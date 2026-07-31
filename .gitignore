@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.env
+*.sqlite3
+*.db
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+alembic/versions/*.py
+!alembic/versions/.gitkeep
+staticfiles/
+sent_emails/
+.cache/
+media/
+
+# uv — lock file MUST be committed, do NOT add uv.lock here
+# See: https://docs.astral.sh/uv/concepts/projects/layout/#the-lockfile
+CLAUDE.md
+.claude/
