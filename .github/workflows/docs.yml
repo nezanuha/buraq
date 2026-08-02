@@ -33,6 +33,7 @@ jobs:
 
       - name: Deploy docs
         run: |
-          VERSION=${GITHUB_REF_NAME#v}          # strips "v" → 1.0, 2.0
-          uv run mike deploy --push "$VERSION" latest
-          uv run mike set-default --push latest
+          VERSION=${GITHUB_REF_NAME#v}          # strips "v" → 1.0.0, 2.0.0
+          MINOR=$(echo "$VERSION" | cut -d. -f1,2)   # 1.0.0 → 1.0
+          uv run mike deploy --push --prefix docs "$MINOR" latest
+          uv run mike set-default --push --prefix docs latest
