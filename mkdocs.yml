@@ -109,6 +109,7 @@ nav:
     - Sessions: topics/sessions.md
     - Cache: topics/cache.md
     - Signals: topics/signals.md
+    - Internationalization: topics/i18n.md
     - Admin: topics/admin.md
     - Static Files: topics/static-files.md
     - Email: topics/email.md

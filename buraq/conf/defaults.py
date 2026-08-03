@@ -62,6 +62,24 @@ class BuraqSettings(BaseSettings):
     # Static files
     STATIC_ROOT: str | None = None
 
+    # Internationalization
+    USE_I18N: bool = True
+    LANGUAGE_CODE: str = "en"
+    LANGUAGES: list[tuple[str, str]] = [
+        ("en", "English"),
+        ("ar", "العربية"),
+        ("fr", "Français"),
+        ("es", "Español"),
+        ("de", "Deutsch"),
+        ("zh", "中文"),
+        ("ja", "日本語"),
+        ("tr", "Türkçe"),
+        ("ur", "اردو"),
+    ]
+    LOCALE_PATHS: list[str] = []
+    LANGUAGE_COOKIE_NAME: str = "buraq_language"
+    LANGUAGE_COOKIE_AGE: int = 60 * 60 * 24 * 365  # 1 year
+
 
 # Global settings instance — overridden by user's settings module
 settings = BuraqSettings()

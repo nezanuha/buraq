@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "buraq"
-version = "1.0.0"
+version = "1.1.0"
 description = "A high-performance Django-like framework built on FastAPI"
 readme = "README.md"
 license = { text = "MIT" }
@@ -43,6 +43,7 @@ dependencies = [
     "itsdangerous>=2.2.0",
     "aiofiles>=23.2.0",
     "aiosmtplib>=3.0.0",
+    "babel>=2.14.0",
     "redis[hiredis]>=5.0.0",
 ]
 

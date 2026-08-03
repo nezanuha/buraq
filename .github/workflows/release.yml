@@ -19,7 +19,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check if version changed
+        id: version_changed
+        run: |
+          PREV=$(git show HEAD~1:pyproject.toml 2>/dev/null | grep '^version = ' | sed 's/version = "//;s/"//' || echo "")
+          CURR=$(grep '^version = ' pyproject.toml | sed 's/version = "//;s/"//')
+          if [ "$PREV" = "$CURR" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Read version from pyproject.toml
+        if: steps.version_changed.outputs.changed == 'true'
         id: version
         run: |
           VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "//;s/"//')
@@ -27,6 +39,7 @@ jobs:
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
       - name: Check if tag already exists
+        if: steps.version_changed.outputs.changed == 'true'
         id: tag_check
         run: |
           if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
@@ -36,7 +49,7 @@ jobs:
           fi
 
       - name: Create tag
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.version_changed.outputs.changed == 'true' && steps.tag_check.outputs.exists == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -44,38 +57,43 @@ jobs:
           git push origin ${{ steps.version.outputs.tag }}
 
       - uses: actions/setup-python@v5
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.version_changed.outputs.changed == 'true' && steps.tag_check.outputs.exists == 'false'
         with:
           python-version: "3.12"
 
       - name: Install uv
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.version_changed.outputs.changed == 'true' && steps.tag_check.outputs.exists == 'false'
         uses: astral-sh/setup-uv@v3
 
       - name: Extract changelog for this version
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.version_changed.outputs.changed == 'true' && steps.tag_check.outputs.exists == 'false'
         id: changelog
         run: |
           VERSION=${{ steps.version.outputs.version }}
           NOTES=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          if [ -z "$(echo "$NOTES" | tr -d '[:space:]')" ]; then
+            echo "❌ No changelog entry found for version $VERSION"
+            echo "Add '## [$VERSION] - $(date +%Y-%m-%d)' to CHANGELOG.md before releasing."
+            exit 1
+          fi
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub release
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.version_changed.outputs.changed == 'true' && steps.tag_check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Buraq ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
           body: ${{ steps.changelog.outputs.notes }}
 
       - name: Build package
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.version_changed.outputs.changed == 'true' && steps.tag_check.outputs.exists == 'false'
         run: uv build
 
       - name: Publish to PyPI
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.version_changed.outputs.changed == 'true' && steps.tag_check.outputs.exists == 'false'
         run: uv publish
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}

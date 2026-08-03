@@ -251,6 +251,108 @@ def clearcache():
     asyncio.run(_clear())
 
 
+# ─── Internationalization ─────────────────────────────────────────────────────
+
+@app.command()
+def makemessages(
+    locale: list[str] = typer.Option(..., "--locale", "-l", help="Locale(s) to generate, e.g. -l ar -l fr"),
+    domain: str = typer.Option("django", "--domain", "-d", help="Message domain (default: django)"),
+    extensions: list[str] = typer.Option(["py", "html"], "--extension", "-e", help="File extensions to scan"),
+    ignore: list[str] = typer.Option([], "--ignore", "-i", help="Paths to ignore"),
+):
+    """
+    Extract translatable strings into .po files (like Django's makemessages).
+
+    Example:
+        buraq makemessages -l ar
+        buraq makemessages -l ar -l fr -l es
+    """
+    try:
+        from babel.messages.frontend import CommandLineInterface
+    except ImportError:
+        typer.echo("Error: Babel is required. Run: buraq install babel", err=True)
+        raise typer.Exit(1)
+
+    cwd = Path.cwd()
+    input_paths = [str(cwd)]
+    ext_list = ",".join(f"*.{e}" for e in extensions)
+    ignore_list = list(ignore) + [".venv", "site", "dist", "__pycache__"]
+
+    for lang in locale:
+        po_path = cwd / "locale" / lang / "LC_MESSAGES" / f"{domain}.po"
+        po_path.parent.mkdir(parents=True, exist_ok=True)
+
+        pot_path = cwd / "locale" / f"{domain}.pot"
+
+        typer.echo(f"Extracting messages for locale '{lang}'...")
+
+        extract_args = [
+            "pybabel", "extract",
+            "--input-dirs", str(cwd),
+            "--output", str(pot_path),
+            "--project", "buraq",
+        ]
+        for ign in ignore_list:
+            extract_args += ["--ignore-dirs", ign]
+
+        result = subprocess.run(extract_args, capture_output=True, text=True)
+        if result.returncode != 0:
+            typer.echo(result.stderr, err=True)
+            raise typer.Exit(1)
+
+        if po_path.exists():
+            update_args = ["pybabel", "update", "-i", str(pot_path), "-d", str(cwd / "locale"), "-l", lang]
+            result = subprocess.run(update_args, capture_output=True, text=True)
+        else:
+            init_args = ["pybabel", "init", "-i", str(pot_path), "-d", str(cwd / "locale"), "-l", lang]
+            result = subprocess.run(init_args, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            typer.echo(result.stderr, err=True)
+            raise typer.Exit(1)
+
+        typer.echo(f"  Done → locale/{lang}/LC_MESSAGES/{domain}.po")
+
+    typer.echo("makemessages complete. Translate the .po files then run: buraq compilemessages")
+
+
+@app.command()
+def compilemessages(
+    domain: str = typer.Option("django", "--domain", "-d", help="Message domain (default: django)"),
+):
+    """
+    Compile .po translation files into binary .mo files (like Django's compilemessages).
+
+    Example:
+        buraq compilemessages
+    """
+    try:
+        import subprocess as _sp
+        _sp.run(["pybabel", "--version"], capture_output=True, check=True)
+    except (FileNotFoundError, Exception):
+        typer.echo("Error: Babel is required. Run: buraq install babel", err=True)
+        raise typer.Exit(1)
+
+    locale_dir = Path.cwd() / "locale"
+    if not locale_dir.exists():
+        typer.echo("No locale/ directory found. Run buraq makemessages first.", err=True)
+        raise typer.Exit(1)
+
+    result = subprocess.run(
+        ["pybabel", "compile", "-d", str(locale_dir), "--domain", domain],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        typer.echo(result.stderr, err=True)
+        raise typer.Exit(1)
+
+    typer.echo(result.stdout or "compilemessages complete. .mo files updated.")
+
+    from buraq.utils.translation import invalidate_cache
+    invalidate_cache()
+
+
 # ─── uv Package Manager ──────────────────────────────────────────────────────
 
 def _uv() -> str:
