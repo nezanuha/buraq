@@ -83,8 +83,8 @@ uv add buraq aiosqlite
 buraq startproject myblog
 cd myblog
 uv sync
-python manage.py migrate
-python manage.py runserver
+buraq migrate
+buraq runserver
 ```
 
 Open [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs) — your API is live.

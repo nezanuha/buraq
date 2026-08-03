@@ -18,14 +18,14 @@ myblog/
 │   ├── script.py.mako
 │   └── versions/
 ├── main.py               # ASGI entry point (imports app from config/urls.py)
-├── manage.py             # CLI — python manage.py <command>
+├── manage.py             # CLI — buraq <command>
 ├── alembic.ini
 ├── pyproject.toml
 ├── .env
 └── .gitignore
 ```
 
-After running `python manage.py startapp posts`:
+After running `buraq startapp posts`:
 
 ```
 myblog/
@@ -72,12 +72,12 @@ app.load_urls(urlpatterns)
 Works exactly like Django's `manage.py`. Auto-detects `.venv` so you don't need to activate it:
 
 ```bash
-python manage.py runserver
-python manage.py runserver 8080       # custom port
-python manage.py makemigrations
-python manage.py migrate
-python manage.py startapp <name>
-python manage.py createsuperuser
+buraq runserver
+buraq runserver 8080       # custom port
+buraq makemigrations
+buraq migrate
+buraq startapp <name>
+buraq createsuperuser
 ```
 
 ### `alembic/`

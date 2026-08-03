@@ -1,60 +1,60 @@
 # Built-in Management Commands
 
-All commands run via `python manage.py <command>`.
+All commands run via `buraq <command>`.
 
 ## Server
 
 ```bash
 # Start development server (default: main:app on 127.0.0.1:8000)
-python manage.py runserver
+buraq runserver
 
 # Custom port (Django-style)
-python manage.py runserver 8080
+buraq runserver 8080
 
 # Custom host:port
-python manage.py runserver 0.0.0.0:8080
+buraq runserver 0.0.0.0:8080
 
 # Custom app path
-python manage.py runserver config.urls:app
+buraq runserver config.urls:app
 
 # Options
-python manage.py runserver --no-reload      # disable auto-reload
-python manage.py runserver --workers 4      # multiple workers (disables reload)
+buraq runserver --no-reload      # disable auto-reload
+buraq runserver --workers 4      # multiple workers (disables reload)
 ```
 
 ## Database
 
 ```bash
 # Generate migration from model changes
-python manage.py makemigrations
-python manage.py makemigrations "add slug to post"
+buraq makemigrations
+buraq makemigrations "add slug to post"
 
 # Apply all pending migrations
-python manage.py migrate
+buraq migrate
 
 # Migrate to a specific revision
-python manage.py migrate abc1234
+buraq migrate abc1234
 
 # Roll back migrations
-python manage.py rollback          # 1 migration
-python manage.py rollback 3        # 3 migrations
+buraq rollback          # 1 migration
+buraq rollback 3        # 3 migrations
 
 # View migration history
-python manage.py showmigrations
+buraq showmigrations
 ```
 
 ## Users
 
 ```bash
 # Create a superuser interactively
-python manage.py createsuperuser
+buraq createsuperuser
 ```
 
 ## Apps & Projects
 
 ```bash
 # Scaffold a new app
-python manage.py startapp posts
+buraq startapp posts
 
 # Scaffold a new project
 buraq startproject myproject
@@ -64,23 +64,23 @@ buraq startproject myproject --postgres    # with PostgreSQL config
 ## Static files
 
 ```bash
-python manage.py collectstatic
-python manage.py collectstatic --dest /var/www/static
-python manage.py collectstatic --clear       # wipe destination first
+buraq collectstatic
+buraq collectstatic --dest /var/www/static
+buraq collectstatic --clear       # wipe destination first
 ```
 
 ## Cache
 
 ```bash
-python manage.py clearcache
+buraq clearcache
 ```
 
 ## Package management (uv wrappers)
 
 ```bash
-python manage.py install requests httpx
-python manage.py install --dev pytest
-python manage.py uninstall requests
-python manage.py sync
-python manage.py pip freeze
+buraq install requests httpx
+buraq install --dev pytest
+buraq uninstall requests
+buraq sync
+buraq pip freeze
 ```

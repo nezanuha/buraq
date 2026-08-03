@@ -68,9 +68,9 @@ python -c "import buraq; print(buraq.__version__)"
 buraq startproject myproject
 cd myproject
 uv sync
-python manage.py migrate
-python manage.py runserver
+buraq migrate
+buraq runserver
 ```
 
 !!! tip
-    `python manage.py runserver` auto-detects the `.venv` in your project folder and uses it — no manual activation needed.
+    `buraq runserver` auto-detects the `.venv` in your project folder and uses it — no manual activation needed.

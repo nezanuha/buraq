@@ -30,7 +30,7 @@ psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE mydb TO myuser;"
 ## Apply migrations
 
 ```bash
-python manage.py migrate
+buraq migrate
 ```
 
 ## Connection pooling

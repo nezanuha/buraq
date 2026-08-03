@@ -19,7 +19,7 @@ STATIC_ROOT = str(BASE_DIR / "staticfiles")  # destination for collectstatic
 ## Collecting for production
 
 ```bash
-python manage.py collectstatic
+buraq collectstatic
 ```
 
 Copies all static files into `STATIC_ROOT`. Serve that directory with Nginx or WhiteNoise in production.

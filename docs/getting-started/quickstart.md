@@ -13,7 +13,7 @@ uv sync
 ## 2. Create an app
 
 ```bash
-python manage.py startapp posts
+buraq startapp posts
 ```
 
 ## 3. Define a model
@@ -84,13 +84,13 @@ INSTALLED_APPS = [
 ## 7. Create the database tables
 
 ```bash
-python manage.py migrate
+buraq migrate
 ```
 
 ## 8. Run the server
 
 ```bash
-python manage.py runserver
+buraq runserver
 ```
 
 Visit [http://127.0.0.1:8000/posts/](http://127.0.0.1:8000/posts/) — your blog is live.

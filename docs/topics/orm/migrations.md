@@ -6,22 +6,22 @@ Buraq uses [Alembic](https://alembic.sqlalchemy.org/) for migrations — the sta
 
 ```bash
 # 1. After changing models, generate a migration
-python manage.py makemigrations
+buraq makemigrations
 
 # With a description
-python manage.py makemigrations "add slug to post"
+buraq makemigrations "add slug to post"
 
 # 2. Apply migrations
-python manage.py migrate
+buraq migrate
 
 # 3. Roll back one migration
-python manage.py rollback
+buraq rollback
 
 # Roll back N migrations
-python manage.py rollback 3
+buraq rollback 3
 
 # 4. Check migration history
-python manage.py showmigrations
+buraq showmigrations
 ```
 
 ## How it works
@@ -32,7 +32,7 @@ python manage.py showmigrations
 
 ## First migration
 
-For a new project, running `python manage.py migrate` automatically creates all tables defined in your models — no migration file needed for the initial setup.
+For a new project, running `buraq migrate` automatically creates all tables defined in your models — no migration file needed for the initial setup.
 
 ## Manual migrations
 

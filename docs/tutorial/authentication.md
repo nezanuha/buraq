@@ -60,7 +60,7 @@ async def my_view(request):
 ## Creating a superuser
 
 ```bash
-python manage.py createsuperuser
+buraq createsuperuser
 ```
 
 ## Register & login flow

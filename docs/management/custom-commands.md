@@ -1,6 +1,6 @@
 # Custom Management Commands
 
-Create app-specific commands that run via `python manage.py manage <command>`.
+Create app-specific commands that run via `buraq manage <command>`.
 
 ## Creating a command
 
@@ -39,8 +39,8 @@ class Command(BaseCommand):
 ## Running it
 
 ```bash
-python manage.py manage seed_posts
-python manage.py manage seed_posts --count 50 --published
+buraq manage seed_posts
+buraq manage seed_posts --count 50 --published
 ```
 
 ## BaseCommand API

@@ -20,7 +20,7 @@ RUN uv sync --no-dev --frozen
 COPY . .
 
 # Collect static files
-RUN uv run python manage.py collectstatic --no-input
+RUN uv run buraq collectstatic --no-input
 
 EXPOSE 8000
 
@@ -49,7 +49,7 @@ services:
       redis:
         condition: service_started
     command: >
-      sh -c "uv run python manage.py migrate &&
+      sh -c "uv run buraq migrate &&
              uv run gunicorn config.urls:app
                --worker-class uvicorn.workers.UvicornWorker
                --workers 4 --bind 0.0.0.0:8000"
@@ -91,8 +91,8 @@ docker compose up -d
 docker compose logs -f web
 
 # Run migrations
-docker compose exec web python manage.py migrate
+docker compose exec web buraq migrate
 
 # Create superuser
-docker compose exec web python manage.py createsuperuser
+docker compose exec web buraq createsuperuser
 ```

@@ -37,7 +37,7 @@ class Comment(models.Model):
 ## Create the tables
 
 ```bash
-python manage.py migrate
+buraq migrate
 ```
 
 !!! note

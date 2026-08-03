@@ -9,7 +9,7 @@
 - [ ] `CACHE_BACKEND` set to Redis
 - [ ] Static files collected and served by Nginx or WhiteNoise
 - [ ] HTTPS enabled
-- [ ] Migrations applied (`python manage.py migrate`)
+- [ ] Migrations applied (`buraq migrate`)
 
 ## Settings for production
 

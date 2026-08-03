@@ -78,7 +78,7 @@ user = await User.objects.create(
 ## Creating a superuser via CLI
 
 ```bash
-python manage.py createsuperuser
+buraq createsuperuser
 ```
 
 ## User model fields

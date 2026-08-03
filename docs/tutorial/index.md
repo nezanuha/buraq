@@ -24,7 +24,7 @@ This tutorial walks you through building a complete blog application with Buraq 
 buraq startproject buraq_blog
 cd buraq_blog
 uv sync
-python manage.py startapp posts
+buraq startapp posts
 ```
 
 Add `"posts"` to `INSTALLED_APPS` in `config/settings.py`.
