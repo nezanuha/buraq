@@ -24,3 +24,4 @@ media/
 # See: https://docs.astral.sh/uv/concepts/projects/layout/#the-lockfile
 CLAUDE.md
 .claude/
+site/

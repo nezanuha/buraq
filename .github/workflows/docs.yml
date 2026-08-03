@@ -35,5 +35,5 @@ jobs:
         run: |
           VERSION=${GITHUB_REF_NAME#v}          # strips "v" → 1.0.0, 2.0.0
           MINOR=$(echo "$VERSION" | cut -d. -f1,2)   # 1.0.0 → 1.0
-          uv run mike deploy --push --prefix docs "$MINOR" latest
-          uv run mike set-default --push --prefix docs latest
+          uv run mike deploy --push --deploy-prefix docs "$MINOR" latest
+          uv run mike set-default --push --deploy-prefix docs latest

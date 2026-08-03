@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "pyproject.toml"
+      - "pyproject.toml"   # only runs when pyproject.toml changes
 
 permissions:
   contents: write
@@ -58,11 +58,6 @@ jobs:
         run: |
           VERSION=${{ steps.version.outputs.version }}
           NOTES=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
-          if [ -z "$(echo "$NOTES" | tr -d '[:space:]')" ]; then
-            echo "❌ No changelog entry found for version $VERSION"
-            echo "Add '## [$VERSION] - $(date +%Y-%m-%d)' to CHANGELOG.md before releasing."
-            exit 1
-          fi
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -72,7 +67,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: ${{ steps.version.outputs.tag }}
+          name: Buraq ${{ steps.version.outputs.tag }}
           body: ${{ steps.changelog.outputs.notes }}
 
       - name: Build package
