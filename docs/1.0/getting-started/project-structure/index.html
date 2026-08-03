@@ -2477,13 +2477,13 @@
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── script.py.mako
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   └── versions/
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>├── main.py               # ASGI entry point (imports app from config/urls.py)
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>├── manage.py             # CLI — python manage.py &lt;command&gt;
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>├── manage.py             # CLI — buraq &lt;command&gt;
 </span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>├── alembic.ini
 </span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>├── pyproject.toml
 </span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>├── .env
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>└── .gitignore
 </span></code></pre></div>
-<p>After running <code>python manage.py startapp posts</code>:</p>
+<p>After running <code>buraq startapp posts</code>:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>myblog/
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── posts/
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│   ├── __init__.py
@@ -2517,12 +2517,12 @@ See <a href="../settings">Settings</a> for the full reference.</p>
 </span></code></pre></div>
 <h3 id="managepy"><code>manage.py</code><a class="headerlink" href="#managepy" title="Permanent link">&para;</a></h3>
 <p>Works exactly like Django's <code>manage.py</code>. Auto-detects <code>.venv</code> so you don't need to activate it:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>manage.py<span class="w"> </span>runserver
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>python<span class="w"> </span>manage.py<span class="w"> </span>runserver<span class="w"> </span><span class="m">8080</span><span class="w">       </span><span class="c1"># custom port</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>python<span class="w"> </span>manage.py<span class="w"> </span>startapp<span class="w"> </span>&lt;name&gt;
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>python<span class="w"> </span>manage.py<span class="w"> </span>createsuperuser
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>buraq<span class="w"> </span>runserver
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>buraq<span class="w"> </span>runserver<span class="w"> </span><span class="m">8080</span><span class="w">       </span><span class="c1"># custom port</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>buraq<span class="w"> </span>makemigrations
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>buraq<span class="w"> </span>migrate
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>buraq<span class="w"> </span>startapp<span class="w"> </span>&lt;name&gt;
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>buraq<span class="w"> </span>createsuperuser
 </span></code></pre></div>
 <h3 id="alembic"><code>alembic/</code><a class="headerlink" href="#alembic" title="Permanent link">&para;</a></h3>
 <p>Buraq uses <a href="https://alembic.sqlalchemy.org">Alembic</a> for database migrations — the same tool SQLAlchemy recommends. <code>makemigrations</code> and <code>migrate</code> are thin wrappers over Alembic commands.</p>

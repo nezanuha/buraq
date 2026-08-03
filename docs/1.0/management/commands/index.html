@@ -2493,68 +2493,68 @@
 
 
 <h1 id="built-in-management-commands">Built-in Management Commands<a class="headerlink" href="#built-in-management-commands" title="Permanent link">&para;</a></h1>
-<p>All commands run via <code>python manage.py &lt;command&gt;</code>.</p>
+<p>All commands run via <code>buraq &lt;command&gt;</code>.</p>
 <h2 id="server">Server<a class="headerlink" href="#server" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Start development server (default: main:app on 127.0.0.1:8000)</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python<span class="w"> </span>manage.py<span class="w"> </span>runserver
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>buraq<span class="w"> </span>runserver
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Custom port (Django-style)</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>python<span class="w"> </span>manage.py<span class="w"> </span>runserver<span class="w"> </span><span class="m">8080</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>buraq<span class="w"> </span>runserver<span class="w"> </span><span class="m">8080</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Custom host:port</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>python<span class="w"> </span>manage.py<span class="w"> </span>runserver<span class="w"> </span><span class="m">0</span>.0.0.0:8080
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>buraq<span class="w"> </span>runserver<span class="w"> </span><span class="m">0</span>.0.0.0:8080
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Custom app path</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>python<span class="w"> </span>manage.py<span class="w"> </span>runserver<span class="w"> </span>config.urls:app
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>buraq<span class="w"> </span>runserver<span class="w"> </span>config.urls:app
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Options</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>python<span class="w"> </span>manage.py<span class="w"> </span>runserver<span class="w"> </span>--no-reload<span class="w">      </span><span class="c1"># disable auto-reload</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>python<span class="w"> </span>manage.py<span class="w"> </span>runserver<span class="w"> </span>--workers<span class="w"> </span><span class="m">4</span><span class="w">      </span><span class="c1"># multiple workers (disables reload)</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>buraq<span class="w"> </span>runserver<span class="w"> </span>--no-reload<span class="w">      </span><span class="c1"># disable auto-reload</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>buraq<span class="w"> </span>runserver<span class="w"> </span>--workers<span class="w"> </span><span class="m">4</span><span class="w">      </span><span class="c1"># multiple workers (disables reload)</span>
 </span></code></pre></div>
 <h2 id="database">Database<a class="headerlink" href="#database" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Generate migration from model changes</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span><span class="s2">&quot;add slug to post&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>buraq<span class="w"> </span>makemigrations
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>buraq<span class="w"> </span>makemigrations<span class="w"> </span><span class="s2">&quot;add slug to post&quot;</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Apply all pending migrations</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>buraq<span class="w"> </span>migrate
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Migrate to a specific revision</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>python<span class="w"> </span>manage.py<span class="w"> </span>migrate<span class="w"> </span>abc1234
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>buraq<span class="w"> </span>migrate<span class="w"> </span>abc1234
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># Roll back migrations</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>python<span class="w"> </span>manage.py<span class="w"> </span>rollback<span class="w">          </span><span class="c1"># 1 migration</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>python<span class="w"> </span>manage.py<span class="w"> </span>rollback<span class="w"> </span><span class="m">3</span><span class="w">        </span><span class="c1"># 3 migrations</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>buraq<span class="w"> </span>rollback<span class="w">          </span><span class="c1"># 1 migration</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>buraq<span class="w"> </span>rollback<span class="w"> </span><span class="m">3</span><span class="w">        </span><span class="c1"># 3 migrations</span>
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
 </span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># View migration history</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>python<span class="w"> </span>manage.py<span class="w"> </span>showmigrations
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>buraq<span class="w"> </span>showmigrations
 </span></code></pre></div>
 <h2 id="users">Users<a class="headerlink" href="#users" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Create a superuser interactively</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>python<span class="w"> </span>manage.py<span class="w"> </span>createsuperuser
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>buraq<span class="w"> </span>createsuperuser
 </span></code></pre></div>
 <h2 id="apps-projects">Apps &amp; Projects<a class="headerlink" href="#apps-projects" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Scaffold a new app</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>python<span class="w"> </span>manage.py<span class="w"> </span>startapp<span class="w"> </span>posts
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>buraq<span class="w"> </span>startapp<span class="w"> </span>posts
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Scaffold a new project</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>buraq<span class="w"> </span>startproject<span class="w"> </span>myproject
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>buraq<span class="w"> </span>startproject<span class="w"> </span>myproject<span class="w"> </span>--postgres<span class="w">    </span><span class="c1"># with PostgreSQL config</span>
 </span></code></pre></div>
 <h2 id="static-files">Static files<a class="headerlink" href="#static-files" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic<span class="w"> </span>--dest<span class="w"> </span>/var/www/static
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic<span class="w"> </span>--clear<span class="w">       </span><span class="c1"># wipe destination first</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>buraq<span class="w"> </span>collectstatic
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>buraq<span class="w"> </span>collectstatic<span class="w"> </span>--dest<span class="w"> </span>/var/www/static
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>buraq<span class="w"> </span>collectstatic<span class="w"> </span>--clear<span class="w">       </span><span class="c1"># wipe destination first</span>
 </span></code></pre></div>
 <h2 id="cache">Cache<a class="headerlink" href="#cache" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>python<span class="w"> </span>manage.py<span class="w"> </span>clearcache
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>buraq<span class="w"> </span>clearcache
 </span></code></pre></div>
 <h2 id="package-management-uv-wrappers">Package management (uv wrappers)<a class="headerlink" href="#package-management-uv-wrappers" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>python<span class="w"> </span>manage.py<span class="w"> </span>install<span class="w"> </span>requests<span class="w"> </span>httpx
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>python<span class="w"> </span>manage.py<span class="w"> </span>install<span class="w"> </span>--dev<span class="w"> </span>pytest
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>python<span class="w"> </span>manage.py<span class="w"> </span>uninstall<span class="w"> </span>requests
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>python<span class="w"> </span>manage.py<span class="w"> </span>sync
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>python<span class="w"> </span>manage.py<span class="w"> </span>pip<span class="w"> </span>freeze
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>buraq<span class="w"> </span>install<span class="w"> </span>requests<span class="w"> </span>httpx
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>buraq<span class="w"> </span>install<span class="w"> </span>--dev<span class="w"> </span>pytest
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>buraq<span class="w"> </span>uninstall<span class="w"> </span>requests
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>buraq<span class="w"> </span>sync
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>buraq<span class="w"> </span>pip<span class="w"> </span>freeze
 </span></code></pre></div>
 
 

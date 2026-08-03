@@ -2479,7 +2479,7 @@
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">&lt;</span><span class="nt">img</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">url_for</span><span class="o">(</span><span class="s1">&#39;static&#39;</span><span class="o">,</span> <span class="nv">path</span><span class="o">=</span><span class="s1">&#39;/images/logo.png&#39;</span><span class="o">)</span> <span class="cp">}}</span><span class="s">&quot;</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h2 id="collecting-for-production">Collecting for production<a class="headerlink" href="#collecting-for-production" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>buraq<span class="w"> </span>collectstatic
 </span></code></pre></div>
 <p>Copies all static files into <code>STATIC_ROOT</code>. Serve that directory with Nginx or WhiteNoise in production.</p>
 <h2 id="whitenoise-production">WhiteNoise (production)<a class="headerlink" href="#whitenoise-production" title="Permanent link">&para;</a></h2>

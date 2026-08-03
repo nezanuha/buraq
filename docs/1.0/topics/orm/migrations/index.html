@@ -2489,28 +2489,28 @@
 <p>Buraq uses <a href="https://alembic.sqlalchemy.org">Alembic</a> for migrations — the standard SQLAlchemy migration tool.</p>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># 1. After changing models, generate a migration</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>buraq<span class="w"> </span>makemigrations
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># With a description</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span><span class="s2">&quot;add slug to post&quot;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>buraq<span class="w"> </span>makemigrations<span class="w"> </span><span class="s2">&quot;add slug to post&quot;</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># 2. Apply migrations</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>buraq<span class="w"> </span>migrate
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># 3. Roll back one migration</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>python<span class="w"> </span>manage.py<span class="w"> </span>rollback
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>buraq<span class="w"> </span>rollback
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Roll back N migrations</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>python<span class="w"> </span>manage.py<span class="w"> </span>rollback<span class="w"> </span><span class="m">3</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>buraq<span class="w"> </span>rollback<span class="w"> </span><span class="m">3</span>
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="c1"># 4. Check migration history</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>python<span class="w"> </span>manage.py<span class="w"> </span>showmigrations
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>buraq<span class="w"> </span>showmigrations
 </span></code></pre></div>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p><code>makemigrations</code> runs <code>alembic revision --autogenerate</code>, which compares your model definitions to the current database schema and generates a migration file in <code>alembic/versions/</code>.</p>
 <p><code>migrate</code> runs <code>alembic upgrade head</code>, applying all pending migrations.</p>
 <h2 id="first-migration">First migration<a class="headerlink" href="#first-migration" title="Permanent link">&para;</a></h2>
-<p>For a new project, running <code>python manage.py migrate</code> automatically creates all tables defined in your models — no migration file needed for the initial setup.</p>
+<p>For a new project, running <code>buraq migrate</code> automatically creates all tables defined in your models — no migration file needed for the initial setup.</p>
 <h2 id="manual-migrations">Manual migrations<a class="headerlink" href="#manual-migrations" title="Permanent link">&para;</a></h2>
 <p>For complex changes (data migrations, custom SQL), edit the generated migration file directly:</p>
 <div class="language-python highlight"><span class="filename">alembic/versions/001_add_slug.py</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">upgrade</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>

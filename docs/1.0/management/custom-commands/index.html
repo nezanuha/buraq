@@ -2405,7 +2405,7 @@
 
 
 <h1 id="custom-management-commands">Custom Management Commands<a class="headerlink" href="#custom-management-commands" title="Permanent link">&para;</a></h1>
-<p>Create app-specific commands that run via <code>python manage.py manage &lt;command&gt;</code>.</p>
+<p>Create app-specific commands that run via <code>buraq manage &lt;command&gt;</code>.</p>
 <h2 id="creating-a-command">Creating a command<a class="headerlink" href="#creating-a-command" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>posts/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>└── management/
@@ -2436,8 +2436,8 @@
 </span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> posts.&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="running-it">Running it<a class="headerlink" href="#running-it" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>manage.py<span class="w"> </span>manage<span class="w"> </span>seed_posts
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>python<span class="w"> </span>manage.py<span class="w"> </span>manage<span class="w"> </span>seed_posts<span class="w"> </span>--count<span class="w"> </span><span class="m">50</span><span class="w"> </span>--published
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>buraq<span class="w"> </span>manage<span class="w"> </span>seed_posts
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>buraq<span class="w"> </span>manage<span class="w"> </span>seed_posts<span class="w"> </span>--count<span class="w"> </span><span class="m">50</span><span class="w"> </span>--published
 </span></code></pre></div>
 <h2 id="basecommand-api">BaseCommand API<a class="headerlink" href="#basecommand-api" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Command</span><span class="p">(</span><span class="n">BaseCommand</span><span class="p">):</span>
