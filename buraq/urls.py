@@ -125,6 +125,89 @@ def delete(url_path: str, view: Callable, name: str = "", **kwargs) -> URLPatter
     return URLPattern(url_path, view, name, ["DELETE"], kwargs)
 
 
+# ── URL registry & reverse() ──────────────────────────────────────────────────
+
+# name → FastAPI path string, e.g. "post_detail" → "/posts/{pk}"
+_route_registry: dict[str, str] = {}
+
+# Names registered under i18n_patterns() — get a language prefix prepended
+_i18n_route_names: set[str] = set()
+
+
+@dataclass
+class I18nURLGroup:
+    """Wraps URL patterns that should be served under a language prefix."""
+    patterns: list
+
+
+def i18n_patterns(*patterns: Any) -> I18nURLGroup:
+    """
+    Mark URL patterns as language-prefixed.
+
+    Routes inside this group are served at ``/{lang}/{path}`` automatically —
+    ``LocaleMiddleware`` strips the prefix before routing, so your views stay clean.
+    Named routes get registered in ``_i18n_route_names`` so that ``url_for()``
+    can prepend the correct language prefix when generating links.
+
+    Usage::
+
+        from buraq.urls import path, i18n_patterns
+        from buraq.contrib.i18n.views import set_language
+
+        urlpatterns = [
+            path("/i18n/set_language", set_language),   # NOT language-prefixed
+            *i18n_patterns(
+                path("/",        views.home,    name="home"),
+                path("/about",   views.about,   name="about"),
+                path("/posts",   include("posts.urls")),
+            ),
+        ]
+    """
+    return I18nURLGroup(list(patterns))
+
+
+def reverse(name: str, **path_params: Any) -> str:
+    """
+    Return the URL path for a named route — like Django's ``reverse()``.
+
+    For routes registered via ``i18n_patterns()``, automatically prepends
+    the active language prefix (skipped for the default language).
+
+    Usage::
+
+        from buraq.urls import reverse
+
+        reverse("home")                      # → "/"
+        reverse("post_detail", pk=42)        # → "/posts/42"
+
+        # Inside an Arabic request (active language = "ar"):
+        reverse("about")                     # → "/ar/about"
+        reverse("post_detail", pk=42)        # → "/ar/posts/42"
+    """
+    if name not in _route_registry:
+        raise ValueError(f"No URL pattern with name {name!r}. Did you set name= on path()?")
+
+    path_str = _route_registry[name]
+
+    # Substitute {param} placeholders
+    for key, value in path_params.items():
+        path_str = path_str.replace(f"{{{key}}}", str(value))
+
+    if name not in _i18n_route_names:
+        return path_str
+
+    from buraq.conf.defaults import settings
+    from buraq.utils.translation import get_language
+
+    default_lang: str = getattr(settings, "LANGUAGE_CODE", "en")
+    lang = get_language()
+
+    if lang == default_lang:
+        return path_str
+
+    return f"/{lang}{path_str}"
+
+
 # ── Internal registration ─────────────────────────────────────────────────────
 
 def _inject_request(view: Callable) -> Callable:
@@ -209,13 +292,21 @@ def _patch_cbv_signature(view: Callable, full_path: str, param_types: dict = Non
     return cbv_wrapper
 
 
-def register_urlpatterns(app: Any, patterns: list, prefix: str = "") -> None:
+def register_urlpatterns(
+    app: Any,
+    patterns: list,
+    prefix: str = "",
+    _i18n: bool = False,
+) -> None:
     """Recursively register all URL patterns with a FastAPI app instance."""
     for item in patterns:
-        if isinstance(item, URLInclude):
+        if isinstance(item, I18nURLGroup):
+            register_urlpatterns(app, item.patterns, prefix, _i18n=True)
+
+        elif isinstance(item, URLInclude):
             module = importlib.import_module(item.module_path)
             sub_patterns = getattr(module, "urlpatterns", [])
-            register_urlpatterns(app, sub_patterns, prefix + item._prefix)
+            register_urlpatterns(app, sub_patterns, prefix + item._prefix, _i18n=_i18n)
 
         elif isinstance(item, URLPattern):
             full_path = (prefix + item.path).replace("//", "/") or "/"
@@ -224,6 +315,9 @@ def register_urlpatterns(app: Any, patterns: list, prefix: str = "") -> None:
             kw = dict(item.extra)
             if item.name:
                 kw["name"] = item.name
+                _route_registry[item.name] = full_path
+                if _i18n:
+                    _i18n_route_names.add(item.name)
             if len(item.methods) == 1:
                 # Single method — use the convenience decorator (app.get, app.post, etc.)
                 getattr(app, item.methods[0].lower())(full_path, **kw)(view)

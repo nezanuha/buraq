@@ -87,7 +87,9 @@ class Buraq(FastAPI):
                 pass
 
     async def _on_startup(self) -> None:
-        pass
+        if settings.USE_I18N:
+            from buraq.utils.translation import warmup_catalogs
+            warmup_catalogs()
 
     async def _on_shutdown(self) -> None:
         from buraq.core.db import engine

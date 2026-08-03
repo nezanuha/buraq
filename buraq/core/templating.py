@@ -18,6 +18,22 @@ def get_templates() -> Jinja2Templates:
         # Inject commonly needed helpers as Jinja2 globals
         from buraq.contrib.messages import get_messages
         _templates.env.globals["get_messages"] = get_messages
+
+        # i18n globals — available in every template without passing from views
+        if settings.USE_I18N:
+            from buraq.utils.translation import (
+                gettext,
+                ngettext,
+                pgettext,
+                get_language,
+                get_language_bidi,
+            )
+            _templates.env.globals["_"] = gettext
+            _templates.env.globals["gettext"] = gettext
+            _templates.env.globals["ngettext"] = ngettext
+            _templates.env.globals["pgettext"] = pgettext
+            _templates.env.globals["get_language"] = get_language
+            _templates.env.globals["get_language_bidi"] = get_language_bidi
     return _templates
 
 

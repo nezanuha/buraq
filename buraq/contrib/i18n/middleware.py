@@ -32,15 +32,16 @@ class LocaleMiddleware:
             await self.app(scope, receive, send)
             return
 
-        language = _detect_language(scope)
+        language, stripped_scope = _detect_language(scope)
         token = activate(language)
         try:
-            await self.app(scope, receive, send)
+            await self.app(stripped_scope, receive, send)
         finally:
             deactivate(token)
 
 
-def _detect_language(scope: dict) -> str:
+def _detect_language(scope: dict) -> tuple[str, dict]:
+    """Return (language, scope) — scope may have language prefix stripped from path."""
     from buraq.conf.defaults import settings
 
     supported: list[str] = [code for code, _ in getattr(settings, "LANGUAGES", [])]
@@ -48,12 +49,19 @@ def _detect_language(scope: dict) -> str:
 
     headers: dict[bytes, bytes] = dict(scope.get("headers", []))
 
-    # 1. URL prefix — e.g. /ar/about → "ar"
+    # 1. URL prefix — e.g. /ar/about → "ar", strip to /about
     path: str = scope.get("path", "")
     if path and path != "/":
         prefix = path.split("/")[1]
         if prefix in supported:
-            return prefix
+            stripped_path = path[len(prefix) + 1:] or "/"
+            new_scope = {**scope, "path": stripped_path}
+            # Update raw_path too so ASGI servers stay consistent
+            raw = scope.get("raw_path", b"")
+            prefix_bytes = f"/{prefix}".encode()
+            if raw.startswith(prefix_bytes):
+                new_scope["raw_path"] = raw[len(prefix_bytes):] or b"/"
+            return prefix, new_scope
 
     # 2. Cookie
     cookie_name: str = getattr(settings, "LANGUAGE_COOKIE_NAME", "buraq_language")
@@ -63,16 +71,16 @@ def _detect_language(scope: dict) -> str:
         if name.strip() == cookie_name:
             lang = value.strip()
             if lang in supported:
-                return lang
+                return lang, scope
 
     # 3. Accept-Language header — pick the highest-quality supported language
     accept = headers.get(b"accept-language", b"").decode()
     if accept:
         lang = _parse_accept_language(accept, supported)
         if lang:
-            return lang
+            return lang, scope
 
-    return default
+    return default, scope
 
 
 def _parse_accept_language(header: str, supported: list[str]) -> str | None:
