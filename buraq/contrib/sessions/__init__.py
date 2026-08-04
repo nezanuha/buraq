@@ -1,5 +1,5 @@
 """
-Cookie-based signed sessions — like Django's session framework.
+Cookie-based signed sessions.
 
 Usage:
     # config/urls.py

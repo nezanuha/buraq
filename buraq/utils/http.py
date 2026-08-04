@@ -1,5 +1,5 @@
 """
-HTTP utilities — mirrors django.utils.http.
+HTTP utilities — URL safety helpers and encoding utilities.
 """
 from __future__ import annotations
 

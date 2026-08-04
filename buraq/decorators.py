@@ -1,5 +1,5 @@
 """
-View decorators — like Django's django.contrib.auth.decorators.
+View decorators for restricting access based on authentication and permissions.
 
 Usage:
     from buraq.decorators import login_required, staff_required

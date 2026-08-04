@@ -19,7 +19,7 @@ class MultipleObjectsReturned(Exception):
 
 class QuerySet:
     """
-    Chainable async query builder — mirrors Django's QuerySet.
+    Chainable async query builder.
 
     Usage:
         await Post.objects.all()
@@ -302,7 +302,7 @@ class QuerySet:
 
 class Manager:
     """
-    Django-like async ORM manager attached to every Model as `.objects`.
+    Async ORM manager attached to every Model as `.objects`.
     """
 
     def __init__(self, model_class: type):

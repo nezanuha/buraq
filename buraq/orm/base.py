@@ -77,7 +77,7 @@ class CheckConstraint:
 
 class Model(Base):
     """
-    Django-like model base. Define fields as class attributes.
+    Model base class. Define fields as class attributes.
 
     Example:
         from buraq import models
@@ -183,7 +183,7 @@ class Model(Base):
         for attr_name, m2m in m2m_fields.items():
             m2m.contribute_to_class(cls, attr_name)
 
-    # ── Instance methods (like Django's Model.save/delete) ─────────────────
+    # ── Instance methods ──────────────────────────────────────────────────────
 
     async def save(self, update_fields: list = None) -> None:
         """Insert or update this instance."""

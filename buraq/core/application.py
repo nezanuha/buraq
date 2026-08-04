@@ -52,7 +52,7 @@ class Buraq(FastAPI):
 
     def load_urls(self, urlpatterns: list) -> None:
         """
-        Register Django-style urlpatterns.
+        Register urlpatterns with the application.
 
         app.load_urls([
             path('/auth',  include('buraq.contrib.auth.urls')),
@@ -81,7 +81,7 @@ class Buraq(FastAPI):
                 if hasattr(urls_module, "router"):
                     self.include_router(urls_module.router)
                 elif hasattr(urls_module, "urlpatterns"):
-                    # Optional `prefix` on the urls module (like app_name in Django)
+                    # Optional `prefix` on the urls module
                     app_prefix = getattr(urls_module, "prefix", "")
                     register_urlpatterns(self, urls_module.urlpatterns, prefix=app_prefix)
             except ModuleNotFoundError:

@@ -1,5 +1,5 @@
 """
-Database transaction helpers — like Django's django.db.transaction.
+Database transaction helpers — atomic(), on_commit(), and savepoint utilities.
 
 Usage:
     from buraq.db import transaction

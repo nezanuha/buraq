@@ -1,5 +1,5 @@
 """
-Django-style flash messages — backed by session so they survive redirects.
+Flash messages — backed by session so they survive redirects.
 
 Usage in views:
     from buraq.contrib.messages import success, error, info, warning

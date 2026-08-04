@@ -1,5 +1,5 @@
 """
-Generic class-based views — like Django's django.views.generic.
+Generic class-based views — ListView, DetailView, CreateView, UpdateView, DeleteView.
 """
 from buraq.shortcuts import redirect, render
 from buraq.views.base import View

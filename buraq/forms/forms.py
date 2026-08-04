@@ -1,5 +1,5 @@
 """
-Forms — like Django's django.forms.Form and django.forms.ModelForm.
+Forms — Form and ModelForm base classes with validation and rendering.
 
 Usage:
     from buraq.forms import Form, ModelForm

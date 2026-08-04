@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `path()` now accepts an optional dict as the third positional argument to pass extra keyword arguments to the view (e.g. `path('/url', view, {'key': 'val'}, name='name')`); internally applied via `functools.partial`
+
 ## [1.4.0] - 2026-08-04
 
 ### Added

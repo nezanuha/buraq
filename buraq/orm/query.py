@@ -18,7 +18,7 @@ import sqlalchemy as sa
 
 class F:
     """
-    Reference a model field in a query — like Django's F().
+    Reference a model field by name in a query expression.
 
     Usage:
         Post.objects.filter(views__gt=F("likes"))

@@ -1,5 +1,5 @@
 """
-Form fields — like Django's django.forms.fields.
+Form fields — built-in field types with validation.
 """
 import re
 from datetime import date, datetime
@@ -383,7 +383,7 @@ class RegexField(CharField):
 
 
 class TextField(CharField):
-    """Multi-line text field — renders as <textarea>. Mirrors Django's models.TextField."""
+    """Multi-line text field — renders as <textarea>."""
     widget = "textarea"
 
 

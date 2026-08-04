@@ -1,5 +1,5 @@
 """
-Cookie-based signed session middleware — like Django's SessionMiddleware.
+Cookie-based signed session middleware.
 Requires: uv add itsdangerous
 """
 import json

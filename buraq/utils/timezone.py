@@ -1,5 +1,5 @@
 """
-Timezone utilities — mirrors django.utils.timezone.
+Timezone utilities — now(), localtime(), make_aware(), and context-local activation.
 
 Uses Python's stdlib ``zoneinfo`` module (C extension, Python 3.9+, zero extra deps).
 Uses ``contextvars`` for async-safe per-request timezone state.

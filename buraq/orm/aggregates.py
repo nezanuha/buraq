@@ -1,5 +1,5 @@
 """
-Aggregation functions — like Django's Count, Sum, Avg, Min, Max.
+Aggregation functions — Count, Sum, Avg, Min, Max for use with aggregate() and annotate().
 
 Usage:
     from buraq.orm.aggregates import Count, Sum, Avg, Min, Max

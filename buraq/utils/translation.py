@@ -209,7 +209,7 @@ def _load_catalog(language: str) -> _gettext.NullTranslations:
         for locale_path in locale_paths:
             try:
                 catalog = _gettext.translation(
-                    domain="django",
+                    domain="messages",
                     localedir=locale_path,
                     languages=[language],
                     codeset="utf-8",
@@ -401,7 +401,7 @@ def npgettext_lazy(context: str, singular: str, plural: str, number: int) -> _La
     return _LazyNpgettext(context, singular, plural, number)
 
 
-# ── Aliases matching Django's API ──────────────────────────────────────────────
+# ── Convenience aliases ────────────────────────────────────────────────────────
 _ = gettext
 _l = gettext_lazy
 _n = ngettext

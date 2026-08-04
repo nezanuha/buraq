@@ -1,5 +1,5 @@
 """
-Django-style URL configuration for Buraq.
+URL configuration for Buraq — path(), include(), get(), post(), reverse().
 
 Usage:
 
@@ -51,7 +51,7 @@ def _to_fastapi_path(django_path: str) -> str:
 
 
 def _extract_param_types(django_path: str) -> dict:
-    """Return {param_name: python_type} from a Django-style URL path."""
+    """Return {param_name: python_type} from a typed URL path like /posts/<int:pk>."""
     return {
         name: _DJANGO_TYPE_MAP.get(type_str, str)
         for type_str, name in _DJANGO_PARAM_RE.findall(django_path)
@@ -82,27 +82,38 @@ class URLInclude:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def include(module_path: str) -> URLInclude:
-    """Include urlpatterns from another module — like Django's include()."""
+    """Include urlpatterns from another module."""
     return URLInclude(module_path)
 
 
 _ALL_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
 
 
-def path(url_path: str, view_or_include: Any, name: str = "", **kwargs) -> Any:
+def path(
+    url_path: str,
+    view_or_include: Any,
+    kwargs: dict | None = None,
+    name: str = "",
+    **extra,
+) -> Any:
     """
-    Django-style: handles ALL HTTP methods by default, method dispatch is
+    Handles ALL HTTP methods by default, method dispatch is
     done inside the view (or CBV's dispatch()).
 
-    path('/posts',           include('posts.urls'))   # include sub-app
-    path('/posts/',          views.post_list)          # all methods
+    path('/posts',           include('posts.urls'))         # include sub-app
+    path('/posts/',          views.post_list)               # all methods
     path('/posts/<int:pk>',  views.post_detail, name='post_detail')
+    path('/posts/',          views.post_list, {'flag': True})  # extra view kwargs
     path('/posts/',          views.post_list, methods=["GET", "POST"])  # explicit
     """
     if isinstance(view_or_include, URLInclude):
         view_or_include._prefix = _to_fastapi_path(url_path)
         return view_or_include
-    return URLPattern(url_path, view_or_include, name, kwargs.pop("methods", _ALL_METHODS), kwargs)
+    view = view_or_include
+    if kwargs:
+        view = functools.partial(view, **kwargs)
+        functools.update_wrapper(view, view_or_include)
+    return URLPattern(url_path, view, name, extra.pop("methods", _ALL_METHODS), extra)
 
 
 def get(url_path: str, view: Callable, name: str = "", **kwargs) -> URLPattern:
@@ -168,7 +179,7 @@ def i18n_patterns(*patterns: Any) -> I18nURLGroup:
 
 def reverse(name: str, **path_params: Any) -> str:
     """
-    Return the URL path for a named route — like Django's ``reverse()``.
+    Return the URL path for a named route.
 
     For routes registered via ``i18n_patterns()``, automatically prepends
     the active language prefix (skipped for the default language).
@@ -258,7 +269,7 @@ def _patch_cbv_signature(view: Callable, full_path: str, param_types: dict = Non
     CBV handlers often use **kwargs to receive path params, which means the
     as_view() signature patching in View.as_view() can't know the param names.
     Here we have the path, so we can build the exact signature FastAPI needs.
-    param_types carries Django type info (e.g. {"pk": int}) so FastAPI
+    param_types carries URL type info (e.g. {"pk": int}) so FastAPI
     coerces the string path segment to the right Python type.
     """
     if not getattr(view, "view_class", None):

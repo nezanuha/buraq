@@ -1,5 +1,5 @@
 """
-Django-style shortcuts for Buraq views.
+Shortcuts for Buraq views — render, redirect, get_object_or_404, render_to_string.
 
 from buraq.shortcuts import render, redirect, get_object_or_404, render_to_string
 """
@@ -12,7 +12,7 @@ from starlette.responses import HTMLResponse, RedirectResponse
 
 def render(request: Request, template_name: str, context: dict | None = None) -> HTMLResponse:
     """
-    Render a Jinja2 template and return an HTMLResponse — exactly like Django's render().
+    Render a Jinja2 template and return an HTMLResponse.
 
     Usage:
         async def post_list(request):
@@ -29,7 +29,7 @@ def render(request: Request, template_name: str, context: dict | None = None) ->
 
 def redirect(to: str, permanent: bool = False) -> RedirectResponse:
     """
-    Return an HTTP redirect — like Django's redirect().
+    Return an HTTP redirect response.
 
     Usage:
         return redirect('/posts/')
@@ -45,7 +45,7 @@ def render_to_string(
     request: Request | None = None,
 ) -> str:
     """
-    Render a template to a string — like Django's render_to_string().
+    Render a template to a string.
 
     Useful for rendering email bodies, partial HTML, or any template outside of a view::
 
@@ -58,7 +58,7 @@ def render_to_string(
 
 async def get_object_or_404(model: Any, **kwargs) -> Any:
     """
-    Fetch a single object or raise 404 — exactly like Django's get_object_or_404().
+    Fetch a single object or raise 404.
 
     Usage:
         post = await get_object_or_404(Post, id=id)

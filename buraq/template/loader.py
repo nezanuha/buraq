@@ -1,5 +1,5 @@
 """
-Template loader utilities — mirrors django.template.loader.
+Template loader utilities — render_to_string, get_template, select_template.
 
 Usage:
     from buraq.template.loader import render_to_string, get_template, select_template
@@ -67,7 +67,7 @@ def render_to_string(
     request: Any = None,
 ) -> str:
     """
-    Render a template to a string — like Django's render_to_string().
+    Render a template to a string.
 
     Accepts a single template name or a list (tries each in order).
     Optionally accepts a ``request`` to inject it into the template context.

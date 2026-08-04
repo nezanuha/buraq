@@ -1,5 +1,5 @@
 """
-Class-based views — like Django's django.views.View.
+Class-based views — View base class and dispatch machinery.
 """
 import inspect
 

@@ -1,5 +1,5 @@
 """
-Django-like model API.
+Buraq model API — re-exports Model, fields, and constraints.
 
 Usage:
     from buraq import models

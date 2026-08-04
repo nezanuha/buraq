@@ -1,5 +1,5 @@
 """
-TranslatableModel — django-parler–style per-language field translations.
+TranslatableModel — per-language field translations with a companion translation table.
 
 Usage::
 

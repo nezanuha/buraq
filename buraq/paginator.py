@@ -1,5 +1,5 @@
 """
-Paginator — identical to Django's django.core.paginator.
+Paginator — paginate querysets or lists with a familiar API.
 
 Usage:
     from buraq.paginator import Paginator

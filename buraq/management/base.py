@@ -1,5 +1,5 @@
 """
-BaseCommand — like Django's django.core.management.base.BaseCommand.
+BaseCommand — base class for custom management commands.
 
 Usage:
     # myapp/management/commands/send_reminders.py
@@ -29,7 +29,7 @@ from typing import Any
 
 
 class Style:
-    """Terminal color helpers — mirrors Django's management style."""
+    """Terminal color helpers for management command output."""
 
     def SUCCESS(self, msg: str) -> str:
         return f"\033[32m{msg}\033[0m"  # green

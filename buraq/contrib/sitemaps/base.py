@@ -1,5 +1,5 @@
 """
-Sitemap framework — mirrors Django's django.contrib.sitemaps.
+Sitemap framework — Sitemap, GenericSitemap, and async sitemap view.
 
 Usage:
     from buraq.contrib.sitemaps import Sitemap, GenericSitemap
@@ -103,7 +103,7 @@ class Sitemap:
 
 class GenericSitemap(Sitemap):
     """
-    Sitemap for a model queryset — mirrors Django's GenericSitemap.
+    Sitemap for a model queryset.
 
     Usage::
 

@@ -14,7 +14,7 @@ except ImportError:
 
 
 class ModelAdmin(_ModelView):
-    """Base class for admin model registration — mirrors Django's ModelAdmin."""
+    """Base class for registering a model with the admin interface."""
     pass
 
 

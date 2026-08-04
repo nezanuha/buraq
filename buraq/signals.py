@@ -1,5 +1,5 @@
 """
-Django-style signals for Buraq.
+Signals — sync/async event dispatch for decoupled application logic.
 
 Usage:
     from buraq.signals import pre_save, post_save, Signal

@@ -6,7 +6,7 @@ import typer
 
 app = typer.Typer(
     name="buraq",
-    help="Buraq management CLI — mirrors Django's manage.py",
+    help="Buraq management CLI — run servers, migrations, and project commands.",
     add_completion=False,
 )
 
@@ -26,10 +26,10 @@ def runserver(
     reload: bool = typer.Option(True, help="Auto-reload on change"),
     workers: int = typer.Option(1, help="Number of worker processes"),
 ):
-    """Start the development server (like Django's runserver)."""
+    """Start the development server."""
     app_path = "main:app"
 
-    # Django-style: runserver 8001  OR  runserver 0.0.0.0:8001
+    # Supports: runserver 8001  OR  runserver 0.0.0.0:8001
     if bind.isdigit():
         port = int(bind)
     elif ":" in bind and not bind.startswith("/") and "." not in bind.split(":")[0]:
@@ -76,7 +76,7 @@ def runserver(
 
 @app.command()
 def makemigrations(message: str = typer.Argument("auto", help="Migration message")):
-    """Generate a new database migration (like Django's makemigrations)."""
+    """Generate a new database migration."""
     typer.echo(f"Creating migration: {message}")
     result = subprocess.run(["alembic", "revision", "--autogenerate", "-m", message])
     if result.returncode != 0:
@@ -85,7 +85,7 @@ def makemigrations(message: str = typer.Argument("auto", help="Migration message
 
 @app.command()
 def migrate(revision: str = typer.Argument("head", help="Target revision")):
-    """Apply database migrations (like Django's migrate)."""
+    """Apply database migrations."""
     typer.echo(f"Applying migrations to: {revision}")
     result = subprocess.run(["alembic", "upgrade", revision])
     if result.returncode != 0:
@@ -141,7 +141,7 @@ def createsuperuser(
 
 @app.command()
 def startapp(name: str = typer.Argument(..., help="App name")):
-    """Create a new Buraq app (like Django's startapp)."""
+    """Create a new Buraq app with the standard directory structure."""
     base = Path(name)
     if base.exists():
         typer.echo(f"App '{name}' already exists.", err=True)
@@ -228,7 +228,7 @@ def collectstatic(
     dest: str | None = typer.Option(None, help="Destination directory"),
     clear: bool = typer.Option(False, help="Clear destination before collecting"),
 ):
-    """Collect all static files into STATIC_ROOT (like Django's collectstatic)."""
+    """Collect all static files into STATIC_ROOT."""
     from buraq.contrib.staticfiles import collect_static
     typer.echo("Collecting static files...")
     result = collect_static(dest_dir=dest, clear=clear)
@@ -256,12 +256,12 @@ def clearcache():
 @app.command()
 def makemessages(
     locale: list[str] = typer.Option(..., "--locale", "-l", help="Locale(s) to generate"),
-    domain: str = typer.Option("django", "--domain", "-d", help="Message domain"),
+    domain: str = typer.Option("messages", "--domain", "-d", help="Message domain"),
     extensions: list[str] = typer.Option(["py", "html"], "--extension", "-e", help="Extensions"),
     ignore: list[str] = typer.Option([], "--ignore", "-i", help="Paths to ignore"),
 ):
     """
-    Extract translatable strings into .po files (like Django's makemessages).
+    Extract translatable strings into .po files.
 
     Example:
         buraq makemessages -l ar
@@ -322,10 +322,10 @@ def makemessages(
 
 @app.command()
 def compilemessages(
-    domain: str = typer.Option("django", "--domain", "-d", help="Message domain (default: django)"),
+    domain: str = typer.Option("messages", "--domain", "-d", help="Message domain"),
 ):
     """
-    Compile .po translation files into binary .mo files (like Django's compilemessages).
+    Compile .po translation files into binary .mo files.
 
     Example:
         buraq compilemessages
@@ -429,7 +429,6 @@ def startproject(
 ):
     """
     Scaffold a new Buraq project with uv, pyproject.toml, and full structure.
-    Like Django's django-admin startproject.
     """
     project_dir = Path(dest or name)
     if project_dir.exists():
@@ -609,7 +608,7 @@ def startproject(
         "from buraq.contrib.admin import BuraqAdmin\n\n"
         "app = Buraq(settings_module='config.settings')\n"
         "admin = BuraqAdmin(app)\n\n\n"
-        "# ── URL Configuration (like Django's urls.py) ──────────────────────\n"
+        "# ── URL Configuration ───────────────────────────────────────────────\n"
         "# Add your apps here after running: python manage.py startapp <name>\n"
         "urlpatterns = [\n"
         "    path('/auth', include('buraq.contrib.auth.urls')),\n"
@@ -624,7 +623,7 @@ def startproject(
     # manage.py — auto-detects .venv so `python manage.py` just works
     (project_dir / "manage.py").write_text(
         '#!/usr/bin/env python\n'
-        '"""Run like Django: python manage.py <command>"""\n'
+        '"""Run: python manage.py <command>"""\n'
         'import os, sys\n'
         'from pathlib import Path\n\n'
         'def _bootstrap():\n'
