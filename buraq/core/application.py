@@ -98,6 +98,9 @@ class Buraq(FastAPI):
             return HTMLResponse(content=detail, status_code=404)
 
     async def _on_startup(self) -> None:
+        from buraq.core.templating import discover_templatetags
+        discover_templatetags()
+
         if settings.USE_I18N:
             from buraq.utils.translation import warmup_catalogs
             warmup_catalogs()

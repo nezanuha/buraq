@@ -104,6 +104,7 @@ nav:
       - ModelForm: topics/forms/modelform.md
     - Templates: topics/templates.md
     - Template Loader: topics/template-loader.md
+    - Template Tags: topics/template-tags.md
     - URLs: topics/urls.md
     - Middleware: topics/middleware.md
     - HTTP Responses: topics/http-responses.md
@@ -113,6 +114,7 @@ nav:
     - Signals: topics/signals.md
     - Internationalization: topics/i18n.md
     - Translatable Models: topics/translatable-models.md
+    - Text Utilities: topics/text.md
     - Timezone: topics/timezone.md
     - Sitemaps: topics/sitemaps.md
     - Admin: topics/admin.md
