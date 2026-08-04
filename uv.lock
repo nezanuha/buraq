@@ -264,7 +264,7 @@ wheels = [
 
 [[package]]
 name = "buraq"
-version = "1.0.0"
+version = "1.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -272,6 +272,7 @@ dependencies = [
     { name = "alembic" },
     { name = "argon2-cffi" },
     { name = "asyncpg" },
+    { name = "babel" },
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "granian" },
@@ -334,6 +335,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "argon2-cffi", specifier = ">=23.1.0" },
     { name = "asyncpg", specifier = ">=0.29.0" },
+    { name = "babel", specifier = ">=2.14.0" },
     { name = "email-validator", specifier = ">=2.1.0" },
     { name = "fastapi", specifier = ">=0.111.0" },
     { name = "granian", specifier = ">=1.5.0" },

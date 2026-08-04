@@ -48,6 +48,7 @@ class Buraq(FastAPI):
         self.middleware("http")(security_headers_middleware)
         register_static(self)
         self._register_apps()
+        self._register_exception_handlers()
 
     def load_urls(self, urlpatterns: list) -> None:
         """
@@ -85,6 +86,16 @@ class Buraq(FastAPI):
                     register_urlpatterns(self, urls_module.urlpatterns, prefix=app_prefix)
             except ModuleNotFoundError:
                 pass
+
+    def _register_exception_handlers(self) -> None:
+        from buraq.http import Http404
+        from starlette.requests import Request
+        from starlette.responses import HTMLResponse
+
+        @self.exception_handler(Http404)
+        async def _http404_handler(request: Request, exc: Http404) -> HTMLResponse:
+            detail = str(exc) if str(exc) else "Not Found"
+            return HTMLResponse(content=detail, status_code=404)
 
     async def _on_startup(self) -> None:
         if settings.USE_I18N:

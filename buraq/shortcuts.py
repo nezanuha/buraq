@@ -1,7 +1,7 @@
 """
 Django-style shortcuts for Buraq views.
 
-from buraq.shortcuts import render, redirect, get_object_or_404
+from buraq.shortcuts import render, redirect, get_object_or_404, render_to_string
 """
 from typing import Any
 
@@ -37,6 +37,23 @@ def redirect(to: str, permanent: bool = False) -> RedirectResponse:
         return redirect('/posts/', permanent=True)
     """
     return RedirectResponse(url=to, status_code=301 if permanent else 302)
+
+
+def render_to_string(
+    template_name: str | list[str],
+    context: dict | None = None,
+    request: Request | None = None,
+) -> str:
+    """
+    Render a template to a string — like Django's render_to_string().
+
+    Useful for rendering email bodies, partial HTML, or any template outside of a view::
+
+        body = render_to_string("emails/welcome.html", {"user": user})
+        html = render_to_string(["partials/card.html", "partials/default.html"], context)
+    """
+    from buraq.template.loader import render_to_string as _render
+    return _render(template_name, context, request)
 
 
 async def get_object_or_404(model: Any, **kwargs) -> Any:

@@ -62,6 +62,10 @@ class BuraqSettings(BaseSettings):
     # Static files
     STATIC_ROOT: str | None = None
 
+    # Timezone
+    USE_TZ: bool = True
+    TIME_ZONE: str = "UTC"
+
     # Internationalization
     USE_I18N: bool = True
     LANGUAGE_CODE: str = "en"
