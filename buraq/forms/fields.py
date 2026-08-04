@@ -75,7 +75,10 @@ class Field:
 
 
 class CharField(Field):
-    def __init__(self, max_length: int = None, min_length: int = None, strip: bool = True, empty_value: str = "", **kwargs):
+    def __init__(
+        self, max_length: int = None, min_length: int = None,
+        strip: bool = True, empty_value: str = "", **kwargs
+    ):
         super().__init__(**kwargs)
         self.max_length = max_length
         self.min_length = min_length
@@ -124,9 +127,15 @@ class IntegerField(Field):
         if value is None:
             return
         if self.min_value is not None and value < self.min_value:
-            raise ValidationError(f"Ensure this value is greater than or equal to {self.min_value}.", code="min_value")
+            raise ValidationError(
+                f"Ensure this value is greater than or equal to {self.min_value}.",
+                code="min_value",
+            )
         if self.max_value is not None and value > self.max_value:
-            raise ValidationError(f"Ensure this value is less than or equal to {self.max_value}.", code="max_value")
+            raise ValidationError(
+                f"Ensure this value is less than or equal to {self.max_value}.",
+                code="max_value",
+            )
 
 
 class FloatField(IntegerField):
@@ -140,7 +149,10 @@ class FloatField(IntegerField):
 
 
 class DecimalField(Field):
-    def __init__(self, max_digits: int = None, decimal_places: int = None, min_value=None, max_value=None, **kwargs):
+    def __init__(
+        self, max_digits: int = None, decimal_places: int = None,
+        min_value=None, max_value=None, **kwargs
+    ):
         super().__init__(**kwargs)
         self.max_digits = max_digits
         self.decimal_places = decimal_places
@@ -160,9 +172,15 @@ class DecimalField(Field):
         if value is None:
             return
         if self.min_value is not None and value < self.min_value:
-            raise ValidationError(f"Ensure this value is greater than or equal to {self.min_value}.", code="min_value")
+            raise ValidationError(
+                f"Ensure this value is greater than or equal to {self.min_value}.",
+                code="min_value",
+            )
         if self.max_value is not None and value > self.max_value:
-            raise ValidationError(f"Ensure this value is less than or equal to {self.max_value}.", code="max_value")
+            raise ValidationError(
+                f"Ensure this value is less than or equal to {self.max_value}.",
+                code="max_value",
+            )
 
 
 class BooleanField(Field):

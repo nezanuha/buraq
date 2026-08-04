@@ -420,7 +420,7 @@ class Manager:
 
     async def bulk_create(self, records: list[dict], ignore_conflicts: bool = False) -> list:
         from buraq.core.db import SessionLocal
-        # Use only column names as keys — never pass SA instance dicts which contain _sa_instance_state.
+        # Use only column names as keys — never pass SA instance dicts (_sa_instance_state).
         col_names = {c.name for c in self._model.__table__.columns}
         clean_records = [{k: v for k, v in r.items() if k in col_names} for r in records]
         async with SessionLocal() as db:

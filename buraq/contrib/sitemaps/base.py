@@ -7,8 +7,9 @@ Usage:
 from __future__ import annotations
 
 import inspect
+from collections.abc import Callable
 from datetime import date, datetime
-from typing import Any, Callable
+from typing import Any
 
 
 class Sitemap:

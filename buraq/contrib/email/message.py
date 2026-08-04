@@ -23,7 +23,9 @@ class EmailMessage:
     def _get_from(self) -> str:
         return self.from_email or getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")  # type: ignore[attr-defined]
 
-    def attach(self, filename: str, content: bytes, mimetype: str = "application/octet-stream") -> None:
+    def attach(
+        self, filename: str, content: bytes, mimetype: str = "application/octet-stream"
+    ) -> None:
         self.attachments.append((filename, content, mimetype))
 
     def attach_file(self, path: str) -> None:

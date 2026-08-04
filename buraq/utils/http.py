@@ -61,9 +61,8 @@ def _is_safe_url(url: str, allowed_hosts: set[str], require_https: bool = False)
     # No scheme and no netloc → relative URL
     if not scheme and not netloc:
         # Guard against protocol-relative (//evil.com) and backslash tricks
-        if url.startswith("//") or url.startswith("\\\\") or url.startswith("\\/") or url.startswith("/\\"):
-            return False
-        return True
+        bad = ("//", "\\\\", "\\/", "/\\")
+        return not any(url.startswith(b) for b in bad)
 
     # Only http/https allowed
     if scheme not in ("http", "https"):

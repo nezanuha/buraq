@@ -30,7 +30,7 @@ Usage in any app's templatetags.py::
 """
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 
 class Library:
@@ -131,7 +131,7 @@ class Library:
 
     # ── Merge another Library into this one ───────────────────────────────────
 
-    def merge(self, other: "Library") -> None:
+    def merge(self, other: Library) -> None:
         self._globals.update(other._globals)
         self._filters.update(other._filters)
         self._tests.update(other._tests)

@@ -78,9 +78,10 @@ class View:
 
         if best_sig is not None:
             params = list(best_sig.parameters.values())
-            new_params = [
-                inspect.Parameter("request", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Request)
-            ] + [
+            req_param = inspect.Parameter(
+                "request", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Request
+            )
+            new_params = [req_param] + [
                 p for p in params
                 if p.name not in ("self", "request")
                 and p.kind not in (

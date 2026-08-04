@@ -88,9 +88,10 @@ class Buraq(FastAPI):
                 pass
 
     def _register_exception_handlers(self) -> None:
-        from buraq.http import Http404
         from starlette.requests import Request
         from starlette.responses import HTMLResponse
+
+        from buraq.http import Http404
 
         @self.exception_handler(Http404)
         async def _http404_handler(request: Request, exc: Http404) -> HTMLResponse:

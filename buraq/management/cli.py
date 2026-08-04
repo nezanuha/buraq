@@ -255,9 +255,9 @@ def clearcache():
 
 @app.command()
 def makemessages(
-    locale: list[str] = typer.Option(..., "--locale", "-l", help="Locale(s) to generate, e.g. -l ar -l fr"),
-    domain: str = typer.Option("django", "--domain", "-d", help="Message domain (default: django)"),
-    extensions: list[str] = typer.Option(["py", "html"], "--extension", "-e", help="File extensions to scan"),
+    locale: list[str] = typer.Option(..., "--locale", "-l", help="Locale(s) to generate"),
+    domain: str = typer.Option("django", "--domain", "-d", help="Message domain"),
+    extensions: list[str] = typer.Option(["py", "html"], "--extension", "-e", help="Extensions"),
     ignore: list[str] = typer.Option([], "--ignore", "-i", help="Paths to ignore"),
 ):
     """
@@ -268,14 +268,12 @@ def makemessages(
         buraq makemessages -l ar -l fr -l es
     """
     try:
-        from babel.messages.frontend import CommandLineInterface
+        import babel.messages  # noqa: F401
     except ImportError:
         typer.echo("Error: Babel is required. Run: buraq install babel", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     cwd = Path.cwd()
-    input_paths = [str(cwd)]
-    ext_list = ",".join(f"*.{e}" for e in extensions)
     ignore_list = list(ignore) + [".venv", "site", "dist", "__pycache__"]
 
     for lang in locale:
@@ -301,10 +299,16 @@ def makemessages(
             raise typer.Exit(1)
 
         if po_path.exists():
-            update_args = ["pybabel", "update", "-i", str(pot_path), "-d", str(cwd / "locale"), "-l", lang]
+            update_args = [
+                "pybabel", "update", "-i", str(pot_path),
+                "-d", str(cwd / "locale"), "-l", lang,
+            ]
             result = subprocess.run(update_args, capture_output=True, text=True)
         else:
-            init_args = ["pybabel", "init", "-i", str(pot_path), "-d", str(cwd / "locale"), "-l", lang]
+            init_args = [
+                "pybabel", "init", "-i", str(pot_path),
+                "-d", str(cwd / "locale"), "-l", lang,
+            ]
             result = subprocess.run(init_args, capture_output=True, text=True)
 
         if result.returncode != 0:
@@ -329,9 +333,9 @@ def compilemessages(
     try:
         import subprocess as _sp
         _sp.run(["pybabel", "--version"], capture_output=True, check=True)
-    except (FileNotFoundError, Exception):
+    except (FileNotFoundError, Exception):  # noqa: BLE001
         typer.echo("Error: Babel is required. Run: buraq install babel", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     locale_dir = Path.cwd() / "locale"
     if not locale_dir.exists():
@@ -684,7 +688,10 @@ def run_command(
         try:
             mod = importlib.import_module(f"{app_name}.management.commands.{command}")
             if not hasattr(mod, "Command"):
-                typer.echo(f"Module {app_name}.management.commands.{command} has no Command class.", err=True)
+                typer.echo(
+                    f"Module {app_name}.management.commands.{command} has no Command class.",
+                    err=True,
+                )
                 continue
             cmd = mod.Command()
             parser = cmd.create_parser("manage.py", command)

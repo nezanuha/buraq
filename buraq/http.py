@@ -5,12 +5,12 @@ Usage:
 """
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Iterator
+from typing import Any
 
 import orjson
 from starlette.responses import Response
 from starlette.responses import StreamingResponse as _StreamingResponse
-
 
 # ── Base response ──────────────────────────────────────────────────────────────
 

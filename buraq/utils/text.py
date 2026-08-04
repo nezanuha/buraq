@@ -13,7 +13,6 @@ import textwrap
 import unicodedata
 from html.parser import HTMLParser
 
-
 # ── slugify ───────────────────────────────────────────────────────────────────
 
 def slugify(value: str, allow_unicode: bool = False) -> str:
@@ -209,9 +208,10 @@ def unescape_entities(text: str) -> str:
 
 # ── HTML truncation internals ─────────────────────────────────────────────────
 
-_VOID_ELEMENTS = frozenset(
-    "area base br col embed hr img input link meta param source track wbr".split()
-)
+_VOID_ELEMENTS = frozenset([
+    "area", "base", "br", "col", "embed", "hr", "img",
+    "input", "link", "meta", "param", "source", "track", "wbr",
+])
 
 
 class _TruncateHTMLParser(HTMLParser):

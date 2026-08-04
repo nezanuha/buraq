@@ -19,7 +19,9 @@ Usage::
 
     # Read
     tr = await article.get_translation("ar")          # ArticleTranslation instance
-    title = await article.safe_translation_getter("title", language_code="ar", fallback_language="en")
+    title = await article.safe_translation_getter(
+        "title", language_code="ar", fallback_language="en"
+    )
 
     # Write
     await article.set_translation("ar", title="مرحبا", content="...")
@@ -32,7 +34,7 @@ from __future__ import annotations
 import sqlalchemy as sa
 
 from buraq.core.db import Base, SessionLocal
-from buraq.orm.base import Model, _to_table_name
+from buraq.orm.base import Model
 from buraq.orm.fields import Field
 from buraq.orm.manager import DoesNotExist, Manager
 

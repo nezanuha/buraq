@@ -62,6 +62,7 @@ async def login(request, user) -> None:
 
     # Update last_login asynchronously (fire-and-forget — don't block the view)
     import asyncio
+
     from buraq.utils.timezone import now as _now
 
     async def _update_last_login():

@@ -157,7 +157,9 @@ class DetailView(SingleObjectMixin, ContextMixin, TemplateMixin, View):
     async def get(self, request, **kwargs):
         self.kwargs = kwargs
         obj = await self.get_object()
-        ctx = await self.get_context_data(object=obj, **{self.get_context_object_name(): obj}, **kwargs)
+        ctx = await self.get_context_data(
+            object=obj, **{self.get_context_object_name(): obj}, **kwargs
+        )
         return render(request, self.get_template_name(), ctx)
 
 

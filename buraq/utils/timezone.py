@@ -10,14 +10,13 @@ Usage:
 from __future__ import annotations
 
 import contextvars
+from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import date, datetime
-from datetime import timezone as _utc
-from typing import Generator
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from datetime import UTC, date, datetime
+from zoneinfo import ZoneInfo
 
 # UTC singleton — same as datetime.timezone.utc but named for clarity
-UTC = _utc.utc
+UTC = UTC
 
 _active_timezone: contextvars.ContextVar[ZoneInfo | None] = contextvars.ContextVar(
     "_active_timezone", default=None

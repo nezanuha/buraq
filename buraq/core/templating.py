@@ -26,11 +26,11 @@ def get_templates() -> Jinja2Templates:
         # i18n globals
         if settings.USE_I18N:
             from buraq.utils.translation import (
+                get_language,
+                get_language_bidi,
                 gettext,
                 ngettext,
                 pgettext,
-                get_language,
-                get_language_bidi,
             )
             _templates.env.globals["_"]               = gettext
             _templates.env.globals["gettext"]         = gettext

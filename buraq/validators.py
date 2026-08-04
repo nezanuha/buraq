@@ -18,8 +18,9 @@ class MaxLengthValidator:
 
     def __call__(self, value):
         if value and len(str(value)) > self.limit:
+            n = len(str(value))
             raise ValidationError(
-                f"Ensure this value has at most {self.limit} characters (it has {len(str(value))}).",
+                f"Ensure this value has at most {self.limit} characters (it has {n}).",
                 code="max_length",
                 params={"limit_value": self.limit, "show_value": len(str(value))},
             )
@@ -31,8 +32,9 @@ class MinLengthValidator:
 
     def __call__(self, value):
         if value and len(str(value)) < self.limit:
+            n = len(str(value))
             raise ValidationError(
-                f"Ensure this value has at least {self.limit} characters (it has {len(str(value))}).",
+                f"Ensure this value has at least {self.limit} characters (it has {n}).",
                 code="min_length",
                 params={"limit_value": self.limit, "show_value": len(str(value))},
             )
@@ -65,7 +67,10 @@ class MinValueValidator:
 
 
 class RegexValidator:
-    def __init__(self, regex: str, message: str = "Enter a valid value.", code: str = "invalid", inverse_match: bool = False):
+    def __init__(
+        self, regex: str, message: str = "Enter a valid value.",
+        code: str = "invalid", inverse_match: bool = False
+    ):
         self.regex = _re.compile(regex)
         self.message = message
         self.code = code
@@ -83,8 +88,10 @@ class EmailValidator:
     user_regex = _re.compile(r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*$"
                               r"|^\"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-\011\013\014\016-\177])*\"$)",
                               _re.IGNORECASE)
-    domain_regex = _re.compile(r"(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)$",
-                                _re.IGNORECASE)
+    domain_regex = _re.compile(
+        r"(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)$",
+        _re.IGNORECASE,
+    )
 
     def __call__(self, value: str):
         if not value or "@" not in value:

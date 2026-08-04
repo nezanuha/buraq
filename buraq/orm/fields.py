@@ -213,7 +213,10 @@ class ForeignKey(Field):
         author_id = ForeignKey("buraq_users") # string table name
     """
 
-    def __init__(self, to: Any, on_delete: str = "CASCADE", null: bool = False, related_name: str = "", **kwargs):
+    def __init__(
+        self, to: Any, on_delete: str = "CASCADE", null: bool = False,
+        related_name: str = "", **kwargs
+    ):
         super().__init__(null=null, **kwargs)
         self._to = to
         self.related_name = related_name
@@ -308,7 +311,10 @@ class ManyToManyField(Field):
         if through is None:
             from buraq.core.db import Base
             source_table = model_cls.__tablename__
-            target_table = to if isinstance(to, str) else getattr(to, "__tablename__", str(to).lower() + "s")
+            target_table = (
+                to if isinstance(to, str)
+                else getattr(to, "__tablename__", str(to).lower() + "s")
+            )
             assoc_table_name = f"{source_table}_{target_table}"
 
             # Only create if not already defined
@@ -317,8 +323,14 @@ class ManyToManyField(Field):
                 self._assoc_table = Table(
                     assoc_table_name,
                     Base.metadata,
-                    Column("source_id", Integer, ForeignKey(f"{source_table}.id", ondelete="CASCADE"), primary_key=True),
-                    Column("target_id", Integer, ForeignKey(f"{target_table}.id", ondelete="CASCADE"), primary_key=True),
+                    Column(
+                        "source_id", Integer,
+                        ForeignKey(f"{source_table}.id", ondelete="CASCADE"), primary_key=True,
+                    ),
+                    Column(
+                        "target_id", Integer,
+                        ForeignKey(f"{target_table}.id", ondelete="CASCADE"), primary_key=True,
+                    ),
                 )
             else:
                 self._assoc_table = Base.metadata.tables[assoc_table_name]

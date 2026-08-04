@@ -98,7 +98,10 @@ class BaseForm:
                 self._cleaned_data[name] = value
                 cleaner = getattr(self, f"clean_{name}", None)
                 if cleaner:
-                    value = await cleaner(value) if inspect.iscoroutinefunction(cleaner) else cleaner(value)
+                    value = (
+                        await cleaner(value) if inspect.iscoroutinefunction(cleaner)
+                        else cleaner(value)
+                    )
                     self._cleaned_data[name] = value
             except ValidationError as e:
                 self.add_error(name, e.message)

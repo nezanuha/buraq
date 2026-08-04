@@ -225,7 +225,9 @@ class Model(Base):
         async with SessionLocal() as db:
             fresh = await db.get(self.__class__, self.id)
             if fresh is None:
-                raise self.DoesNotExist(f"{self.__class__.__name__} with id={self.id} does not exist.")
+                raise self.DoesNotExist(
+                    f"{self.__class__.__name__} with id={self.id} does not exist."
+                )
             for col in self.__class__.__table__.columns:
                 setattr(self, col.name, getattr(fresh, col.name))
 

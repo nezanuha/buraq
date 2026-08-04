@@ -18,8 +18,9 @@ from __future__ import annotations
 import contextvars
 import gettext as _gettext
 import threading
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Generator
+from typing import Any
 
 # Sentinel — set by deactivate_all() to disable translation entirely
 _DEACTIVATED: str = "__deactivated__"

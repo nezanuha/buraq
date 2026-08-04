@@ -25,7 +25,9 @@ from starlette.responses import RedirectResponse
 _log = logging.getLogger(__name__)
 
 
-def login_required(view_func=None, login_url: str = "/auth/login", redirect_field_name: str = "next"):
+def login_required(
+    view_func=None, login_url: str = "/auth/login", redirect_field_name: str = "next"
+):
     """
     Require the user to be authenticated (session-based via AuthenticationMiddleware).
     Redirects to login_url if not authenticated.
@@ -161,7 +163,9 @@ def never_cache(func):
     async def wrapper(request, *args, **kwargs):
         response = await func(request, *args, **kwargs)
         if hasattr(response, "headers"):
-            response.headers["Cache-Control"] = "max-age=0, no-cache, no-store, must-revalidate, private"
+            response.headers["Cache-Control"] = (
+                "max-age=0, no-cache, no-store, must-revalidate, private"
+            )
             response.headers["Expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
             response.headers["Pragma"] = "no-cache"
         return response
