@@ -67,11 +67,27 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
-      - name: Create git tag
+      - name: Install docs dependencies
+        if: steps.tag_check.outputs.exists == 'false'
+        run: uv sync --group docs
+
+      - name: Configure git
         if: steps.tag_check.outputs.exists == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy docs
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          MINOR=$(echo "$VERSION" | cut -d. -f1,2)
+          uv run mike deploy --push --deploy-prefix docs --update-aliases "$MINOR" latest
+          uv run mike set-default --push --deploy-prefix docs latest
+
+      - name: Create git tag
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
           git tag ${{ steps.version.outputs.tag }}
           git push origin ${{ steps.version.outputs.tag }}
 
