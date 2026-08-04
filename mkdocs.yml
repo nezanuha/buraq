@@ -103,13 +103,17 @@ nav:
       - Validation: topics/forms/validation.md
       - ModelForm: topics/forms/modelform.md
     - Templates: topics/templates.md
+    - Template Loader: topics/template-loader.md
     - URLs: topics/urls.md
     - Middleware: topics/middleware.md
+    - HTTP Responses: topics/http-responses.md
     - Authentication: topics/authentication.md
     - Sessions: topics/sessions.md
     - Cache: topics/cache.md
     - Signals: topics/signals.md
     - Internationalization: topics/i18n.md
+    - Timezone: topics/timezone.md
+    - Sitemaps: topics/sitemaps.md
     - Admin: topics/admin.md
     - Static Files: topics/static-files.md
     - Email: topics/email.md
