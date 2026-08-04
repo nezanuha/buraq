@@ -4,6 +4,13 @@ from typing import Any
 
 import sqlalchemy as sa
 
+CASCADE = "CASCADE"
+PROTECT = "PROTECT"
+SET_NULL = "SET_NULL"
+DO_NOTHING = "DO_NOTHING"
+SET_DEFAULT = "SET_DEFAULT"
+RESTRICT = "RESTRICT"
+
 
 class Field:
     """Base field — all Buraq fields inherit from this."""
@@ -21,6 +28,7 @@ class Field:
         choices: list = None,
         validators: list = None,
         editable: bool = True,
+        help_text: str = "",
     ):
         self.null = null
         self.blank = blank
@@ -31,6 +39,7 @@ class Field:
         self.choices = choices or []
         self.validators = validators or []
         self.editable = editable
+        self.help_text = help_text
 
     def to_sa_column(self, name: str = "") -> sa.Column:
         kwargs: dict[str, Any] = {
@@ -146,7 +155,19 @@ class NullBooleanField(Field):
 
 
 class TextField(Field):
-    _sa_type = sa.Text
+    def __init__(self, max_length: int = None, **kwargs):
+        super().__init__(**kwargs)
+        self.max_length = max_length
+
+    def to_sa_column(self, name: str = "") -> sa.Column:
+        col_type = sa.String(self.max_length) if self.max_length else sa.Text
+        return sa.Column(
+            col_type,
+            nullable=self.null,
+            unique=self.unique,
+            index=self.db_index,
+            default=self.default,
+        )
 
 
 class DateField(Field):
@@ -287,12 +308,16 @@ class ManyToManyField(Field):
         await post.tags.clear()
     """
 
-    def __init__(self, to: Any, through: Any = None, related_name: str = "", **kwargs):
+    def __init__(
+        self, to: Any, through: Any = None, related_name: str = "",
+        symmetrical: bool = True, **kwargs
+    ):
         # ManyToManyField does NOT create a column on the model table
         super().__init__(**kwargs)
         self._to = to
         self.through = through
         self.related_name = related_name
+        self.symmetrical = symmetrical
         self._attr_name = None  # set by base.py when attaching
 
     def to_sa_column(self, name: str = ""):

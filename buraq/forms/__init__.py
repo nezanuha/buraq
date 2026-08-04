@@ -27,6 +27,18 @@ from buraq.forms.fields import (
     UUIDField,
 )
 from buraq.forms.forms import BoundField, Form, ModelForm, ValidationError
+from buraq.forms.widgets import (
+    CheckboxInput,
+    DateInput,
+    FileInput,
+    HiddenInput,
+    NumberInput,
+    Select,
+    Textarea,
+    TextInput,
+    URLInput,
+    Widget,
+)
 
 __all__ = [
     "Form", "ModelForm", "BoundField", "ValidationError",
@@ -36,4 +48,6 @@ __all__ = [
     "TypedChoiceField", "FileField", "ImageField", "UUIDField", "JSONField",
     "RegexField", "TextField", "PasswordField", "HiddenField",
     "IPAddressField", "GenericIPAddressField",
+    "Widget", "TextInput", "Textarea", "FileInput", "Select", "CheckboxInput",
+    "NumberInput", "URLInput", "DateInput", "HiddenInput",
 ]

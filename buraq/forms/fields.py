@@ -2,7 +2,8 @@
 Form fields — built-in field types with validation.
 """
 import re
-from datetime import date, datetime
+from datetime import date as _date
+from datetime import datetime as _datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -228,18 +229,22 @@ class SlugField(CharField):
 
 
 class DateField(Field):
-    input_formats = ["%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%d/%m/%Y", "%d/%m/%y"]
+    _default_input_formats = ["%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%d/%m/%Y", "%d/%m/%y"]
+
+    def __init__(self, input_formats=None, **kwargs):
+        super().__init__(**kwargs)
+        self.input_formats = input_formats or self._default_input_formats
 
     def to_python(self, value):
         if value in (None, ""):
             return None
-        if isinstance(value, datetime):
+        if isinstance(value, _datetime):
             return value.date()
-        if isinstance(value, date):
+        if isinstance(value, _date):
             return value
         for fmt in self.input_formats:
             try:
-                return datetime.strptime(str(value).strip(), fmt).date()
+                return _datetime.strptime(str(value).strip(), fmt).date()
             except (ValueError, TypeError):
                 continue
         raise ValidationError("Enter a valid date.", code="invalid")
@@ -251,11 +256,11 @@ class DateTimeField(Field):
     def to_python(self, value):
         if value in (None, ""):
             return None
-        if isinstance(value, datetime):
+        if isinstance(value, _datetime):
             return value
         for fmt in self.input_formats:
             try:
-                return datetime.strptime(str(value).strip(), fmt)
+                return _datetime.strptime(str(value).strip(), fmt)
             except (ValueError, TypeError):
                 continue
         raise ValidationError("Enter a valid date/time.", code="invalid")
@@ -270,7 +275,7 @@ class TimeField(Field):
             return value
         for fmt in ["%H:%M:%S", "%H:%M"]:
             try:
-                return datetime.strptime(str(value).strip(), fmt).time()
+                return _datetime.strptime(str(value).strip(), fmt).time()
             except (ValueError, TypeError):
                 continue
         raise ValidationError("Enter a valid time.", code="invalid")

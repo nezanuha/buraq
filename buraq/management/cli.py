@@ -704,5 +704,11 @@ def run_command(
     raise typer.Exit(1)
 
 
+def execute_from_command_line(argv=None):
+    """Entry point for manage.py."""
+    import sys
+    app(args=(argv or sys.argv)[1:], standalone_mode=True)
+
+
 if __name__ == "__main__":
     app()

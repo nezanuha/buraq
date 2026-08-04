@@ -147,3 +147,33 @@ class GenericSitemap(Sitemap):
         if hasattr(item, "get_absolute_url"):
             return item.get_absolute_url()
         return str(item)
+
+
+async def sitemap_index(request: Any, sitemaps: dict) -> Any:
+    """
+    Return a ``<sitemapindex>`` XML document with one ``<sitemap>`` entry per
+    key in *sitemaps*.  Pass *sitemaps* via path kwargs or call directly.
+
+    Usage::
+
+        from buraq.contrib.sitemaps import sitemap_index, PostSitemap
+
+        path("/sitemap.xml", sitemap_index, {"sitemaps": {"posts": PostSitemap()}})
+    """
+    from starlette.responses import Response
+
+    proto = "https"
+    host = request.headers.get("host", "") if request else ""
+
+    entries: list[str] = []
+    for section in sitemaps:
+        loc = f"{proto}://{host}/sitemap-{section}.xml"
+        entries.append(f"  <sitemap><loc>{loc}</loc></sitemap>")
+
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "\n".join(entries)
+        + "\n</sitemapindex>"
+    )
+    return Response(content=xml, media_type="application/xml")

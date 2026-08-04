@@ -219,3 +219,9 @@ def require_http_methods(*methods):
 require_GET  = require_http_methods("GET")
 require_POST = require_http_methods("POST")
 require_safe = require_http_methods("GET", "HEAD")
+
+
+def csrf_exempt(func):
+    """Mark a view as exempt from CSRF protection."""
+    func._csrf_exempt = True
+    return func

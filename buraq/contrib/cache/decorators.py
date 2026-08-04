@@ -73,3 +73,16 @@ def cache_result(key: str | None = None, timeout: int = 300):
 
         return wrapper
     return decorator
+
+
+def never_cache(func):
+    """Prevent caching of a response by setting appropriate headers."""
+    @functools.wraps(func)
+    async def wrapper(request, *args, **kwargs):
+        response = await func(request, *args, **kwargs)
+        response.headers["Cache-Control"] = (
+            "max-age=0, no-cache, no-store, must-revalidate, private"
+        )
+        response.headers["Expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
+        return response
+    return wrapper

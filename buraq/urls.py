@@ -77,13 +77,14 @@ class URLPattern:
 class URLInclude:
     module_path: str
     _prefix: str = ""
+    namespace: str = ""
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def include(module_path: str) -> URLInclude:
+def include(module_path: str, namespace: str = "") -> URLInclude:
     """Include urlpatterns from another module."""
-    return URLInclude(module_path)
+    return URLInclude(module_path, namespace=namespace)
 
 
 _ALL_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
@@ -144,14 +145,18 @@ _route_registry: dict[str, str] = {}
 # Names registered under i18n_patterns() — get a language prefix prepended
 _i18n_route_names: set[str] = set()
 
+# Maps route name → prefix_default_language flag
+_i18n_prefix_default: dict[str, bool] = {}
+
 
 @dataclass
 class I18nURLGroup:
     """Wraps URL patterns that should be served under a language prefix."""
     patterns: list
+    prefix_default_language: bool = True
 
 
-def i18n_patterns(*patterns: Any) -> I18nURLGroup:
+def i18n_patterns(*patterns: Any, prefix_default_language: bool = True) -> I18nURLGroup:
     """
     Mark URL patterns as language-prefixed.
 
@@ -174,7 +179,7 @@ def i18n_patterns(*patterns: Any) -> I18nURLGroup:
             ),
         ]
     """
-    return I18nURLGroup(list(patterns))
+    return I18nURLGroup(list(patterns), prefix_default_language=prefix_default_language)
 
 
 def reverse(name: str, **path_params: Any) -> str:
@@ -212,6 +217,10 @@ def reverse(name: str, **path_params: Any) -> str:
 
     default_lang: str = getattr(settings, "LANGUAGE_CODE", "en")
     lang = get_language()
+
+    prefix_default = _i18n_prefix_default.get(name, True)
+    if lang == default_lang and not prefix_default:
+        return path_str
 
     if lang == default_lang:
         return path_str
@@ -308,16 +317,27 @@ def register_urlpatterns(
     patterns: list,
     prefix: str = "",
     _i18n: bool = False,
+    _namespace: str = "",
+    _prefix_default_language: bool = True,
 ) -> None:
     """Recursively register all URL patterns with a FastAPI app instance."""
     for item in patterns:
         if isinstance(item, I18nURLGroup):
-            register_urlpatterns(app, item.patterns, prefix, _i18n=True)
+            register_urlpatterns(
+                app, item.patterns, prefix, _i18n=True,
+                _namespace=_namespace,
+                _prefix_default_language=item.prefix_default_language,
+            )
 
         elif isinstance(item, URLInclude):
             module = importlib.import_module(item.module_path)
             sub_patterns = getattr(module, "urlpatterns", [])
-            register_urlpatterns(app, sub_patterns, prefix + item._prefix, _i18n=_i18n)
+            ns = item.namespace or _namespace
+            register_urlpatterns(
+                app, sub_patterns, prefix + item._prefix, _i18n=_i18n,
+                _namespace=ns,
+                _prefix_default_language=_prefix_default_language,
+            )
 
         elif isinstance(item, URLPattern):
             full_path = (prefix + item.path).replace("//", "/") or "/"
@@ -325,10 +345,12 @@ def register_urlpatterns(
             view = _patch_cbv_signature(view, full_path, item.param_types)
             kw = dict(item.extra)
             if item.name:
-                kw["name"] = item.name
-                _route_registry[item.name] = full_path
+                reg_name = f"{_namespace}:{item.name}" if _namespace else item.name
+                kw["name"] = reg_name
+                _route_registry[reg_name] = full_path
                 if _i18n:
-                    _i18n_route_names.add(item.name)
+                    _i18n_route_names.add(reg_name)
+                    _i18n_prefix_default[reg_name] = _prefix_default_language
             if len(item.methods) == 1:
                 # Single method — use the convenience decorator (app.get, app.post, etc.)
                 getattr(app, item.methods[0].lower())(full_path, **kw)(view)
