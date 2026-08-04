@@ -145,3 +145,15 @@ async def webhook(request):
 ```
 
 `csrf_exempt` marks the view with `_csrf_exempt = True`. The CSRF middleware skips validation for such views.
+
+## never_cache
+
+```python
+from buraq.decorators import never_cache
+
+@never_cache
+async def user_dashboard(request):
+    ...
+```
+
+Adds `Cache-Control: no-store`, `Pragma: no-cache`, and `Expires: 0` headers to every response — prevents browsers and proxies from caching sensitive pages.
