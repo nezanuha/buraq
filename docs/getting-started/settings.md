@@ -96,6 +96,13 @@ JWT_ALGORITHM       = "HS256"
 JWT_EXPIRY_MINUTES  = 60
 ```
 
+## Timezone
+
+```python
+USE_TZ    = True     # store and return timezone-aware datetimes (default: True)
+TIME_ZONE = "UTC"    # default timezone — any IANA name, e.g. "America/New_York"
+```
+
 ## Sessions
 
 ```python

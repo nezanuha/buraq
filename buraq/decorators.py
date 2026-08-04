@@ -27,7 +27,7 @@ _log = logging.getLogger(__name__)
 
 def login_required(view_func=None, login_url: str = "/auth/login", redirect_field_name: str = "next"):
     """
-    Require the user to be authenticated (valid JWT Bearer token).
+    Require the user to be authenticated (session-based via AuthenticationMiddleware).
     Redirects to login_url if not authenticated.
 
     Can be used as:
@@ -37,23 +37,13 @@ def login_required(view_func=None, login_url: str = "/auth/login", redirect_fiel
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(request, *args, **kwargs):
-            auth = request.headers.get("authorization", "")
-            if not auth.startswith("Bearer "):
+            user = getattr(request, "user", None)
+            if not (user and getattr(user, "is_authenticated", False)):
                 next_url = str(request.url)
                 return RedirectResponse(
                     url=f"{login_url}?{redirect_field_name}={next_url}",
                     status_code=302,
                 )
-            token = auth.removeprefix("Bearer ").strip()
-            try:
-                from buraq.core.auth import decode_token
-                decode_token(token)
-            except Exception as exc:
-                import jwt as _jwt
-                if isinstance(exc, (_jwt.PyJWTError, ValueError)):
-                    return RedirectResponse(url=login_url, status_code=302)
-                _log.exception("Unexpected error during token decode in login_required")
-                raise
             return await func(request, *args, **kwargs)
         return wrapper
 
@@ -68,18 +58,11 @@ def staff_required(view_func=None, login_url: str = "/auth/login"):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(request, *args, **kwargs):
-            auth = request.headers.get("authorization", "")
-            if not auth.startswith("Bearer "):
+            user = getattr(request, "user", None)
+            if not (user and getattr(user, "is_authenticated", False)):
                 return RedirectResponse(url=login_url, status_code=302)
-            try:
-                from buraq.core.auth import decode_token
-                payload = decode_token(auth.removeprefix("Bearer ").strip())
-                if not payload.get("is_staff"):
-                    raise HTTPException(status_code=403, detail="Staff access required.")
-            except HTTPException:
-                raise
-            except Exception:
-                return RedirectResponse(url=login_url, status_code=302)
+            if not getattr(user, "is_staff", False):
+                raise HTTPException(status_code=403, detail="Staff access required.")
             return await func(request, *args, **kwargs)
         return wrapper
 
@@ -93,18 +76,11 @@ def superuser_required(view_func=None, login_url: str = "/auth/login"):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(request, *args, **kwargs):
-            auth = request.headers.get("authorization", "")
-            if not auth.startswith("Bearer "):
+            user = getattr(request, "user", None)
+            if not (user and getattr(user, "is_authenticated", False)):
                 return RedirectResponse(url=login_url, status_code=302)
-            try:
-                from buraq.core.auth import decode_token
-                payload = decode_token(auth.removeprefix("Bearer ").strip())
-                if not payload.get("is_superuser"):
-                    raise HTTPException(status_code=403, detail="Superuser access required.")
-            except HTTPException:
-                raise
-            except Exception:
-                return RedirectResponse(url=login_url, status_code=302)
+            if not getattr(user, "is_superuser", False):
+                raise HTTPException(status_code=403, detail="Superuser access required.")
             return await func(request, *args, **kwargs)
         return wrapper
 

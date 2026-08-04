@@ -112,6 +112,7 @@ nav:
     - Cache: topics/cache.md
     - Signals: topics/signals.md
     - Internationalization: topics/i18n.md
+    - Translatable Models: topics/translatable-models.md
     - Timezone: topics/timezone.md
     - Sitemaps: topics/sitemaps.md
     - Admin: topics/admin.md

@@ -11,6 +11,7 @@ Buraq automatically applies these (configured via settings):
 | CORS | Cross-Origin Resource Sharing headers |
 | GZip | Response compression |
 | Session | Cookie-based sessions |
+| Authentication | Reads session, sets `request.user` (`User` or `AnonymousUser`) |
 | Security headers | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, etc. |
 
 ## CORS settings
@@ -53,7 +54,18 @@ app.add_middleware(RequestTimingMiddleware)
 
 ## Middleware order
 
-Middleware is applied in reverse registration order — the last one registered is the outermost layer (first to process the request, last to process the response). Register middleware that must run first (e.g., authentication) last.
+Middleware is applied in reverse registration order — the last one registered is the outermost layer (first to process the request, last to process the response).
+
+`AuthenticationMiddleware` depends on `SessionMiddleware` being present, so register `AuthenticationMiddleware` after `SessionMiddleware`:
+
+```python
+from buraq.contrib.auth.middleware import AuthenticationMiddleware
+from buraq.contrib.sessions import SessionMiddleware
+from buraq.conf import settings
+
+app.add_middleware(AuthenticationMiddleware)   # registered second → runs first
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+```
 
 ## Rate limiting
 

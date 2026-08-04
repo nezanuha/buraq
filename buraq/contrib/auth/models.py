@@ -1,6 +1,23 @@
 from buraq import models
 
 
+class AnonymousUser:
+    """Represents an unauthenticated user."""
+    id           = None
+    pk           = None
+    username     = ""
+    is_active    = False
+    is_staff     = False
+    is_superuser = False
+    is_authenticated = False
+
+    def __str__(self):
+        return "AnonymousUser"
+
+    def __repr__(self):
+        return "<AnonymousUser>"
+
+
 class User(models.Model):
     email           = models.CharField(max_length=255, unique=True, db_index=True)
     username        = models.CharField(max_length=150, unique=True, db_index=True)
@@ -15,6 +32,8 @@ class User(models.Model):
 
     class Meta:
         table_name = "buraq_users"
+
+    is_authenticated = True
 
     @property
     def full_name(self) -> str:

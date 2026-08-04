@@ -7,11 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-04
+
+### Added
+- `HttpResponse`, `JsonResponse`, `StreamingHttpResponse` — HTTP response classes; `JsonResponse` uses orjson (Rust) for high-performance serialization
+- `Http404` — raise in any view to return a 404 response; exception handler registered automatically at app startup
+- `HttpResponseRedirect`, `HttpResponsePermanentRedirect` — 302 and 301 redirects
+- `HttpResponseNotFound`, `HttpResponseForbidden`, `HttpResponseBadRequest`, `HttpResponseNotAllowed`, `HttpResponseGone`, `HttpResponseNotModified`, `HttpResponseServerError` — standard HTTP error responses
+- `buraq.utils.timezone` — timezone utilities: `now()`, `localtime()`, `localdate()`, `make_aware()`, `make_naive()`, `is_aware()`, `is_naive()`, `activate()`, `deactivate()`, `override()`; uses stdlib `zoneinfo` (C extension, zero extra deps), async-safe via `contextvars`
+- `USE_TZ` and `TIME_ZONE` settings
+- `url_has_allowed_host_and_scheme()` — open redirect protection via `buraq.utils.http`
+- Sitemaps framework (`buraq.contrib.sitemaps`): `Sitemap`, `GenericSitemap`, async `sitemap` view; XML generated via stdlib ElementTree C accelerator
+- `buraq.template.loader`: `render_to_string()`, `get_template()`, `select_template()`, `TemplateDoesNotExist`
+- `render_to_string()` added to `buraq.shortcuts`
+- `AuthenticationMiddleware` — reads `_auth_user_id` from session, fetches `User`, sets `request.user`; falls back to `AnonymousUser` for unauthenticated requests
+- `AnonymousUser` — represents unauthenticated users; `is_authenticated = False`, `is_staff = False`, `is_superuser = False`
+- `User.is_authenticated` — `True` on the `User` model so `request.user.is_authenticated` works uniformly
+- `buraq.contrib.auth.authenticate(request, username, password)` — verifies credentials via Argon2, returns `User` or `None`
+- `buraq.contrib.auth.login(request, user)` — writes `_auth_user_id` to session, cycles session key (session fixation protection), updates `last_login`
+- `buraq.contrib.auth.logout(request)` — flushes session, resets `request.user` to `AnonymousUser`
+- `@login_required`, `@staff_required`, `@superuser_required` now check `request.user.is_authenticated` / `.is_staff` / `.is_superuser` (session-based) instead of `Authorization: Bearer` tokens
+- `TranslatableModel` and `TranslatedFields` (`buraq.contrib.i18n.models`) — per-language field translations stored in an auto-created `{table}_translation` companion table; Alembic detects the table automatically
+- `await model.get_translation(lang_code)` — fetch translation row; raises `DoesNotExist` if missing
+- `await model.safe_translation_getter(field, language_code, fallback_language, default)` — fetch a translated field value, never raises
+- `await model.set_translation(lang_code, **fields)` — upsert a translation row
+- `await model.get_translations()` — list all translation rows for an instance
+- `await model.delete_translation(lang_code)` — remove one translation row
+
 ## [1.2.0] - 2026-08-03
 
 ### Added
 - `i18n_patterns()` — marks URL groups as language-prefixed for automatic URL generation
-- `reverse("name", **kwargs)` — global URL reversal like Django's, no request needed; auto-prepends active language prefix for i18n routes
+- `reverse("name", **kwargs)` — global URL reversal, no request needed; auto-prepends active language prefix for i18n routes
 - `translate_url(url, lang)` — rewrites any URL path to a different language prefix
 - `set_language` view — POST/GET endpoint that redirects to the language-prefixed URL (`/i18n/set_language?language=ar&next=/about` → `/ar/about`)
 - `LocaleMiddleware` now strips the language prefix from the path before routing (`/ar/about` → router sees `/about`)
@@ -62,7 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Argon2 password hashing via argon2-cffi
 - orjson for high-performance JSON serialization
 
-[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/nezanuha/buraq/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/nezanuha/buraq/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nezanuha/buraq/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nezanuha/buraq/releases/tag/v1.0.0
