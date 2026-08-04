@@ -39,6 +39,19 @@ urlpatterns = [
 ]
 ```
 
+## Namespaced includes
+
+```python
+path("/auth",  include("buraq.contrib.auth.urls", namespace="auth"))
+path("/posts", include("posts.urls", namespace="posts"))
+```
+
+Then `reverse()` uses the namespace:
+```python
+reverse("auth:login")
+reverse("posts:post_detail", pk=42)
+```
+
 ## Including sub-applications
 
 ```python title="config/urls.py"
@@ -55,6 +68,32 @@ urlpatterns = [
 
 app.load_urls(urlpatterns)
 ```
+
+## path() with extra view kwargs
+
+```python
+# Pass a dict as the third positional argument — forwarded to the view
+path("/posts", views.post_list, {"template": "posts/custom.html"}, name="post_list")
+
+# Equivalent using functools.partial:
+from functools import partial
+path("/posts", partial(views.post_list, template="posts/custom.html"), name="post_list")
+```
+
+## i18n_patterns prefix_default_language
+
+```python
+urlpatterns = [
+    *i18n_patterns(
+        path("/", views.home, name="home"),
+        prefix_default_language=False,  # default language served at /, not /en/
+    ),
+]
+```
+
+When `prefix_default_language=False`:
+- Default language (`LANGUAGE_CODE`) → `/about`
+- Other languages → `/ar/about`, `/fr/about`
 
 ## Path converters
 

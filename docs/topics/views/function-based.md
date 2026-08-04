@@ -131,3 +131,17 @@ async def edit_post(request, pk: int):
 async def publish_post(request, pk: int):
     ...
 ```
+
+## csrf_exempt
+
+```python
+from buraq.decorators import csrf_exempt
+
+@csrf_exempt
+async def webhook(request):
+    """Third-party webhooks don't send CSRF tokens."""
+    payload = await request.json()
+    ...
+```
+
+`csrf_exempt` marks the view with `_csrf_exempt = True`. The CSRF middleware skips validation for such views.

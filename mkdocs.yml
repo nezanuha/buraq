@@ -100,6 +100,7 @@ nav:
     - Forms:
       - Overview: topics/forms/overview.md
       - Fields: topics/forms/fields.md
+      - Widgets: topics/forms/widgets.md
       - Validation: topics/forms/validation.md
       - ModelForm: topics/forms/modelform.md
     - Templates: topics/templates.md

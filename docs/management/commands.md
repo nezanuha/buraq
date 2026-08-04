@@ -75,6 +75,25 @@ buraq collectstatic --clear       # wipe destination first
 buraq clearcache
 ```
 
+## execute_from_command_line
+
+`execute_from_command_line` is the entry point used by `manage.py`:
+
+```python title="manage.py"
+#!/usr/bin/env python
+"""Run: python manage.py <command>"""
+import os, sys
+from pathlib import Path
+
+if Path(".venv/bin/python").exists():
+    os.execv(".venv/bin/python", [".venv/bin/python"] + sys.argv)
+
+from buraq.management.cli import execute_from_command_line
+execute_from_command_line(sys.argv)
+```
+
+This is generated automatically when you run `buraq startproject`.
+
 ## Package management (uv wrappers)
 
 ```bash

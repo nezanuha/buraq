@@ -73,6 +73,17 @@ SIZES = [("s", "Small"), ("m", "Medium"), ("l", "Large")]
 size = ChoiceField(choices=SIZES)
 ```
 
+## DateField
+
+```python
+DateField(
+    input_formats = ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"],  # accepted parse formats
+    required      = True,
+)
+```
+
+`to_python()` tries each format in order; raises `ValidationError` if none match.
+
 ## RegexField
 
 ```python

@@ -221,3 +221,36 @@ Accepts any Buraq model field. Assign it once per model as a class attribute —
 | `Model.translation_model` | The auto-created SQLAlchemy model class |
 | `Model.translation_model.objects` | Full ORM `Manager` — supports `filter()`, `get()`, `all()`, etc. |
 | `Model._translated_field_names` | List of field names stored in the translation table |
+
+---
+
+## TranslatableModelForm
+
+```python
+from buraq.contrib.i18n.forms import TranslatableModelForm
+from myapp.models import Article
+
+class ArticleForm(TranslatableModelForm):
+    class Meta:
+        model = Article
+        fields = ["title", "body", "slug"]  # include translated fields here
+```
+
+`TranslatableModelForm.save()` automatically:
+1. Saves the base model instance
+2. Reads `language_code` from the form (hidden field, defaults to the active language)
+3. Calls `instance.set_translation(lang, **translated_fields)` to upsert the translation row
+
+To set the language explicitly in the view:
+
+```python
+async def edit_article(request, pk: int):
+    article = await get_object_or_404(Article, id=pk)
+    if request.method == "POST":
+        form = ArticleForm(await request.form(), instance=article)
+        form.data["language_code"] = "ar"   # translate into Arabic
+        if form.is_valid():
+            await form.save()
+            return redirect("/articles")
+    ...
+```

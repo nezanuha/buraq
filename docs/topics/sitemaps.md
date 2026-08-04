@@ -169,6 +169,31 @@ class PostSitemap(Sitemap):
 
 ---
 
+## Sitemap index
+
+For large sites, split sitemaps by content type and serve a `<sitemapindex>` that lists them:
+
+```python
+from buraq.contrib.sitemaps import sitemap_index
+from buraq.urls import path
+from . import sitemaps
+
+urlpatterns = [
+    path("/sitemap.xml", sitemap_index, {
+        "sitemaps": {
+            "posts": sitemaps.PostSitemap,
+            "pages": sitemaps.PageSitemap,
+        }
+    }),
+    path("/sitemap-posts.xml", sitemap, {"sitemaps": {"posts": sitemaps.PostSitemap}}),
+    path("/sitemap-pages.xml", sitemap, {"sitemaps": {"pages": sitemaps.PageSitemap}}),
+]
+```
+
+The index view returns a `<sitemapindex>` XML document with one `<sitemap><loc>` entry per key, pointing to `/{key}-sitemap.xml`.
+
+---
+
 ## Sitemap Reference
 
 ### Sitemap class attributes

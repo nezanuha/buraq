@@ -50,6 +50,44 @@ async def my_view(request):
     await cache.clear()
 ```
 
+## Atomic helpers
+
+```python
+# add — set only if key is not already present
+was_set = await cache.add("lock:user:42", True, timeout=30)
+if not was_set:
+    return  # already locked
+
+# incr / decr — atomic counter operations
+await cache.set("page_views", 0)
+views = await cache.incr("page_views")        # → 1
+views = await cache.incr("page_views", delta=5)  # → 6
+views = await cache.decr("page_views")        # → 5
+```
+
+## Sync access
+
+For code that runs outside an async context (e.g. management commands, startup scripts):
+
+```python
+value = cache.get_sync("my_key")
+cache.set_sync("my_key", value, timeout=300)
+cache.delete_sync("my_key")
+cache.delete_many_sync(["key1", "key2"])
+cache.clear_sync()
+```
+
+## `never_cache` decorator
+
+```python
+from buraq.decorators import never_cache
+
+@never_cache
+async def user_dashboard(request):
+    # Response always has Cache-Control: no-store, Pragma: no-cache, Expires: 0
+    ...
+```
+
 ## Batch operations
 
 ```python

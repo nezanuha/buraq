@@ -41,6 +41,33 @@ class Post(models.Model):
 | `JSONField()` | `dict/list` | `JSON` |
 | `ForeignKey(model)` | model instance | `INTEGER` (FK) |
 
+## Choices
+
+```python
+from buraq import models
+
+class Status(models.TextChoices):
+    DRAFT     = "draft"
+    PUBLISHED = "published"
+    ARCHIVED  = "archived"
+
+class Priority(models.IntegerChoices):
+    LOW    = 1
+    MEDIUM = 2
+    HIGH   = 3
+
+class Article(models.Model):
+    status   = models.CharField(max_length=20, choices=Status.choices())
+    priority = models.IntegerField(choices=Priority.choices(), default=Priority.LOW)
+```
+
+Usage:
+```python
+article.status == Status.PUBLISHED        # True
+Status.values()                           # ["draft", "published", "archived"]
+Status.choices()                          # [("draft", "Draft"), ("published", "Published"), ...]
+```
+
 ## Field options
 
 All fields accept these common options:
@@ -73,12 +100,53 @@ updated_at = models.DateTimeField(auto_now=True)
 ## ForeignKey
 
 ```python
+from buraq import models
+
 class Comment(models.Model):
-    post   = models.ForeignKey("Post", on_delete="CASCADE")
-    author = models.ForeignKey("User", on_delete="SET NULL", nullable=True)
+    post   = models.ForeignKey("Post", on_delete=models.CASCADE)
+    author = models.ForeignKey("User", on_delete=models.SET_NULL, null=True)
 ```
 
-`on_delete` options: `"CASCADE"`, `"SET NULL"`, `"RESTRICT"`, `"SET DEFAULT"`, `"NO ACTION"`
+| Constant | SQL | Behaviour |
+|---|---|---|
+| `models.CASCADE` | `ON DELETE CASCADE` | Delete related rows |
+| `models.PROTECT` | `ON DELETE RESTRICT` | Block delete if related rows exist |
+| `models.SET_NULL` | `ON DELETE SET NULL` | Set FK to NULL (requires `null=True`) |
+| `models.SET_DEFAULT` | `ON DELETE SET DEFAULT` | Set FK to field default |
+| `models.DO_NOTHING` | `ON DELETE NO ACTION` | Leave related rows unchanged |
+| `models.RESTRICT` | `ON DELETE RESTRICT` | Like PROTECT; raises IntegrityError |
+
+## help_text
+
+```python
+class Post(models.Model):
+    slug = models.SlugField(
+        unique=True,
+        help_text="URL-friendly identifier, e.g. 'my-first-post'.",
+    )
+```
+
+`help_text` is stored on the field and surfaced by `ModelForm` automatically.
+
+## TextField with max_length
+
+```python
+# No limit (stores as TEXT column)
+body = models.TextField()
+
+# With limit (stores as VARCHAR)
+excerpt = models.TextField(max_length=500)
+```
+
+## ManyToManyField symmetrical
+
+```python
+# Default: symmetrical=True (A follows B implies B follows A)
+followers = models.ManyToManyField("self")
+
+# symmetrical=False — for directed graphs (A follows B ≠ B follows A)
+following = models.ManyToManyField("self", symmetrical=False)
+```
 
 ## Meta class
 
