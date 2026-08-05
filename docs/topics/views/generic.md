@@ -101,6 +101,138 @@ urlpatterns = [
 ]
 ```
 
+## FormView
+
+Handle a form's GET/POST cycle without tying it to a model. See [FormView](form-view.md) for the full reference.
+
+```python
+from buraq.views.generic import FormView
+
+class ContactView(FormView):
+    template_name = "contact.html"
+    form_class    = ContactForm
+    success_url   = "/thanks/"
+
+    async def form_valid(self, request, form):
+        await send_contact_email(form.cleaned_data)
+        return redirect(self.success_url)
+```
+
+---
+
+## Date archive views
+
+Filter objects by date field. All archive views share `date_field` (default `"created_at"`) and `allow_future`.
+
+```python
+from buraq.views.generic import (
+    YearArchiveView, MonthArchiveView, WeekArchiveView,
+    DayArchiveView, TodayArchiveView, ArchiveIndexView, DateDetailView,
+)
+```
+
+### YearArchiveView / MonthArchiveView
+
+```python
+class PostYearView(YearArchiveView):
+    model      = Post
+    date_field = "published_on"
+
+class PostMonthView(MonthArchiveView):
+    model      = Post
+    date_field = "published_on"
+
+urlpatterns = [
+    get("/<int:year>",         PostYearView.as_view()),
+    get("/<int:year>/<int:month>", PostMonthView.as_view()),
+]
+```
+
+### WeekArchiveView
+
+List objects for an ISO week number.
+
+```python
+class PostWeekView(WeekArchiveView):
+    model      = Post
+    date_field = "published_on"
+
+# URL: /2024/week/12
+get("/<int:year>/week/<int:week>", PostWeekView.as_view())
+```
+
+### DayArchiveView
+
+```python
+class PostDayView(DayArchiveView):
+    model      = Post
+    date_field = "published_on"
+
+# URL: /2024/3/15
+get("/<int:year>/<int:month>/<int:day>", PostDayView.as_view())
+```
+
+### TodayArchiveView
+
+No URL parameters needed — always uses today's date.
+
+```python
+class TodayPostsView(TodayArchiveView):
+    model      = Post
+    date_field = "published_on"
+
+get("/today", TodayPostsView.as_view())
+```
+
+### ArchiveIndexView
+
+Top-level archive — provides a list of all distinct years in `date_list`.
+
+```python
+class PostArchiveView(ArchiveIndexView):
+    model      = Post
+    date_field = "published_on"
+    template_name = "posts/archive.html"
+    # context: date_list (list of year dates)
+
+get("/archive", PostArchiveView.as_view())
+```
+
+### DateDetailView
+
+Retrieve a single object by year/month/day + pk or slug.
+
+```python
+class PostDateDetailView(DateDetailView):
+    model      = Post
+    date_field = "published_on"
+    template_name = "posts/detail.html"
+
+get("/<int:year>/<int:month>/<int:day>/<int:pk>", PostDateDetailView.as_view())
+```
+
+---
+
+## Auth mixins
+
+Add access control to any CBV by mixing in before the view class. See [Auth Mixins](mixins.md) for the full reference.
+
+```python
+from buraq.views.mixins import LoginRequiredMixin, PermissionRequiredMixin
+
+class PostCreateView(LoginRequiredMixin, CreateView):
+    model      = Post
+    form_class = PostForm
+    success_url = "/posts/"
+
+class PostPublishView(PermissionRequiredMixin, UpdateView):
+    model               = Post
+    permission_required = "blog.publish_post"
+    success_url         = "/posts/"
+```
+
+---
+
 ## Overriding context
 
 ```python

@@ -106,7 +106,7 @@ anon.is_superuser      # False
 ### Protecting views with decorators
 
 ```python
-from buraq.decorators import login_required, staff_required, superuser_required
+from buraq.decorators import login_required, staff_required, superuser_required, permission_required
 
 @login_required
 async def dashboard(request):
@@ -126,6 +126,83 @@ async def admin_view(request):
 @superuser_required
 async def super_view(request):
     ...
+
+
+@permission_required("blog.publish_post")
+async def publish_view(request, pk: int):
+    ...
+```
+
+### @user_passes_test
+
+Redirect based on any custom condition:
+
+```python
+from buraq.decorators import user_passes_test
+
+@user_passes_test(lambda u: u.is_active and u.date_joined.year >= 2024)
+async def new_users_only(request):
+    ...
+```
+
+### Protecting class-based views
+
+```python
+from buraq.views.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
+
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "dashboard.html"
+
+class PublishView(PermissionRequiredMixin, UpdateView):
+    model               = Post
+    permission_required = "blog.publish_post"
+
+class StaffOnlyView(UserPassesTestMixin, DetailView):
+    model = Report
+
+    async def test_func(self, request) -> bool:
+        return request.user.is_staff
+```
+
+See [Auth Mixins](views/mixins.md) for the full reference.
+
+---
+
+### Permissions
+
+Check whether a user holds a specific permission:
+
+```python
+# In a view
+can_publish = await request.user.has_perm("blog.publish_post")
+can_all     = await request.user.has_perms(["blog.add_post", "blog.change_post"])
+any_blog    = await request.user.has_module_perms("blog")
+
+# List user's direct permissions and groups
+perms  = await request.user.user_permissions()
+groups = await request.user.groups()
+```
+
+Superusers (`is_superuser=True`) always return `True` from all `has_perm*` checks.
+
+See [Permissions & Groups](permissions.md) for setup and assignment.
+
+---
+
+### Password utilities
+
+```python
+from buraq.contrib.auth import make_password, check_password, validate_password
+
+hashed = make_password("my-secret")
+ok     = check_password("my-secret", hashed)
+
+# Raises ValidationError if too short or entirely numeric
+validate_password("weakpass")
+
+# Keep the user logged in after a password change
+from buraq.contrib.auth import update_session_auth_hash
+await update_session_auth_hash(request, user)
 ```
 
 ---

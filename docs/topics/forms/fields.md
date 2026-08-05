@@ -25,6 +25,9 @@
 | `ChoiceField` | Select from a list |
 | `MultipleChoiceField` | Select multiple from a list |
 | `TypedChoiceField` | `ChoiceField` with type coercion |
+| `TypedMultipleChoiceField` | `MultipleChoiceField` with type coercion |
+| `ModelChoiceField` | Select a single model instance from a queryset |
+| `ModelMultipleChoiceField` | Select multiple model instances from a queryset |
 | `FileField` | File upload |
 | `ImageField` | Image upload (validates content type) |
 | `JSONField` | JSON data |
@@ -88,6 +91,60 @@ DateField(
 
 ```python
 phone = RegexField(regex=r"^\+?1?\d{9,15}$", label="Phone number")
+```
+
+## ModelChoiceField
+
+Select a single model instance from a queryset. The field validates and stores the primary key; use `fetch()` to retrieve the actual object.
+
+```python
+from buraq.forms import ModelChoiceField
+
+class PostForm(Form):
+    author = ModelChoiceField(
+        queryset    = User.objects.filter(is_active=True),
+        empty_label = "— Select author —",
+        required    = True,
+    )
+
+# In your view — after form.is_valid():
+author = await form.fields["author"].fetch(form.cleaned_data["author"])
+```
+
+## ModelMultipleChoiceField
+
+Select multiple model instances from a queryset.
+
+```python
+from buraq.forms import ModelMultipleChoiceField
+
+class PostForm(Form):
+    tags = ModelMultipleChoiceField(
+        queryset = Tag.objects.all(),
+        required = False,
+    )
+
+# Fetch selected instances
+tags = await form.fields["tags"].fetch_many(form.cleaned_data["tags"])
+```
+
+## TypedChoiceField / TypedMultipleChoiceField
+
+Coerce the submitted string value to a Python type.
+
+```python
+from buraq.forms import TypedChoiceField, TypedMultipleChoiceField
+
+priority = TypedChoiceField(
+    choices   = [(1, "Low"), (2, "Medium"), (3, "High")],
+    coerce    = int,
+    empty_value = None,
+)
+
+levels = TypedMultipleChoiceField(
+    choices = [(1, "One"), (2, "Two"), (3, "Three")],
+    coerce  = int,
+)
 ```
 
 ## Custom validators
