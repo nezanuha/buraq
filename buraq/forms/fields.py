@@ -415,3 +415,84 @@ class IPAddressField(CharField):
 
 class GenericIPAddressField(IPAddressField):
     pass
+
+
+class ModelChoiceField(Field):
+    """
+    Select a single model instance from a queryset.
+
+    Usage:
+        author = ModelChoiceField(queryset=User.objects.filter(is_active=True))
+        selected_user = await form.fields["author"].fetch(pk_value)
+    """
+
+    def __init__(self, queryset, empty_label: str = "---------", **kwargs):
+        super().__init__(**kwargs)
+        self.queryset = queryset
+        self.empty_label = empty_label
+
+    def to_python(self, value):
+        if value in (None, "", "None"):
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            raise ValidationError("Select a valid choice.", code="invalid_choice") from None
+
+    def validate(self, value):
+        if self.required and value is None:
+            raise ValidationError(self.error_messages["required"], code="required")
+
+    async def fetch(self, pk):
+        """Return the model instance matching pk, or raise ValidationError."""
+        if pk is None:
+            return None
+        try:
+            return await self.queryset.filter(id=pk).first()
+        except Exception:
+            raise ValidationError("Select a valid choice.", code="invalid_choice") from None
+
+
+class ModelMultipleChoiceField(ModelChoiceField):
+    """
+    Select multiple model instances from a queryset.
+
+    Usage:
+        tags = ModelMultipleChoiceField(queryset=Tag.objects.all())
+        selected_tags = await form.fields["tags"].fetch_many(pk_values)
+    """
+
+    def to_python(self, value):
+        if not value:
+            return []
+        if isinstance(value, str):
+            value = [value]
+        try:
+            return [int(v) for v in value]
+        except (ValueError, TypeError):
+            raise ValidationError("Select valid choices.", code="invalid_choice") from None
+
+    def validate(self, value):
+        if self.required and not value:
+            raise ValidationError(self.error_messages["required"], code="required")
+
+    async def fetch_many(self, pks: list):
+        """Return a list of model instances matching the given pks."""
+        if not pks:
+            return []
+        return await self.queryset.filter(id__in=pks).all()
+
+
+class TypedMultipleChoiceField(MultipleChoiceField):
+    """MultipleChoiceField that coerces values to a given type."""
+
+    def __init__(self, coerce=str, **kwargs):
+        self.coerce = coerce
+        super().__init__(**kwargs)
+
+    def to_python(self, value):
+        values = super().to_python(value)
+        try:
+            return [self.coerce(v) for v in values]
+        except (ValueError, TypeError):
+            raise ValidationError(self.error_messages["invalid"], code="invalid") from None

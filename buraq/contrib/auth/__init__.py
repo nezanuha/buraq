@@ -24,6 +24,52 @@ _log = logging.getLogger(__name__)
 _AUTH_USER_SESSION_KEY = "_auth_user_id"
 
 
+# ── Password utilities ────────────────────────────────────────────────────────
+
+def make_password(password: str) -> str:
+    """Hash a plain-text password using Argon2."""
+    from buraq.core.auth import hash_password
+    return hash_password(password)
+
+
+def check_password(password: str, hashed: str) -> bool:
+    """Verify a plain-text password against a stored hash."""
+    from buraq.core.auth import verify_password
+    return verify_password(password, hashed)
+
+
+def validate_password(password: str, min_length: int = 8) -> None:
+    """
+    Raise ValidationError if the password does not meet minimum requirements.
+
+    Rules:
+    - At least ``min_length`` characters (default 8)
+    - Not entirely numeric
+    """
+    from buraq.exceptions import ValidationError
+    if not password or len(password) < min_length:
+        raise ValidationError(
+            f"This password is too short. It must contain at least {min_length} characters.",
+            code="password_too_short",
+        )
+    if password.isdigit():
+        raise ValidationError(
+            "This password is entirely numeric.",
+            code="password_entirely_numeric",
+        )
+
+
+async def update_session_auth_hash(request, user) -> None:
+    """
+    Re-log the user in after a password change so their session is not invalidated.
+
+    Call this after saving a new password to keep the user authenticated.
+    """
+    session = request.session
+    session[_AUTH_USER_SESSION_KEY] = str(user.id)
+    request.scope["user"] = user
+
+
 async def authenticate(request, *, username: str, password: str):
     """
     Verify credentials.  Returns the ``User`` instance on success, or ``None``.

@@ -166,6 +166,143 @@ class ProhibitNullCharactersValidator:
             raise ValidationError(self.message, code=self.code)
 
 
+class BaseValidator:
+    """Base class for limit-based validators."""
+
+    message = "Ensure this value is %(limit_value)s (it is %(show_value)s)."
+    code = "limit_value"
+
+    def __init__(self, limit_value):
+        self.limit_value = limit_value
+
+    def compare(self, a, b) -> bool:
+        return a is not b
+
+    def clean(self, value):
+        return value
+
+    def __call__(self, value):
+        cleaned = self.clean(value)
+        if self.compare(cleaned, self.limit_value):
+            raise ValidationError(
+                self.message % {"limit_value": self.limit_value, "show_value": cleaned},
+                code=self.code,
+                params={"limit_value": self.limit_value, "show_value": cleaned},
+            )
+
+
+class StepValueValidator:
+    """Raise ValidationError if value is not a multiple of step from offset."""
+
+    def __init__(self, step: int | float, offset: int | float = 0):
+        self.step = step
+        self.offset = offset
+
+    def __call__(self, value):
+        if value is None:
+            return
+        try:
+            remainder = (float(value) - self.offset) % float(self.step)
+            if remainder not in (0, self.step):
+                raise ValidationError(
+                    f"Ensure this value is a multiple of {self.step}.",
+                    code="step_size",
+                )
+        except (TypeError, ValueError):
+            raise ValidationError("Enter a valid number.", code="invalid") from None
+
+
+def validate_integer(value) -> None:
+    """Raise ValidationError if value is not a valid integer."""
+    try:
+        int(str(value).strip())
+    except (ValueError, TypeError):
+        raise ValidationError("Enter a valid integer.", code="invalid") from None
+
+
+def validate_ipv4_address(value: str) -> None:
+    """Raise ValidationError if value is not a valid IPv4 address."""
+    import ipaddress
+    try:
+        ipaddress.IPv4Address(value)
+    except (ValueError, ipaddress.AddressValueError):
+        raise ValidationError("Enter a valid IPv4 address.", code="invalid") from None
+
+
+def validate_ipv6_address(value: str) -> None:
+    """Raise ValidationError if value is not a valid IPv6 address."""
+    import ipaddress
+    try:
+        ipaddress.IPv6Address(value)
+    except (ValueError, ipaddress.AddressValueError):
+        raise ValidationError("Enter a valid IPv6 address.", code="invalid") from None
+
+
+def validate_ipv46_address(value: str) -> None:
+    """Raise ValidationError if value is not a valid IPv4 or IPv6 address."""
+    import ipaddress
+    try:
+        ipaddress.ip_address(value)
+    except (ValueError, ipaddress.AddressValueError):
+        raise ValidationError("Enter a valid IP address.", code="invalid") from None
+
+
+_IMAGE_EXTENSIONS = {
+    ".apng", ".avif", ".bmp", ".gif", ".ico", ".jpeg",
+    ".jpg", ".png", ".svg", ".tif", ".tiff", ".webp",
+}
+
+
+def validate_image_file_extension(value) -> None:
+    """Raise ValidationError if the file is not a recognised image format."""
+    import os
+    name = getattr(value, "filename", None) or getattr(value, "name", str(value))
+    ext = os.path.splitext(str(name))[1].lower()
+    if ext not in _IMAGE_EXTENSIONS:
+        raise ValidationError(
+            f"File extension '{ext}' is not allowed. "
+            f"Allowed extensions: {', '.join(sorted(_IMAGE_EXTENSIONS))}.",
+            code="invalid_extension",
+        )
+
+
+class FileExtensionValidator:
+    """Validate that a file has one of the allowed extensions."""
+
+    def __init__(self, allowed_extensions: list[str]):
+        self.allowed_extensions = [e.lower().lstrip(".") for e in allowed_extensions]
+
+    def __call__(self, value) -> None:
+        import os
+        name = getattr(value, "filename", None) or getattr(value, "name", str(value))
+        ext = os.path.splitext(str(name))[1].lower().lstrip(".")
+        if ext not in self.allowed_extensions:
+            raise ValidationError(
+                f"File extension '{ext}' is not allowed. "
+                f"Allowed: {', '.join(self.allowed_extensions)}.",
+                code="invalid_extension",
+            )
+
+
+def int_list_validator(sep: str = ",", allow_negative: bool = False):
+    """Return a validator that accepts a separator-delimited string of integers."""
+
+    class _IntListValidator:
+        def __call__(self, value):
+            for part in str(value).split(sep):
+                stripped = part.strip()
+                try:
+                    n = int(stripped)
+                except ValueError:
+                    raise ValidationError(
+                        f"'{stripped}' is not a valid integer.", code="invalid"
+                    ) from None
+                if not allow_negative and n < 0:
+                    raise ValidationError("Negative integers are not allowed.", code="invalid")
+
+    return _IntListValidator()
+
+
 # Convenience singletons
 validate_email = EmailValidator()
 validate_slug = SlugValidator()

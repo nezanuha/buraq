@@ -1,6 +1,74 @@
 from buraq import models
 
 
+class Permission(models.Model):
+    """
+    A specific action a user can perform on a model.
+
+    Permissions follow the pattern ``"app.action_model"``, e.g. ``"blog.add_post"``.
+    """
+
+    name        = models.CharField(max_length=255)
+    codename    = models.CharField(max_length=100, unique=True)
+    content_type = models.CharField(max_length=100, null=True)
+
+    class Meta:
+        table_name = "buraq_permissions"
+
+    def __str__(self):
+        return self.codename
+
+
+class Group(models.Model):
+    """A named collection of permissions that can be assigned to users."""
+
+    name = models.CharField(max_length=150, unique=True)
+
+    class Meta:
+        table_name = "buraq_groups"
+
+    def __str__(self):
+        return self.name
+
+    async def permissions(self):
+        from buraq.contrib.auth.models import GroupPermission
+        gps = await GroupPermission.objects.filter(group_id=self.id).all()
+        perm_ids = [gp.permission_id for gp in gps]
+        if not perm_ids:
+            return []
+        return await Permission.objects.filter(id__in=perm_ids).all()
+
+
+class UserGroup(models.Model):
+    """Association table between User and Group."""
+
+    user_id  = models.IntegerField()
+    group_id = models.IntegerField()
+
+    class Meta:
+        table_name = "buraq_user_groups"
+
+
+class UserPermission(models.Model):
+    """Direct user-level permission assignment."""
+
+    user_id       = models.IntegerField()
+    permission_id = models.IntegerField()
+
+    class Meta:
+        table_name = "buraq_user_permissions"
+
+
+class GroupPermission(models.Model):
+    """Association table between Group and Permission."""
+
+    group_id      = models.IntegerField()
+    permission_id = models.IntegerField()
+
+    class Meta:
+        table_name = "buraq_group_permissions"
+
+
 class AnonymousUser:
     """Represents an unauthenticated user."""
     id           = None
@@ -38,3 +106,66 @@ class User(models.Model):
     @property
     def full_name(self) -> str:
         return f"{self.first_name or ''} {self.last_name or ''}".strip() or self.username
+
+    async def has_perm(self, perm: str) -> bool:
+        """Return True if the user has the given permission codename."""
+        if self.is_superuser:
+            return True
+        if not self.is_active:
+            return False
+        # Direct user permissions
+        ups = await UserPermission.objects.filter(user_id=self.id).all()
+        perm_ids = [up.permission_id for up in ups]
+        if perm_ids:
+            direct = await Permission.objects.filter(id__in=perm_ids, codename=perm).exists()
+            if direct:
+                return True
+        # Group permissions
+        ugs = await UserGroup.objects.filter(user_id=self.id).all()
+        group_ids = [ug.group_id for ug in ugs]
+        if group_ids:
+            gps = await GroupPermission.objects.filter(group_id__in=group_ids).all()
+            g_perm_ids = [gp.permission_id for gp in gps]
+            if g_perm_ids:
+                return await Permission.objects.filter(id__in=g_perm_ids, codename=perm).exists()
+        return False
+
+    async def has_perms(self, perms: list[str]) -> bool:
+        """Return True if the user has all the given permissions."""
+        for perm in perms:
+            if not await self.has_perm(perm):
+                return False
+        return True
+
+    async def has_module_perms(self, app_label: str) -> bool:
+        """Return True if the user has any permission for the given app."""
+        if self.is_superuser:
+            return True
+        ups = await UserPermission.objects.filter(user_id=self.id).all()
+        perm_ids = [up.permission_id for up in ups]
+        ugs = await UserGroup.objects.filter(user_id=self.id).all()
+        group_ids = [ug.group_id for ug in ugs]
+        if group_ids:
+            gps = await GroupPermission.objects.filter(group_id__in=group_ids).all()
+            perm_ids += [gp.permission_id for gp in gps]
+        if perm_ids:
+            return await Permission.objects.filter(
+                id__in=perm_ids, content_type=app_label
+            ).exists()
+        return False
+
+    async def groups(self):
+        """Return all groups this user belongs to."""
+        ugs = await UserGroup.objects.filter(user_id=self.id).all()
+        group_ids = [ug.group_id for ug in ugs]
+        if not group_ids:
+            return []
+        return await Group.objects.filter(id__in=group_ids).all()
+
+    async def user_permissions(self):
+        """Return all direct permissions for this user."""
+        ups = await UserPermission.objects.filter(user_id=self.id).all()
+        perm_ids = [up.permission_id for up in ups]
+        if not perm_ids:
+            return []
+        return await Permission.objects.filter(id__in=perm_ids).all()

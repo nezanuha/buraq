@@ -334,6 +334,57 @@ class DeleteView(SingleObjectMixin, TemplateMixin, View):
         return redirect(self.success_url)
 
 
+class FormView(ContextMixin, TemplateMixin, View):
+    """
+    Generic view for displaying and processing a form.
+
+    Usage:
+        class ContactView(FormView):
+            template_name = "contact.html"
+            form_class = ContactForm
+            success_url = "/thanks/"
+
+            async def form_valid(self, request, form):
+                # handle valid form data
+                return redirect(self.success_url)
+
+        get("/contact",  ContactView.as_view())
+        post("/contact", ContactView.as_view())
+    """
+
+    form_class = None
+    success_url: str = "/"
+    prefix: str = ""
+
+    def get_form_class(self):
+        return self.form_class
+
+    def get_form(self, data=None, **kwargs):
+        form_class = self.get_form_class()
+        return form_class(data=data, prefix=self.prefix, **kwargs) if form_class else None
+
+    async def get(self, request, **kwargs):
+        self.kwargs = kwargs
+        form = self.get_form()
+        ctx = await self.get_context_data(form=form, **kwargs)
+        return render(request, self.get_template_name(), ctx)
+
+    async def post(self, request, **kwargs):
+        self.kwargs = kwargs
+        raw = dict(await request.form())
+        form = self.get_form(data=raw)
+        if form is None or await form.is_valid():
+            return await self.form_valid(request, form)
+        return await self.form_invalid(request, form)
+
+    async def form_valid(self, request, form):
+        return redirect(self.success_url)
+
+    async def form_invalid(self, request, form):
+        ctx = await self.get_context_data(form=form)
+        return render(request, self.get_template_name(), ctx)
+
+
 class ArchiveView(ListView):
     """ListView that filters by date field."""
     date_field: str = "created_at"
@@ -357,3 +408,90 @@ class MonthArchiveView(ArchiveView):
         qs = (self.model.objects.all()
               .filter(**{f"{self.date_field}__year": year, f"{self.date_field}__month": month}))
         return await qs
+
+
+class WeekArchiveView(ArchiveView):
+    """List objects for a given ISO week number."""
+
+    async def get_queryset(self):
+        import datetime
+        year = int(self.kwargs.get("year", datetime.date.today().year))
+        week = int(self.kwargs.get("week", 1))
+        # ISO: Monday = 1
+        first_day = datetime.date.fromisocalendar(year, week, 1)
+        last_day = first_day + datetime.timedelta(days=6)
+        return await self.model.objects.all().filter(
+            **{f"{self.date_field}__gte": first_day, f"{self.date_field}__lte": last_day}
+        )
+
+
+class DayArchiveView(ArchiveView):
+    """List objects for a specific calendar day."""
+
+    async def get_queryset(self):
+        import datetime
+        year = int(self.kwargs.get("year", datetime.date.today().year))
+        month = int(self.kwargs.get("month", datetime.date.today().month))
+        day = int(self.kwargs.get("day", datetime.date.today().day))
+        return await self.model.objects.all().filter(**{
+            f"{self.date_field}__year": year,
+            f"{self.date_field}__month": month,
+            f"{self.date_field}__day": day,
+        })
+
+
+class TodayArchiveView(DayArchiveView):
+    """List objects for today's date."""
+
+    async def get_queryset(self):
+        import datetime
+        today = datetime.date.today()
+        self.kwargs = {
+            "year": today.year,
+            "month": today.month,
+            "day": today.day,
+            **getattr(self, "kwargs", {}),
+        }
+        return await super().get_queryset()
+
+
+class ArchiveIndexView(ArchiveView):
+    """Top-level archive — list all distinct years that have objects."""
+
+    async def get(self, request, **kwargs):
+        self.kwargs = kwargs
+        years = await self.model.objects.dates(self.date_field, "year")
+        ctx = await self.get_context_data(date_list=years, **kwargs)
+        return render(request, self.get_template_name(), ctx)
+
+
+class DateDetailView(SingleObjectMixin, TemplateMixin, View):
+    """Retrieve a single object identified by year/month/day + pk/slug."""
+
+    date_field: str = "created_at"
+    _template_suffix = "_detail.html"
+
+    async def get(self, request, **kwargs):
+        self.kwargs = kwargs
+        import datetime
+        year = int(kwargs.get("year", datetime.date.today().year))
+        month = int(kwargs.get("month", datetime.date.today().month))
+        day = int(kwargs.get("day", datetime.date.today().day))
+        date_filters = {
+            f"{self.date_field}__year": year,
+            f"{self.date_field}__month": month,
+            f"{self.date_field}__day": day,
+        }
+        pk = kwargs.get("pk")
+        slug = kwargs.get("slug")
+        if pk:
+            date_filters["id"] = pk
+        elif slug:
+            date_filters[self.slug_field] = slug
+        obj = await self.model.objects.filter(**date_filters).first()
+        if obj is None:
+            from buraq.exceptions import Http404
+            raise Http404
+        name = self.get_context_object_name()
+        ctx = await self.get_context_data(object=obj, **{name: obj}, **kwargs)
+        return render(request, self.get_template_name(), ctx)

@@ -220,6 +220,40 @@ class UUIDField(Field):
         )
 
 
+class PositiveBigIntegerField(Field):
+    def to_sa_column(self, name: str = "value") -> sa.Column:
+        return sa.Column(
+            sa.BigInteger,
+            sa.CheckConstraint(f"{name} >= 0"),
+            nullable=self.null,
+            unique=self.unique,
+            index=self.db_index,
+            default=self.default,
+        )
+
+
+class DurationField(Field):
+    """Stores a Python timedelta as a database INTERVAL (or INTEGER microseconds on SQLite)."""
+
+    def to_sa_column(self, name: str = "") -> sa.Column:
+        return sa.Column(
+            sa.Interval,
+            nullable=self.null,
+            unique=self.unique,
+            index=self.db_index,
+            default=self.default,
+        )
+
+
+class GenericIPAddressField(CharField):
+    """Stores IPv4 or IPv6 addresses; max_length 39 covers full IPv6."""
+
+    def __init__(self, protocol: str = "both", **kwargs):
+        kwargs.setdefault("max_length", 39)
+        super().__init__(**kwargs)
+        self.protocol = protocol  # "ipv4", "ipv6", "both"
+
+
 class AutoField(Field):
     """Explicit primary key field (usually not needed — auto-added as `id`)."""
 
@@ -461,3 +495,4 @@ class _M2MManager:
                 select(func.count()).where(assoc.c.source_id == self._instance.id)
             )
             return result.scalar() or 0
+

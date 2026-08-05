@@ -57,6 +57,30 @@ async def send_mass_mail(messages: list[tuple[str, str, list[str]]]) -> int:
     return await get_backend().send_many(emails)
 
 
+async def mail_admins(subject: str, message: str, html_message: str | None = None) -> bool:
+    """Send an email to all ADMINS defined in settings."""
+    admins = getattr(settings, "ADMINS", [])
+    if not admins:
+        return False
+    if isinstance(admins[0], (list, tuple)):
+        recipients = [email for _, email in admins]
+    else:
+        recipients = list(admins)
+    return await send_mail(subject, message, recipients, html_message=html_message)
+
+
+async def mail_managers(subject: str, message: str, html_message: str | None = None) -> bool:
+    """Send an email to all MANAGERS defined in settings."""
+    managers = getattr(settings, "MANAGERS", [])
+    if not managers:
+        return False
+    if isinstance(managers[0], (list, tuple)):
+        recipients = [email for _, email in managers]
+    else:
+        recipients = list(managers)
+    return await send_mail(subject, message, recipients, html_message=html_message)
+
+
 async def send_template_mail(
     subject: str,
     template_name: str,

@@ -15,6 +15,8 @@ from buraq.forms.fields import (
     IntegerField,
     IPAddressField,
     JSONField,
+    ModelChoiceField,
+    ModelMultipleChoiceField,
     MultipleChoiceField,
     NullBooleanField,
     PasswordField,
@@ -23,6 +25,7 @@ from buraq.forms.fields import (
     TextField,
     TimeField,
     TypedChoiceField,
+    TypedMultipleChoiceField,
     URLField,
     UUIDField,
 )
@@ -48,6 +51,7 @@ __all__ = [
     "TypedChoiceField", "FileField", "ImageField", "UUIDField", "JSONField",
     "RegexField", "TextField", "PasswordField", "HiddenField",
     "IPAddressField", "GenericIPAddressField",
+    "ModelChoiceField", "ModelMultipleChoiceField", "TypedMultipleChoiceField",
     "Widget", "TextInput", "Textarea", "FileInput", "Select", "CheckboxInput",
     "NumberInput", "URLInput", "DateInput", "HiddenInput",
 ]

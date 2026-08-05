@@ -35,12 +35,14 @@ from buraq.orm.fields import (
     # Date/time
     DateTimeField,
     DecimalField,
+    DurationField,
     EmailField,
     # Files
     FileField,
     FloatField,
     # Relations
     ForeignKey,
+    GenericIPAddressField,
     ImageField,
     # Numeric
     IntegerField,
@@ -49,6 +51,7 @@ from buraq.orm.fields import (
     ManyToManyField,
     NullBooleanField,
     OneToOneField,
+    PositiveBigIntegerField,
     PositiveIntegerField,
     PositiveSmallIntegerField,
     SlugField,
@@ -65,11 +68,12 @@ __all__ = [
     "CASCADE", "PROTECT", "SET_NULL", "DO_NOTHING", "SET_DEFAULT", "RESTRICT",
     "CharField", "SlugField", "EmailField", "URLField", "TextField",
     "IntegerField", "BigIntegerField", "SmallIntegerField",
-    "PositiveIntegerField", "PositiveSmallIntegerField",
+    "PositiveIntegerField", "PositiveSmallIntegerField", "PositiveBigIntegerField",
     "FloatField", "DecimalField",
     "BooleanField", "NullBooleanField",
-    "DateTimeField", "DateField", "TimeField",
+    "DateTimeField", "DateField", "TimeField", "DurationField",
     "JSONField", "BinaryField", "UUIDField", "AutoField",
     "FileField", "ImageField",
+    "GenericIPAddressField",
     "ForeignKey", "OneToOneField", "ManyToManyField",
 ]

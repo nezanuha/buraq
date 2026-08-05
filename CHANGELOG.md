@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+**ORM — Expressions & Functions**
+- `buraq.orm.expressions` — `Case`, `When`, `Value`, `OuterRef`, `Subquery`, `Exists`, `ExpressionWrapper` for conditional queries and correlated subqueries
+- `buraq.orm.functions` — 60+ database functions: date/time (`Now`, `TruncDate`, `TruncMonth`, `TruncYear`, `ExtractYear`, …), string (`Concat`, `Upper`, `Lower`, `Trim`, `Replace`, `Substr`, `LPad`, …), math (`Abs`, `Ceil`, `Floor`, `Round`, `Sqrt`, `Power`, …), NULL handling (`Coalesce`, `NullIf`, `Greatest`, `Least`), type casting (`Cast`), hash (`MD5`, `SHA1`, `SHA256`, `SHA512`)
+- `buraq.orm.window` — window function support: `Window`, `RowNumber`, `Rank`, `DenseRank`, `PercentRank`, `CumeDist`, `Ntile`, `Lag`, `Lead`, `FirstValue`, `LastValue`, `NthValue`
+
+**ORM — QuerySet**
+- `QuerySet.select_for_update(nowait, skip_locked)` — `SELECT … FOR UPDATE` row-level locking
+- `QuerySet.earliest(*fields)` / `.latest(*fields)` — first/last object by field
+- `QuerySet.dates(field, kind)` / `.datetimes(field, kind)` — distinct date/datetime values
+- `QuerySet.raw(sql, params)` — raw SQL with named parameters, returns list of dicts
+
+**ORM — Fields**
+- `PositiveBigIntegerField` — big integer with `>= 0` constraint
+- `DurationField` — maps Python `timedelta` to database `INTERVAL`
+- `GenericIPAddressField` — IPv4/IPv6 with `protocol` option
+
+**Auth**
+- `Permission`, `Group`, `UserGroup`, `UserPermission`, `GroupPermission` models (`buraq.contrib.auth.models`)
+- `User.has_perm(perm)`, `User.has_perms(perms)`, `User.has_module_perms(app)` — async permission checks
+- `User.groups()`, `User.user_permissions()` — async relation accessors
+- `make_password()`, `check_password()`, `validate_password()`, `update_session_auth_hash()` — password utilities (`buraq.contrib.auth`)
+
+**Views**
+- `FormView` — generic class-based view for displaying and processing a single form
+- `LoginRequiredMixin`, `PermissionRequiredMixin`, `UserPassesTestMixin`, `AccessMixin` — auth mixins for class-based views (`buraq.views.mixins`)
+- `@user_passes_test(fn)` — decorator that calls `fn(user)` and redirects on failure
+- `@cache_page(timeout)` — full-response cache decorator; uses active cache backend
+
+**CSRF**
+- `buraq.contrib.csrf` — `get_token(request)`, `@csrf_protect`, `@ensure_csrf_cookie`
+
+**Forms**
+- `ModelChoiceField` — single model instance picker from a queryset
+- `ModelMultipleChoiceField` — multi-select model picker with `fetch_many()`
+- `TypedMultipleChoiceField` — `MultipleChoiceField` with type coercion
+
+**Views — Archive**
+- `WeekArchiveView` — list objects for a given ISO week number
+- `DayArchiveView` — list objects for a specific calendar day
+- `TodayArchiveView` — list objects for today's date (no URL params needed)
+- `ArchiveIndexView` — top-level archive listing all distinct years
+- `DateDetailView` — retrieve a single object by year/month/day + pk or slug
+
+**Email**
+- `mail_admins(subject, message)` — send email to all `ADMINS` in settings
+- `mail_managers(subject, message)` — send email to all `MANAGERS` in settings
+
+**Validators**
+- `BaseValidator` — base class for limit-based validators
+- `StepValueValidator` — validate that a value is a multiple of a given step
+- `validate_integer()`, `validate_ipv4_address()`, `validate_ipv6_address()`, `validate_ipv46_address()`
+- `validate_image_file_extension()` — validate uploaded image file types
+- `FileExtensionValidator(allowed_extensions)` — validate arbitrary file extensions
+- `int_list_validator(sep, allow_negative)` — validate comma-separated integer strings
+
+**Utilities**
+- `buraq.utils.html` — `SafeString`, `mark_safe`, `escape`, `escapejs`, `conditional_escape`, `format_html`, `format_html_join`, `linebreaks`, `strip_tags`, `urlize`
+- `buraq.utils.encoding` — `force_str`, `smart_str`, `force_bytes`, `iri_to_uri`, `uri_to_iri`, `escape_uri_path`
+- `buraq.utils.crypto` — `get_random_string`, `constant_time_compare`, `pbkdf2`, `salted_hmac`
+- `buraq.utils.functional` — `cached_property`, `LazyObject`, `SimpleLazyObject`, `lazy`, `classproperty`
+- `buraq.utils.dateparse` — `parse_date`, `parse_time`, `parse_datetime`, `parse_duration` — ISO 8601 + `DD HH:MM:SS` formats, no external dependencies
+
+**Humanize**
+- `buraq.contrib.humanize` — `intcomma`, `ordinal`, `apnumber`, `pluralize`, `naturalday`, `naturaltime`, `naturalduration`, `intword`
+
 ### Changed
 - `path()` now accepts an optional dict as the third positional argument to pass extra keyword arguments to the view (e.g. `path('/url', view, {'key': 'val'}, name='name')`); internally applied via `functools.partial`
 

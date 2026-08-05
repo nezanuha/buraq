@@ -91,12 +91,17 @@ nav:
     - ORM:
       - Models: topics/orm/models.md
       - Querying: topics/orm/querying.md
+      - Advanced Querying: topics/orm/advanced-querying.md
+      - Expressions: topics/orm/expressions.md
+      - Database Functions: topics/orm/functions.md
       - Relationships: topics/orm/relationships.md
       - Migrations: topics/orm/migrations.md
     - Views:
       - Function-Based Views: topics/views/function-based.md
       - Class-Based Views: topics/views/class-based.md
       - Generic Views: topics/views/generic.md
+      - FormView: topics/views/form-view.md
+      - Auth Mixins: topics/views/mixins.md
     - Forms:
       - Overview: topics/forms/overview.md
       - Fields: topics/forms/fields.md
@@ -110,6 +115,8 @@ nav:
     - Middleware: topics/middleware.md
     - HTTP Responses: topics/http-responses.md
     - Authentication: topics/authentication.md
+    - Permissions & Groups: topics/permissions.md
+    - CSRF Protection: topics/csrf.md
     - Sessions: topics/sessions.md
     - Cache: topics/cache.md
     - Signals: topics/signals.md
@@ -121,6 +128,7 @@ nav:
     - Admin: topics/admin.md
     - Static Files: topics/static-files.md
     - Email: topics/email.md
+    - Utilities: topics/utils.md
   - Management Commands:
     - Built-in Commands: management/commands.md
     - Custom Commands: management/custom-commands.md

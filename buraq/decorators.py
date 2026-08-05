@@ -225,3 +225,75 @@ def csrf_exempt(func):
     """Mark a view as exempt from CSRF protection."""
     func._csrf_exempt = True
     return func
+
+
+def user_passes_test(test_func, login_url: str = "/auth/login"):
+    """
+    Decorator that allows access only if ``test_func(user)`` returns True.
+
+    Usage:
+        @user_passes_test(lambda u: u.is_staff)
+        async def admin_view(request): ...
+    """
+    def decorator(view_func):
+        @functools.wraps(view_func)
+        async def wrapper(request, *args, **kwargs):
+            user = getattr(request, "user", None)
+            result = test_func(user) if user else False
+            if not result:
+                return RedirectResponse(login_url, status_code=302)
+            return await view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def cache_page(timeout: int, *, cache: str = "default", key_prefix: str = ""):
+    """
+    Cache the full view response for ``timeout`` seconds.
+
+    Uses Buraq's cache backend (memory/Redis/memcached depending on settings).
+
+    Usage:
+        @cache_page(60 * 15)   # cache for 15 minutes
+        async def article_list(request): ...
+    """
+    def decorator(view_func):
+        @functools.wraps(view_func)
+        async def wrapper(request, *args, **kwargs):
+            from buraq.contrib.cache import get_cache
+            c = get_cache(cache)
+
+            # Build cache key from prefix + method + path + query string
+            qs = str(request.url.query) if request.url.query else ""
+            prefix = key_prefix or "buraq"
+            cache_key = f"{prefix}:page:{request.method}:{request.url.path}:{qs}"
+
+            cached = await c.get(cache_key)
+            if cached is not None:
+                from starlette.responses import Response
+                return Response(
+                    content=cached["body"],
+                    status_code=cached.get("status", 200),
+                    media_type=cached.get("media_type", "text/html"),
+                    headers=cached.get("headers", {}),
+                )
+
+            response = await view_func(request, *args, **kwargs)
+
+            # Only cache 200 OK responses
+            if getattr(response, "status_code", 200) == 200:
+                body = b""
+                if hasattr(response, "body"):
+                    body = response.body
+                elif hasattr(response, "render"):
+                    body = await response.render()
+                await c.set(cache_key, {
+                    "body": body,
+                    "status": getattr(response, "status_code", 200),
+                    "media_type": getattr(response, "media_type", "text/html"),
+                    "headers": dict(getattr(response, "headers", {})),
+                }, timeout=timeout)
+
+            return response
+        return wrapper
+    return decorator

@@ -127,6 +127,21 @@ class QuerySet:
     def defer(self, *fields) -> "QuerySet":
         return self
 
+    def select_for_update(self, nowait: bool = False, skip_locked: bool = False) -> "QuerySet":
+        """Lock selected rows with SELECT ... FOR UPDATE."""
+        q = self._query.with_for_update(nowait=nowait, skip_locked=skip_locked)
+        return self._clone(q)
+
+    def annotate_expr(self, **kwargs) -> "QuerySet":
+        """Add arbitrary SQLAlchemy expression columns via .label()."""
+        q = self._query
+        for label, expr in kwargs.items():
+            if hasattr(expr, "resolve"):
+                q = q.add_columns(expr.resolve(self._model).label(label))
+            else:
+                q = q.add_columns(expr.label(label))
+        return self._clone(q)
+
     # ── Async terminal methods ──────────────────────────────────────────────
 
     async def all(self) -> list:
@@ -283,6 +298,62 @@ class QuerySet:
             result = await db.stream_scalars(self._query)
             async for row in result:
                 yield row
+
+    async def earliest(self, *fields: str) -> Any | None:
+        """Return the earliest object by the given field(s), default to primary key."""
+        order_fields = fields or ("id",)
+        qs = self
+        for f in order_fields:
+            qs = qs._clone(qs._query.order_by(getattr(self._model, f)))
+        return await qs.first()
+
+    async def latest(self, *fields: str) -> Any | None:
+        """Return the latest object by the given field(s), default to primary key."""
+        order_fields = fields or ("id",)
+        qs = self
+        for f in order_fields:
+            qs = qs._clone(qs._query.order_by(getattr(self._model, f).desc()))
+        return await qs.first()
+
+    async def dates(self, field: str, kind: str) -> list:
+        """
+        Return a list of distinct date values for the given field, truncated by kind.
+
+        kind: "year" | "month" | "day"
+        """
+        from buraq.core.db import SessionLocal
+        col = getattr(self._model, field)
+        trunc = sa.cast(col, sa.Date)
+        if kind == "year":
+            trunc = func.date_trunc("year", col)
+        elif kind == "month":
+            trunc = func.date_trunc("month", col)
+        q = sa.select(trunc.label("date")).distinct().order_by(trunc)
+        async with SessionLocal() as db:
+            result = await db.execute(q)
+            return [row[0] for row in result.all()]
+
+    async def datetimes(self, field: str, kind: str) -> list:
+        """
+        Return a list of distinct datetime values for the given field, truncated by kind.
+
+        kind: "year" | "month" | "day" | "hour" | "minute" | "second"
+        """
+        from buraq.core.db import SessionLocal
+        col = getattr(self._model, field)
+        trunc = func.date_trunc(kind, col)
+        q = sa.select(trunc.label("dt")).distinct().order_by(trunc)
+        async with SessionLocal() as db:
+            result = await db.execute(q)
+            return [row[0] for row in result.all()]
+
+    async def raw(self, sql: str, params: dict | list | None = None) -> list:
+        """Execute raw SQL and return rows as dicts."""
+        from buraq.core.db import SessionLocal
+        async with SessionLocal() as db:
+            result = await db.execute(sa.text(sql), params or {})
+            keys = list(result.keys())
+            return [dict(zip(keys, row, strict=False)) for row in result.all()]
 
     # ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -460,3 +531,21 @@ class Manager:
     async def in_bulk(self, id_list: list, field_name: str = "id") -> dict:
         items = await self.filter(**{f"{field_name}__in": id_list}).all()
         return {getattr(item, field_name): item for item in items}
+
+    def select_for_update(self, nowait: bool = False, skip_locked: bool = False) -> QuerySet:
+        return QuerySet(self._model).select_for_update(nowait=nowait, skip_locked=skip_locked)
+
+    async def earliest(self, *fields: str) -> Any | None:
+        return await QuerySet(self._model).earliest(*fields)
+
+    async def latest(self, *fields: str) -> Any | None:
+        return await QuerySet(self._model).latest(*fields)
+
+    async def dates(self, field: str, kind: str) -> list:
+        return await QuerySet(self._model).dates(field, kind)
+
+    async def datetimes(self, field: str, kind: str) -> list:
+        return await QuerySet(self._model).datetimes(field, kind)
+
+    async def raw(self, sql: str, params: dict | list | None = None) -> list:
+        return await QuerySet(self._model).raw(sql, params)
