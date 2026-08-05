@@ -105,6 +105,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `QuerySet.defer(*fields)` — now uses SQLAlchemy `defer()` option; returns proper ORM instances with deferred columns loaded on access
 - `QuerySet.only(*fields)` — now uses `load_only()` option; returns proper ORM instances
 
+### Security
+
+- **Event-loop blocking on password hashing** — `make_password()` and `check_password()` called Argon2 synchronously, blocking the event loop for ~100 ms on every hash/verify and stalling all concurrent requests. Both are now `async` and run via `asyncio.to_thread()`. `ModelBackend.authenticate()` received the same fix.
+- **Username enumeration via timing** — `ModelBackend` returned instantly when a username did not exist but waited ~100 ms for Argon2 when the password was wrong. An attacker could enumerate valid usernames by measuring response time. A dummy Argon2 verify is now run for missing users so all code paths take the same time.
+- **Session cookie served from page cache** — `@cache_page` stored the full response header dict, including `Set-Cookie`. A cached response was then served to other users with the original user's session cookie embedded. `set-cookie`, `authorization`, and `www-authenticate` headers are now stripped before the response is stored in cache.
+- **Broken redirect URL on login** — `@login_required` embedded the raw current URL as the `next` query parameter without encoding it. A URL containing `?`, `&`, or `=` would corrupt the redirect query string. The value is now encoded with `urllib.parse.urlencode`.
+- **SHA-1 as default in `salted_hmac`** — SHA-1 has been cryptographically broken since 2005. The default `algorithm` argument was `"sha1"`; it is now `"sha256"`.
+
+### Fixed
+
+- **`has_perms()` doing N × 5 DB queries** — `has_perms(perms)` called `has_perm()` once per permission, and each `has_perm()` executed up to 5 sequential queries. For 10 permissions that was 50 queries per request. A new `_get_all_permission_codenames()` helper fetches all direct and group permissions in 3 queries; `has_perm`, `has_perms`, and `has_module_perms` all share this result. `has_perms(n)` is now always 3 queries regardless of how many permissions are checked.
+- **`permission_required` async detection** — the decorator called `user.has_perm(perm)` then checked `inspect.iscoroutine(result)` after the fact. If the method is not a coroutine function the coroutine is never created and the check silently falls through. Changed to `inspect.iscoroutinefunction(user.has_perm)` before calling.
+- **`BaseFormSet.errors` list length mismatch** — when empty extra forms were skipped during validation, the `_errors` list was shorter than `forms`. Iterating `zip(formset.forms, formset.errors)` would silently misalign form/error pairs. Empty forms now append `{}` to keep the lists the same length.
+- **`BaseFormSet.cleaned_data` was a method, not a property** — `formset.cleaned_data` returned a bound method object instead of data. Changed to `@property`.
+- **`defer()` and `only()` were no-ops** — `defer()` returned `self` unchanged; `only()` selected raw columns breaking ORM instance return. Both now use SQLAlchemy `defer()` / `load_only()` options and return proper model instances.
+- **`asyncio.get_event_loop()` deprecated in Python 3.10+** — `FileSystemStorage` used the deprecated form inside async methods. Replaced with `asyncio.get_running_loop()`.
+- **Private Starlette import in `RequestFactory`** — `_TestClientTransport` is an internal symbol that can be removed in any Starlette release. Import removed.
+- **`asyncSetUp` failure leaked event loop** — if `asyncSetUp` raised, `TestCase.setUp` exited without closing the loop. `tearDown` then ran against a partially-initialised loop. Both methods now use `try/finally`.
+- **Backend cache not used** — `_load_backends()` re-imported and re-instantiated all auth backend classes on every `authenticate()` call. Result is now cached at module level with a `_clear_backend_cache()` escape hatch.
+
 ### Changed
 - `path()` now accepts an optional dict as the third positional argument to pass extra keyword arguments to the view (e.g. `path('/url', view, {'key': 'val'}, name='name')`); internally applied via `functools.partial`
 
