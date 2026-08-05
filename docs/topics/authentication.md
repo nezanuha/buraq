@@ -207,6 +207,44 @@ await update_session_auth_hash(request, user)
 
 ---
 
+## Authentication backends
+
+`authenticate()` iterates `AUTHENTICATION_BACKENDS` in order and returns the first user a backend yields.  The default backend checks the `User` table.
+
+### Configuration
+
+```python title="config/settings.py"
+AUTHENTICATION_BACKENDS = [
+    "myapp.backends.LDAPBackend",          # checked first
+    "buraq.contrib.auth.backends.ModelBackend",  # fallback
+]
+```
+
+### Writing a custom backend
+
+A backend is any class with an async `authenticate` method.  `get_user` is optional but required for session restoration.
+
+```python title="myapp/backends.py"
+class LDAPBackend:
+    async def authenticate(self, request, *, username: str, password: str):
+        user = await ldap_lookup(username, password)   # returns User or None
+        return user
+
+    async def get_user(self, user_id: int):
+        from buraq.contrib.auth.models import User
+        return await User.objects.get_or_none(id=user_id)
+```
+
+`authenticate()` in views works unchanged — the backend selection is transparent:
+
+```python
+user = await authenticate(request, username="alice", password="secret")
+```
+
+`user._auth_backend` records which backend authenticated the user.
+
+---
+
 ## JWT authentication
 
 Useful for API endpoints consumed by mobile or SPA clients.

@@ -74,6 +74,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Humanize**
 - `buraq.contrib.humanize` — `intcomma`, `ordinal`, `apnumber`, `pluralize`, `naturalday`, `naturaltime`, `naturalduration`, `intword`
 
+**Formsets**
+- `buraq.forms.formsets` — `BaseFormSet`, `BaseModelFormSet`, `BaseInlineFormSet`
+- `formset_factory(form, extra, can_delete, min_num, max_num, validate_min, validate_max)` — create a FormSet class from any `Form`
+- `modelformset_factory(model, fields, extra, …)` — create a ModelFormSet; auto-generates a `ModelForm` if none provided
+- `inlineformset_factory(parent, child, fk_field, …)` — create an InlineFormSet that stamps the parent FK on save; FK auto-detected from foreign keys if `fk_field` is omitted
+- `BaseFormSet.cleaned_data` — property returning list of non-empty valid form dicts
+- `BaseFormSet.management_form_html()` — renders the four hidden management inputs
+
+**File Storage**
+- `buraq.core.files` — `File`, `ContentFile`, `UploadedFile` wrappers
+- `FileSystemStorage(location, base_url)` — async `save`, `open`, `delete`, `exists`, `size`, `listdir`; safe path traversal; auto-suffixes on name collision
+- `default_storage` — lazy proxy to configured `DEFAULT_FILE_STORAGE` backend
+- `UploadedFile.from_starlette(upload)` — build from Starlette `UploadFile`
+
+**Testing**
+- `buraq.test.AsyncClient` — exercises the full ASGI stack in-process; `get`, `post`, `put`, `patch`, `delete`, `head`, `options`; `json=` shorthand; `headers=` injection; `follow_redirects=`; `force_login(user)`
+- `buraq.test.RequestFactory` — builds `starlette.requests.Request` objects for unit-testing individual views
+- `buraq.test.TestCase` — async-aware `unittest.TestCase` with `asyncSetUp`/`asyncTearDown`; assertion helpers: `assertContains`, `assertNotContains`, `assertRedirects`, `assertStatusCode`, `assertJSONEqual`
+- `buraq.test.SimpleTestCase` — assertion helpers without database or client
+- `buraq.test.TransactionTestCase` — same as `TestCase`, documented for transaction-isolated tests
+
+**Auth — Multiple Backends**
+- `buraq.contrib.auth.backends.ModelBackend` — default username/password backend
+- `AUTHENTICATION_BACKENDS` setting (default: `["buraq.contrib.auth.backends.ModelBackend"]`)
+- `authenticate()` now iterates all configured backends; stamps `user._auth_backend` with the winning backend path
+- `_clear_backend_cache()` — utility to invalidate the cached backend list at runtime
+
+**ORM — Deferred Loading (fixed)**
+- `QuerySet.defer(*fields)` — now uses SQLAlchemy `defer()` option; returns proper ORM instances with deferred columns loaded on access
+- `QuerySet.only(*fields)` — now uses `load_only()` option; returns proper ORM instances
+
 ### Changed
 - `path()` now accepts an optional dict as the third positional argument to pass extra keyword arguments to the view (e.g. `path('/url', view, {'key': 'val'}, name='name')`); internally applied via `functools.partial`
 

@@ -267,7 +267,6 @@ class RequestFactory:
 
     def _make_request(self, method: str, path: str, data=None, **kwargs):
         from starlette.requests import Request
-        from starlette.testclient import _TestClientTransport  # noqa: F401
 
         scope, body = self._build_scope(method, path, data=data, **kwargs)
         receive = _FakeReceive(body)

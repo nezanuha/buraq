@@ -51,8 +51,15 @@ class ModelBackend:
         return await User.objects.get_or_none(id=user_id)
 
 
+_backend_cache: list | None = None
+
+
 def _load_backends() -> list:
-    """Import and instantiate every backend listed in settings."""
+    """Import and instantiate every backend listed in settings. Result is cached."""
+    global _backend_cache
+    if _backend_cache is not None:
+        return _backend_cache
+
     import importlib
 
     from buraq.conf import settings
@@ -63,4 +70,11 @@ def _load_backends() -> list:
         module = importlib.import_module(module_path)
         backend_cls = getattr(module, class_name)
         backends.append(backend_cls())
+    _backend_cache = backends
     return backends
+
+
+def _clear_backend_cache() -> None:
+    """Clear the backend cache — call when AUTHENTICATION_BACKENDS changes at runtime."""
+    global _backend_cache
+    _backend_cache = None

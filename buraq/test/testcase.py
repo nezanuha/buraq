@@ -80,13 +80,19 @@ class _AsyncMixin:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         self._loop = loop
-        if hasattr(self, "asyncSetUp"):
-            self._loop.run_until_complete(self.asyncSetUp())
+        try:
+            if hasattr(self, "asyncSetUp"):
+                self._loop.run_until_complete(self.asyncSetUp())
+        except Exception:
+            self._loop.close()
+            raise
 
     def tearDown(self):
-        if hasattr(self, "asyncTearDown"):
-            self._loop.run_until_complete(self.asyncTearDown())
-        self._loop.close()
+        try:
+            if hasattr(self, "asyncTearDown"):
+                self._loop.run_until_complete(self.asyncTearDown())
+        finally:
+            self._loop.close()
         super().tearDown()
 
     def _callTestMethod(self):

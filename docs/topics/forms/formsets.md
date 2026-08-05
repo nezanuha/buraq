@@ -25,9 +25,8 @@ async def manage_books(request):
     if request.method == "POST":
         formset = BookFormSet(data=dict(await request.form()))
         if await formset.is_valid():
-            for form in formset.forms:
-                if form.cleaned_data:
-                    save_book(form.cleaned_data)
+            for data in formset.cleaned_data:
+                save_book(data)
             return redirect("/books")
     else:
         formset = BookFormSet()
@@ -158,7 +157,7 @@ EmailFormSet = formset_factory(EmailForm, formset=UniqueEmailFormSet)
 | `formset.initial_forms` | Forms pre-populated from `initial` |
 | `formset.extra_forms` | Blank extra forms |
 | `await formset.is_valid()` | Validate all forms; returns `True`/`False` |
-| `formset.cleaned_data()` | List of `cleaned_data` dicts for non-empty valid forms |
+| `formset.cleaned_data` | List of `cleaned_data` dicts for non-empty valid forms (property) |
 | `formset.errors` | List of error dicts, one per form |
 | `formset.non_form_errors()` | Cross-formset errors from `clean()` |
 | `formset.management_form_html()` | HTML string of hidden management fields |

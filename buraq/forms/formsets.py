@@ -174,6 +174,8 @@ class BaseFormSet:
 
         for i, form in enumerate(self.forms):
             if self._is_form_empty(form) and i >= self.initial_form_count():
+                # Always append so len(self._errors) == len(self.forms)
+                self._errors.append({})
                 continue
             if not await form.is_valid():
                 all_valid = False
@@ -184,7 +186,7 @@ class BaseFormSet:
         try:
             await self.clean()
         except ValidationError as e:
-            self._non_form_errors = e.messages if hasattr(e, "messages") else [str(e)]
+            self._non_form_errors = [str(e)]
             all_valid = False
 
         if self.validate_min and self._filled_count() < self.min_num:
@@ -219,6 +221,7 @@ class BaseFormSet:
 
     # ── Cleaned data helpers ─────────────────────────────────────────────────
 
+    @property
     def cleaned_data(self) -> list[dict]:
         return [
             f.cleaned_data for f in self.forms
@@ -272,10 +275,6 @@ class BaseInlineFormSet(BaseModelFormSet):
 
     fk_field: str = ""
     parent_instance = None
-
-    def _construct_form(self, index: int) -> BaseForm:
-        form = super()._construct_form(index)
-        return form
 
     async def save(self, commit: bool = True) -> list:
         saved = []

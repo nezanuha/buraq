@@ -110,7 +110,7 @@ class FileSystemStorage(Storage):
                 for chunk in content.chunks():
                     fh.write(chunk)
 
-        await asyncio.get_event_loop().run_in_executor(None, _write)
+        await asyncio.get_running_loop().run_in_executor(None, _write)
         return name
 
     async def open(self, name: str, mode: str = "rb"):
@@ -121,7 +121,7 @@ class FileSystemStorage(Storage):
         def _open():
             return open(full_path, mode)
 
-        return await asyncio.get_event_loop().run_in_executor(None, _open)
+        return await asyncio.get_running_loop().run_in_executor(None, _open)
 
     async def delete(self, name: str) -> None:
         import asyncio
@@ -132,13 +132,13 @@ class FileSystemStorage(Storage):
             if os.path.exists(full_path):
                 os.remove(full_path)
 
-        await asyncio.get_event_loop().run_in_executor(None, _delete)
+        await asyncio.get_running_loop().run_in_executor(None, _delete)
 
     async def exists(self, name: str) -> bool:
         import asyncio
 
         full_path = self._full_path(name)
-        return await asyncio.get_event_loop().run_in_executor(None, os.path.exists, full_path)
+        return await asyncio.get_running_loop().run_in_executor(None, os.path.exists, full_path)
 
     def url(self, name: str) -> str:
         safe = name.replace(os.sep, "/").lstrip("/")
@@ -148,7 +148,7 @@ class FileSystemStorage(Storage):
         import asyncio
 
         full_path = self._full_path(name)
-        return await asyncio.get_event_loop().run_in_executor(None, os.path.getsize, full_path)
+        return await asyncio.get_running_loop().run_in_executor(None, os.path.getsize, full_path)
 
     async def listdir(self, path: str) -> tuple[list, list]:
         import asyncio
@@ -161,7 +161,7 @@ class FileSystemStorage(Storage):
                 (dirs if entry.is_dir() else files).append(entry.name)
             return dirs, files
 
-        return await asyncio.get_event_loop().run_in_executor(None, _list)
+        return await asyncio.get_running_loop().run_in_executor(None, _list)
 
 
 class _DefaultStorage:
