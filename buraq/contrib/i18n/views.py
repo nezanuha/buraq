@@ -41,7 +41,7 @@ async def set_language(request: Request) -> RedirectResponse:
         from urllib.parse import urlparse
         next_url = urlparse(referer).path or "/"
 
-    if not check_for_language(language):
+    if len(language) > 500 or not check_for_language(language):
         return RedirectResponse(next_url, status_code=302)
 
     redirect_to = translate_url(next_url, language)

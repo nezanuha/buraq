@@ -112,6 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Session cookie served from page cache** — `@cache_page` stored the full response header dict, including `Set-Cookie`. A cached response was then served to other users with the original user's session cookie embedded. `set-cookie`, `authorization`, and `www-authenticate` headers are now stripped before the response is stored in cache.
 - **Broken redirect URL on login** — `@login_required` embedded the raw current URL as the `next` query parameter without encoding it. A URL containing `?`, `&`, or `=` would corrupt the redirect query string. The value is now encoded with `urllib.parse.urlencode`.
 - **SHA-1 as default in `salted_hmac`** — SHA-1 has been cryptographically broken since 2005. The default `algorithm` argument was `"sha1"`; it is now `"sha256"`.
+- **Unbounded language code in `set_language` view** — a caller could POST an arbitrarily long string as the `language` parameter. Any downstream code that cached or logged it without a length guard could be exploited for memory exhaustion. The view now rejects any language code longer than 500 characters before calling `check_for_language`.
 
 ### Fixed
 
