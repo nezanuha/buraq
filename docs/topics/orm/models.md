@@ -40,6 +40,14 @@ class Post(models.Model):
 | `UUIDField()` | `UUID` | `VARCHAR(36)` |
 | `JSONField()` | `dict/list` | `JSON` |
 | `ForeignKey(model)` | model instance | `INTEGER` (FK) |
+| `SmallIntegerField()` | `int` | `SMALLINT` |
+| `PositiveSmallIntegerField()` | `int` | `SMALLINT CHECK ≥ 0` |
+| `PositiveBigIntegerField()` | `int` | `BIGINT CHECK ≥ 0` |
+| `DurationField()` | `timedelta` | `INTERVAL` |
+| `GenericIPAddressField()` | `str` | `VARCHAR(39)` |
+| `BinaryField()` | `bytes` | `BLOB/BYTEA` |
+| `NullBooleanField()` | `bool\|None` | `BOOLEAN` (nullable) |
+| `AutoField()` | `int` | `INTEGER` (auto PK) |
 
 ## Choices
 
@@ -136,6 +144,43 @@ body = models.TextField()
 
 # With limit (stores as VARCHAR)
 excerpt = models.TextField(max_length=500)
+```
+
+## DurationField
+
+Stores a Python `timedelta`. Maps to `INTERVAL` on PostgreSQL, integer microseconds on SQLite.
+
+```python
+class Task(models.Model):
+    name     = models.CharField(max_length=200)
+    duration = models.DurationField(null=True)
+
+# Store
+task = await Task.objects.create(name="Build", duration=timedelta(hours=2, minutes=30))
+
+# Query
+from datetime import timedelta
+long_tasks = await Task.objects.filter(duration__gte=timedelta(hours=1))
+```
+
+## GenericIPAddressField
+
+Stores IPv4 or IPv6 addresses as a string (max 39 chars for full IPv6).
+
+```python
+class Server(models.Model):
+    name    = models.CharField(max_length=100)
+    ip_addr = models.GenericIPAddressField(protocol="both")  # "ipv4", "ipv6", or "both"
+```
+
+## PositiveBigIntegerField
+
+Like `BigIntegerField` but enforces a `>= 0` constraint at the database level.
+
+```python
+class Product(models.Model):
+    name  = models.CharField(max_length=200)
+    stock = models.PositiveBigIntegerField(default=0)
 ```
 
 ## ManyToManyField symmetrical

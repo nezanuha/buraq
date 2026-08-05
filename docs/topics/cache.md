@@ -77,7 +77,31 @@ cache.delete_many_sync(["key1", "key2"])
 cache.clear_sync()
 ```
 
-## `never_cache` decorator
+## `@cache_page` decorator
+
+Cache an entire view's response for a given number of seconds. Uses whatever backend is configured in `CACHE_BACKEND`.
+
+```python
+from buraq.decorators import cache_page
+
+
+@cache_page(60 * 15)   # cache for 15 minutes
+async def article_list(request):
+    articles = await Article.objects.filter(is_published=True).order_by("-created_at")
+    return render(request, "articles/list.html", {"articles": articles})
+```
+
+The cache key is derived from the request method + path + query string. Only `200 OK` responses are cached.
+
+Use a named cache backend or a custom key prefix:
+
+```python
+@cache_page(300, cache="redis", key_prefix="articles")
+async def article_list(request):
+    ...
+```
+
+## `@never_cache` decorator
 
 ```python
 from buraq.decorators import never_cache
