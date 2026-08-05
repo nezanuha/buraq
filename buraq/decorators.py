@@ -41,9 +41,10 @@ def login_required(
         async def wrapper(request, *args, **kwargs):
             user = getattr(request, "user", None)
             if not (user and getattr(user, "is_authenticated", False)):
-                next_url = str(request.url)
+                from urllib.parse import urlencode
+                next_url = urlencode({redirect_field_name: str(request.url)})
                 return RedirectResponse(
-                    url=f"{login_url}?{redirect_field_name}={next_url}",
+                    url=f"{login_url}?{next_url}",
                     status_code=302,
                 )
             return await func(request, *args, **kwargs)
@@ -111,12 +112,12 @@ def permission_required(perm: str, login_url: str = "/auth/login", raise_excepti
                     raise HTTPException(status_code=403, detail="Permission denied.")
                 return RedirectResponse(url=login_url, status_code=302)
 
-            # Support async or sync has_perm()
             import inspect as _inspect
             if hasattr(user, "has_perm"):
-                result = user.has_perm(perm)
-                if _inspect.iscoroutine(result):
-                    result = await result
+                if _inspect.iscoroutinefunction(user.has_perm):
+                    result = await user.has_perm(perm)
+                else:
+                    result = user.has_perm(perm)
             else:
                 perms = getattr(user, "permissions", []) or []
                 result = perm in perms
@@ -287,11 +288,18 @@ def cache_page(timeout: int, *, cache: str = "default", key_prefix: str = ""):
                     body = response.body
                 elif hasattr(response, "render"):
                     body = await response.render()
+
+                # Strip headers that must never be shared across users.
+                _UNCACHEABLE_HEADERS = {"set-cookie", "authorization", "www-authenticate"}
+                safe_headers = {
+                    k: v for k, v in dict(getattr(response, "headers", {})).items()
+                    if k.lower() not in _UNCACHEABLE_HEADERS
+                }
                 await c.set(cache_key, {
                     "body": body,
                     "status": getattr(response, "status_code", 200),
                     "media_type": getattr(response, "media_type", "text/html"),
-                    "headers": dict(getattr(response, "headers", {})),
+                    "headers": safe_headers,
                 }, timeout=timeout)
 
             return response

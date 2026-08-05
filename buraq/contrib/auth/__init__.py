@@ -26,16 +26,20 @@ _AUTH_USER_SESSION_KEY = "_auth_user_id"
 
 # ── Password utilities ────────────────────────────────────────────────────────
 
-def make_password(password: str) -> str:
-    """Hash a plain-text password using Argon2."""
+async def make_password(password: str) -> str:
+    """Hash a plain-text password using Argon2 (runs in a thread — does not block the loop)."""
+    import asyncio
+
     from buraq.core.auth import hash_password
-    return hash_password(password)
+    return await asyncio.to_thread(hash_password, password)
 
 
-def check_password(password: str, hashed: str) -> bool:
-    """Verify a plain-text password against a stored hash."""
+async def check_password(password: str, hashed: str) -> bool:
+    """Verify a plain-text password against an Argon2 hash (runs in a thread)."""
+    import asyncio
+
     from buraq.core.auth import verify_password
-    return verify_password(password, hashed)
+    return await asyncio.to_thread(verify_password, password, hashed)
 
 
 def validate_password(password: str, min_length: int = 8) -> None:

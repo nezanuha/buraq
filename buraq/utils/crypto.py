@@ -44,7 +44,7 @@ def pbkdf2(
 
 
 def salted_hmac(
-    key_salt: str, value: str, secret: str = None, algorithm: str = "sha1"
+    key_salt: str, value: str, secret: str = None, algorithm: str = "sha256"
 ) -> hmac.HMAC:
     """
     Return an HMAC of ``value`` using a key derived from ``key_salt`` and ``secret``.

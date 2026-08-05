@@ -25,23 +25,35 @@ Usage (custom backend)::
 """
 from __future__ import annotations
 
+_DUMMY_HASH = (
+    "$argon2id$v=19$m=65536,t=3,p=4$"
+    "dGVzdHNhbHR2YWx1ZXRlc3Q$"
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+)
+
 
 class ModelBackend:
     """Default backend — checks username + password against the User table."""
 
     async def authenticate(self, request, *, username: str, password: str):
+        import asyncio
+
         from buraq.contrib.auth.models import User
         from buraq.core.auth import verify_password
 
         try:
             user = await User.objects.get(username=username)
         except Exception:
+            # Run a dummy verify so response time is indistinguishable from a
+            # real wrong-password attempt — prevents username enumeration.
+            await asyncio.to_thread(verify_password, password, _DUMMY_HASH)
             return None
 
         if not user.is_active:
             return None
 
-        if not verify_password(password, user.hashed_password):
+        ok = await asyncio.to_thread(verify_password, password, user.hashed_password)
+        if not ok:
             return None
 
         return user

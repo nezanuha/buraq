@@ -107,52 +107,51 @@ class User(models.Model):
     def full_name(self) -> str:
         return f"{self.first_name or ''} {self.last_name or ''}".strip() or self.username
 
+    async def _get_all_permission_codenames(self) -> set[str]:
+        """Fetch all permission codenames for this user in 3 queries (direct + group)."""
+        # Query 1 — direct permission IDs
+        ups = await UserPermission.objects.filter(user_id=self.id).all()
+        perm_ids = {up.permission_id for up in ups}
+
+        # Query 2 — group permission IDs (single IN query across all groups)
+        ugs = await UserGroup.objects.filter(user_id=self.id).all()
+        group_ids = [ug.group_id for ug in ugs]
+        if group_ids:
+            gps = await GroupPermission.objects.filter(group_id__in=group_ids).all()
+            perm_ids |= {gp.permission_id for gp in gps}
+
+        if not perm_ids:
+            return set()
+
+        # Query 3 — fetch codenames for all collected IDs at once
+        perms = await Permission.objects.filter(id__in=list(perm_ids)).all()
+        return {p.codename for p in perms}
+
     async def has_perm(self, perm: str) -> bool:
         """Return True if the user has the given permission codename."""
         if self.is_superuser:
             return True
         if not self.is_active:
             return False
-        # Direct user permissions
-        ups = await UserPermission.objects.filter(user_id=self.id).all()
-        perm_ids = [up.permission_id for up in ups]
-        if perm_ids:
-            direct = await Permission.objects.filter(id__in=perm_ids, codename=perm).exists()
-            if direct:
-                return True
-        # Group permissions
-        ugs = await UserGroup.objects.filter(user_id=self.id).all()
-        group_ids = [ug.group_id for ug in ugs]
-        if group_ids:
-            gps = await GroupPermission.objects.filter(group_id__in=group_ids).all()
-            g_perm_ids = [gp.permission_id for gp in gps]
-            if g_perm_ids:
-                return await Permission.objects.filter(id__in=g_perm_ids, codename=perm).exists()
-        return False
+        return perm in await self._get_all_permission_codenames()
 
     async def has_perms(self, perms: list[str]) -> bool:
-        """Return True if the user has all the given permissions."""
-        for perm in perms:
-            if not await self.has_perm(perm):
-                return False
-        return True
+        """Return True if the user has all the given permissions (single batch query)."""
+        if self.is_superuser:
+            return True
+        if not self.is_active:
+            return False
+        user_perms = await self._get_all_permission_codenames()
+        return all(p in user_perms for p in perms)
 
     async def has_module_perms(self, app_label: str) -> bool:
         """Return True if the user has any permission for the given app."""
         if self.is_superuser:
             return True
-        ups = await UserPermission.objects.filter(user_id=self.id).all()
-        perm_ids = [up.permission_id for up in ups]
-        ugs = await UserGroup.objects.filter(user_id=self.id).all()
-        group_ids = [ug.group_id for ug in ugs]
-        if group_ids:
-            gps = await GroupPermission.objects.filter(group_id__in=group_ids).all()
-            perm_ids += [gp.permission_id for gp in gps]
-        if perm_ids:
-            return await Permission.objects.filter(
-                id__in=perm_ids, content_type=app_label
-            ).exists()
-        return False
+        if not self.is_active:
+            return False
+        user_perms = await self._get_all_permission_codenames()
+        return any(p.startswith(f"{app_label}.") for p in user_perms)
 
     async def groups(self):
         """Return all groups this user belongs to."""
