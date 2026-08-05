@@ -108,6 +108,7 @@ nav:
       - Widgets: topics/forms/widgets.md
       - Validation: topics/forms/validation.md
       - ModelForm: topics/forms/modelform.md
+      - Formsets: topics/forms/formsets.md
     - Templates: topics/templates.md
     - Template Loader: topics/template-loader.md
     - Template Tags: topics/template-tags.md
@@ -128,6 +129,9 @@ nav:
     - Admin: topics/admin.md
     - Static Files: topics/static-files.md
     - Email: topics/email.md
+    - File Storage: topics/file-storage.md
+    - Validators: topics/validators.md
+    - Testing: topics/testing.md
     - Utilities: topics/utils.md
   - Management Commands:
     - Built-in Commands: management/commands.md

@@ -80,3 +80,52 @@ from starlette.requests import Request
 async def login(request: Request):
     ...
 ```
+
+## CSRF protection
+
+Buraq ships a CSRF middleware that validates tokens on state-changing requests.  Tokens are stored in the session.
+
+### Setup
+
+```python title="config/urls.py"
+from buraq.contrib.csrf import CSRFMiddleware
+
+app.add_middleware(CSRFMiddleware)
+```
+
+`CSRFMiddleware` skips validation for safe methods (`GET`, `HEAD`, `OPTIONS`, `TRACE`).
+
+### Using the token in templates
+
+```python
+from buraq.contrib.csrf import get_token
+
+async def my_view(request):
+    csrf_token = get_token(request)
+    return render(request, "form.html", {"csrf_token": csrf_token})
+```
+
+```html
+<form method="post">
+  <input type="hidden" name="csrftoken" value="{{ csrf_token }}">
+  ...
+</form>
+```
+
+### Decorators
+
+```python
+from buraq.contrib.csrf import csrf_protect, ensure_csrf_cookie
+
+# Force CSRF validation on this view
+@csrf_protect
+async def payment_view(request):
+    ...
+
+# Set the CSRF cookie even if the response wouldn't normally need it
+@ensure_csrf_cookie
+async def frontend_entry(request):
+    ...
+```
+
+See [CSRF Protection](csrf.md) for the full reference.

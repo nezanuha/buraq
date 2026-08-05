@@ -151,3 +151,90 @@ await Post.objects.bulk_create(records, ignore_conflicts=True)
 async for post in Post.objects.filter(is_published=True).iterator():
     process(post)   # memory-efficient — doesn't load all at once
 ```
+
+## Deferred loading
+
+Load only specific columns; remaining columns are fetched lazily when accessed.
+
+```python
+# Load only title and slug — content and other fields are deferred
+posts = await Post.objects.only("title", "slug").all()
+
+# Load everything except the large content column
+posts = await Post.objects.defer("content").all()
+```
+
+## Locking rows — select_for_update
+
+```python
+# Lock rows for the duration of the current transaction
+posts = await Post.objects.filter(is_published=False).select_for_update().all()
+
+# Non-blocking — skip rows that are already locked
+posts = await Post.objects.filter(status="pending").select_for_update(skip_locked=True).all()
+
+# Raise immediately if any row is locked
+posts = await Post.objects.filter(status="pending").select_for_update(nowait=True).all()
+```
+
+## Earliest and latest
+
+```python
+# First record by created_at
+oldest = await Post.objects.earliest("created_at")
+
+# Most recent record by created_at
+newest = await Post.objects.latest("created_at")
+
+# Defaults to primary key if no field is specified
+first  = await Post.objects.earliest()
+last   = await Post.objects.latest()
+```
+
+## Date and datetime truncation
+
+```python
+# Distinct years that have at least one post
+years = await Post.objects.dates("created_at", "year")
+# → [datetime.date(2023, 1, 1), datetime.date(2024, 1, 1), ...]
+
+# Distinct months
+months = await Post.objects.dates("created_at", "month")
+
+# Datetime precision (requires DateTimeField)
+hours = await Post.objects.datetimes("created_at", "hour")
+# kind: "year" | "month" | "day" | "hour" | "minute" | "second"
+```
+
+## Raw SQL
+
+Use when ORM expressions can't express what you need.
+
+```python
+rows = await Post.objects.raw(
+    "SELECT id, title FROM posts WHERE views > :min_views",
+    {"min_views": 100},
+)
+# → [{"id": 1, "title": "..."}, ...]
+```
+
+## Annotating with arbitrary expressions
+
+```python
+from buraq.orm.window import RowNumber, Window
+
+posts = await Post.objects.annotate_expr(
+    row_num=RowNumber(Window(order_by="id")),
+).all()
+```
+
+## in_bulk
+
+```python
+# Fetch a dict keyed by primary key
+post_map = await Post.objects.in_bulk([1, 2, 3])
+# → {1: <Post id=1>, 2: <Post id=2>, 3: <Post id=3>}
+
+# Keyed by a different field
+slug_map = await Post.objects.in_bulk(["hello", "world"], field_name="slug")
+```

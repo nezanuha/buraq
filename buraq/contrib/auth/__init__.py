@@ -72,25 +72,23 @@ async def update_session_auth_hash(request, user) -> None:
 
 async def authenticate(request, *, username: str, password: str):
     """
-    Verify credentials.  Returns the ``User`` instance on success, or ``None``.
+    Verify credentials against all configured ``AUTHENTICATION_BACKENDS``.
 
-    Checks ``is_active``; inactive accounts always fail.
+    Returns the first ``User`` instance returned by a backend, or ``None``
+    if every backend declines or raises.
     """
-    from buraq.contrib.auth.models import User
-    from buraq.core.auth import verify_password
+    from buraq.contrib.auth.backends import _load_backends
 
-    try:
-        user = await User.objects.get(username=username)
-    except Exception:
-        return None
-
-    if not user.is_active:
-        return None
-
-    if not verify_password(password, user.hashed_password):
-        return None
-
-    return user
+    for backend in _load_backends():
+        try:
+            user = await backend.authenticate(request, username=username, password=password)
+        except Exception:
+            _log.debug("authenticate(): backend %r raised", backend, exc_info=True)
+            continue
+        if user is not None:
+            user._auth_backend = f"{backend.__class__.__module__}.{backend.__class__.__name__}"
+            return user
+    return None
 
 
 async def login(request, user) -> None:

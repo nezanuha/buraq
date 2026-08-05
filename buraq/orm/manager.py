@@ -121,11 +121,17 @@ class QuerySet:
         return qs
 
     def only(self, *fields) -> "QuerySet":
-        cols = [getattr(self._model, f) for f in fields]
-        return self._clone(select(*cols))
+        from sqlalchemy.orm import load_only
+        attrs = [getattr(self._model, f) for f in fields]
+        q = select(self._model).options(load_only(*attrs))
+        return self._clone(q)
 
     def defer(self, *fields) -> "QuerySet":
-        return self
+        from sqlalchemy.orm import defer as sa_defer
+        q = self._query
+        for field in fields:
+            q = q.options(sa_defer(getattr(self._model, field)))
+        return self._clone(q)
 
     def select_for_update(self, nowait: bool = False, skip_locked: bool = False) -> "QuerySet":
         """Lock selected rows with SELECT ... FOR UPDATE."""

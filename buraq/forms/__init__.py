@@ -30,6 +30,14 @@ from buraq.forms.fields import (
     UUIDField,
 )
 from buraq.forms.forms import BoundField, Form, ModelForm, ValidationError
+from buraq.forms.formsets import (
+    BaseFormSet,
+    BaseInlineFormSet,
+    BaseModelFormSet,
+    formset_factory,
+    inlineformset_factory,
+    modelformset_factory,
+)
 from buraq.forms.widgets import (
     CheckboxInput,
     DateInput,
@@ -45,6 +53,8 @@ from buraq.forms.widgets import (
 
 __all__ = [
     "Form", "ModelForm", "BoundField", "ValidationError",
+    "BaseFormSet", "BaseModelFormSet", "BaseInlineFormSet",
+    "formset_factory", "modelformset_factory", "inlineformset_factory",
     "Field", "CharField", "IntegerField", "FloatField", "DecimalField",
     "BooleanField", "NullBooleanField", "EmailField", "URLField", "SlugField",
     "DateField", "DateTimeField", "TimeField", "ChoiceField", "MultipleChoiceField",

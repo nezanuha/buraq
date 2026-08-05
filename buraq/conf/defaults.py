@@ -25,6 +25,7 @@ class BuraqSettings(BaseSettings):
     # Auth
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     ALGORITHM: str = "HS256"
+    AUTHENTICATION_BACKENDS: list[str] = ["buraq.contrib.auth.backends.ModelBackend"]
 
     # CORS
     CORS_ORIGINS: list[str] = []
