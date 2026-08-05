@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 
@@ -10,6 +11,11 @@ _ANCHOR_HREF = re.compile(r'(<a [^>]*href="[^"]+[^"/])/+"')
 # Strips trailing slash from search index "location" values
 _SEARCH_LOC = re.compile(r'("location":"[^"]+[^"/])/+"')
 
+# Set BURAQ_DOCS_NOINDEX=1 when deploying old/non-latest versions so search
+# engines only index the current version and never rank stale pages.
+_NOINDEX = os.environ.get("BURAQ_DOCS_NOINDEX") == "1"
+_NOINDEX_TAG = '<meta name="robots" content="noindex, follow">'
+
 
 def _strip(output: str) -> str:
     output = _LINK_TAG.sub(r'\1">', output)
@@ -17,14 +23,24 @@ def _strip(output: str) -> str:
     return output
 
 
+def _inject_noindex(output: str) -> str:
+    return output.replace("<head>", f"<head>\n  {_NOINDEX_TAG}", 1)
+
+
 def on_post_page(output, **_):
-    """Strip trailing slash from all internal URLs in content pages."""
-    return _strip(output)
+    """Strip trailing slashes; inject noindex on non-latest version builds."""
+    output = _strip(output)
+    if _NOINDEX:
+        output = _inject_noindex(output)
+    return output
 
 
 def on_post_template(output, **_):
     """Strip trailing slash from all internal URLs in theme templates (e.g. 404.html)."""
-    return _strip(output)
+    output = _strip(output)
+    if _NOINDEX:
+        output = _inject_noindex(output)
+    return output
 
 
 def on_post_build(config, **_):
