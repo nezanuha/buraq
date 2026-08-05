@@ -82,6 +82,14 @@ jobs:
         run: |
           VERSION=${{ steps.version.outputs.version }}
           MINOR=$(echo "$VERSION" | cut -d. -f1,2)
+
+          # Redeploy the current latest with noindex before it loses the alias,
+          # but only when it's a different version (guards against re-releasing same minor).
+          PREV=$(uv run mike list --deploy-prefix docs 2>/dev/null | grep '\[latest\]' | awk '{print $1}')
+          if [ -n "$PREV" ] && [ "$PREV" != "$MINOR" ]; then
+            BURAQ_DOCS_NOINDEX=1 uv run mike deploy --push --deploy-prefix docs "$PREV"
+          fi
+
           uv run mike deploy --push --deploy-prefix docs --update-aliases "$MINOR" latest
           uv run mike set-default --push --deploy-prefix docs latest
 
