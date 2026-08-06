@@ -42,8 +42,8 @@ class Group(models.Model):
 class UserGroup(models.Model):
     """Association table between User and Group."""
 
-    user_id  = models.IntegerField()
-    group_id = models.IntegerField()
+    user_id  = models.ForeignKey("buraq_users", on_delete=models.CASCADE)
+    group_id = models.ForeignKey("buraq_groups", on_delete=models.CASCADE)
 
     class Meta:
         table_name = "buraq_user_groups"
@@ -52,8 +52,8 @@ class UserGroup(models.Model):
 class UserPermission(models.Model):
     """Direct user-level permission assignment."""
 
-    user_id       = models.IntegerField()
-    permission_id = models.IntegerField()
+    user_id       = models.ForeignKey("buraq_users", on_delete=models.CASCADE)
+    permission_id = models.ForeignKey("buraq_permissions", on_delete=models.CASCADE)
 
     class Meta:
         table_name = "buraq_user_permissions"
@@ -62,8 +62,8 @@ class UserPermission(models.Model):
 class GroupPermission(models.Model):
     """Association table between Group and Permission."""
 
-    group_id      = models.IntegerField()
-    permission_id = models.IntegerField()
+    group_id      = models.ForeignKey("buraq_groups", on_delete=models.CASCADE)
+    permission_id = models.ForeignKey("buraq_permissions", on_delete=models.CASCADE)
 
     class Meta:
         table_name = "buraq_group_permissions"

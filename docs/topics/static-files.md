@@ -45,4 +45,4 @@ MEDIA_DIR = str(BASE_DIR / "media")
 MEDIA_URL = "/media/"
 ```
 
-Media files are served automatically at `MEDIA_URL` when `MEDIA_DIR` exists and is non-empty.
+Media files are served automatically at `MEDIA_URL` when `MEDIA_DIR` exists.

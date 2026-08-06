@@ -37,7 +37,7 @@ class RedisCacheBackend(BaseCacheBackend):
     async def set(self, key: str, value: Any, timeout: int | None = None) -> None:
         client = await self._get_client()
         serialized = json.dumps(value, default=str)
-        if timeout:
+        if timeout is not None and timeout > 0:
             await client.setex(self._make_key(key), timeout, serialized)
         else:
             await client.set(self._make_key(key), serialized)
@@ -74,7 +74,7 @@ class RedisCacheBackend(BaseCacheBackend):
         async with client.pipeline(transaction=False) as pipe:
             for key, value in mapping.items():
                 serialized = json.dumps(value, default=str)
-                if timeout:
+                if timeout is not None and timeout > 0:
                     pipe.setex(self._make_key(key), timeout, serialized)
                 else:
                     pipe.set(self._make_key(key), serialized)

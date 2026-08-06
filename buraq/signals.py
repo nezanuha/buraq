@@ -95,16 +95,20 @@ class Signal:
 
     def _live_receivers(self, sender):
         """Yield (handler, ) for all live receivers matching sender, pruning dead weakrefs."""
-        alive = []
-        for entry in self._receivers:
+        dead = []
+        for entry in list(self._receivers):  # snapshot so handlers can connect/disconnect safely
             sender_filter, ref, uid = entry
             live = self._resolve_ref(ref)
             if live is None:
-                continue  # weakref is dead — skip and don't re-add
-            alive.append(entry)
+                dead.append(entry)
+                continue
             if sender_filter is None or sender_filter is sender:
                 yield live
-        self._receivers = alive
+        for entry in dead:
+            try:
+                self._receivers.remove(entry)
+            except ValueError:
+                pass
 
     async def send(self, sender, **kwargs) -> list:
         """Call all matching receivers. Supports both sync and async handlers.

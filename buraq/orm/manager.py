@@ -126,8 +126,14 @@ class QuerySet:
         return self._clone(q)
 
     def values(self, *fields) -> "QuerySet":
-        qs = self._clone(self._query)
-        qs._values_fields = list(fields) if fields else None
+        if fields:
+            cols = [getattr(self._model, f) for f in fields]
+            new_q = self._query.with_only_columns(*cols, maintain_column_froms=True)
+            qs = self._clone(new_q)
+            qs._values_fields = list(fields)
+        else:
+            qs = self._clone(self._query)
+            qs._values_fields = None
         return qs
 
     def values_list(self, *fields, flat: bool = False) -> "QuerySet":
@@ -138,7 +144,7 @@ class QuerySet:
     def only(self, *fields) -> "QuerySet":
         from sqlalchemy.orm import load_only
         attrs = [getattr(self._model, f) for f in fields]
-        q = select(self._model).options(load_only(*attrs))
+        q = self._query.options(load_only(*attrs))
         return self._clone(q)
 
     def defer(self, *fields) -> "QuerySet":
@@ -216,9 +222,11 @@ class QuerySet:
         import sqlalchemy as sa
 
         from buraq.core.db import SessionLocal
-        # Reverse primary key ordering and take 1 row — avoids loading the whole table.
         pk_col = getattr(self._model, "id", None)
-        q = self._query.order_by(sa.desc(pk_col)).limit(1) if pk_col is not None else self._query
+        if pk_col is not None:
+            q = self._query.order_by(None).order_by(sa.desc(pk_col)).limit(1)
+        else:
+            q = self._query
         async with SessionLocal() as db:
             result = await db.execute(q)
             return result.scalar_one_or_none()
@@ -239,32 +247,41 @@ class QuerySet:
 
     async def delete(self) -> int:
         """Bulk delete all rows matching current filters."""
-        from buraq.core.db import SessionLocal
+        from buraq.core.db import SessionLocal, _current_session
+        where_clauses = self._query.whereclause
+        q = sa_delete(self._model)
+        if where_clauses is not None:
+            q = q.where(where_clauses)
+        active = _current_session.get()
+        if active is not None:
+            result = await active.execute(q)
+            await active.flush()
+            return result.rowcount
         async with SessionLocal() as db:
-            # Extract WHERE clause from select query
-            where_clauses = self._query.whereclause
-            q = sa_delete(self._model)
-            if where_clauses is not None:
-                q = q.where(where_clauses)
             result = await db.execute(q)
             await db.commit()
             return result.rowcount
 
     async def update(self, **kwargs) -> int:
         """Bulk update all rows matching current filters."""
-        from buraq.core.db import SessionLocal
+        from buraq.core.db import SessionLocal, _current_session
         from buraq.orm.query import F, _FExpr
+        resolved = {}
+        for key, value in kwargs.items():
+            if isinstance(value, (F, _FExpr)):
+                resolved[key] = value.resolve(self._model)
+            else:
+                resolved[key] = value
+        where_clauses = self._query.whereclause
+        q = sa_update(self._model).values(**resolved)
+        if where_clauses is not None:
+            q = q.where(where_clauses)
+        active = _current_session.get()
+        if active is not None:
+            result = await active.execute(q)
+            await active.flush()
+            return result.rowcount
         async with SessionLocal() as db:
-            resolved = {}
-            for key, value in kwargs.items():
-                if isinstance(value, (F, _FExpr)):
-                    resolved[key] = value.resolve(self._model)
-                else:
-                    resolved[key] = value
-            where_clauses = self._query.whereclause
-            q = sa_update(self._model).values(**resolved)
-            if where_clauses is not None:
-                q = q.where(where_clauses)
             result = await db.execute(q)
             await db.commit()
             return result.rowcount
@@ -324,9 +341,7 @@ class QuerySet:
                 agg_cols.append(sa.literal(agg).label(label))
             agg_labels.append(label)
 
-        all_cols = (
-            [getattr(self._model, f) for f in (self._values_fields or [])] + agg_cols
-        )
+        all_cols = base_cols + agg_cols
         q = select(*all_cols)
         if group_by:
             q = q.group_by(*group_by)
@@ -369,13 +384,22 @@ class QuerySet:
 
         kind: "year" | "month" | "day"
         """
+        from buraq.conf import settings
         from buraq.core.db import SessionLocal
+        from sqlalchemy.engine import make_url as _make_url
         col = getattr(self._model, field)
-        trunc = sa.cast(col, sa.Date)
-        if kind == "year":
-            trunc = func.date_trunc("year", col)
-        elif kind == "month":
-            trunc = func.date_trunc("month", col)
+        try:
+            dialect = _make_url(settings.DATABASE_URL).get_dialect().name
+        except Exception:
+            dialect = "postgresql"
+        if dialect == "sqlite":
+            _fmt = {"year": "%Y-01-01", "month": "%Y-%m-01", "day": "%Y-%m-%d"}
+            trunc = sa.cast(func.strftime(_fmt.get(kind, "%Y-%m-%d"), col), sa.Date)
+        elif dialect in ("mysql", "mariadb"):
+            _fmt = {"year": "%Y-01-01", "month": "%Y-%m-01", "day": "%Y-%m-%d"}
+            trunc = sa.cast(func.date_format(col, _fmt.get(kind, "%Y-%m-%d")), sa.Date)
+        else:
+            trunc = sa.cast(func.date_trunc(kind, col), sa.Date)
         q = sa.select(trunc.label("date")).distinct().order_by(trunc)
         async with SessionLocal() as db:
             result = await db.execute(q)
@@ -387,9 +411,30 @@ class QuerySet:
 
         kind: "year" | "month" | "day" | "hour" | "minute" | "second"
         """
+        from buraq.conf import settings
         from buraq.core.db import SessionLocal
+        from sqlalchemy.engine import make_url as _make_url
         col = getattr(self._model, field)
-        trunc = func.date_trunc(kind, col)
+        try:
+            dialect = _make_url(settings.DATABASE_URL).get_dialect().name
+        except Exception:
+            dialect = "postgresql"
+        if dialect == "sqlite":
+            _fmt = {
+                "year": "%Y-01-01 00:00:00", "month": "%Y-%m-01 00:00:00",
+                "day": "%Y-%m-%d 00:00:00", "hour": "%Y-%m-%d %H:00:00",
+                "minute": "%Y-%m-%d %H:%M:00", "second": "%Y-%m-%d %H:%M:%S",
+            }
+            trunc = sa.cast(func.strftime(_fmt.get(kind, "%Y-%m-%d %H:%M:%S"), col), sa.DateTime)
+        elif dialect in ("mysql", "mariadb"):
+            _fmt = {
+                "year": "%Y-01-01 00:00:00", "month": "%Y-%m-01 00:00:00",
+                "day": "%Y-%m-%d 00:00:00", "hour": "%Y-%m-%d %H:00:00",
+                "minute": "%Y-%m-%d %H:%i:00", "second": "%Y-%m-%d %H:%i:%S",
+            }
+            trunc = sa.cast(func.date_format(col, _fmt.get(kind, "%Y-%m-%d %H:%i:%S")), sa.DateTime)
+        else:
+            trunc = func.date_trunc(kind, col)
         q = sa.select(trunc.label("dt")).distinct().order_by(trunc)
         async with SessionLocal() as db:
             result = await db.execute(q)
@@ -503,7 +548,7 @@ class Manager:
         # Fetch at most 2 rows — enough to detect duplicates without loading the whole table.
         items = await self.filter(*q_objs, **kwargs).limit(2).all()
         if not items:
-            raise DoesNotExist(f"{self._model.__name__} matching query does not exist.")
+            raise self._model.DoesNotExist(f"{self._model.__name__} matching query does not exist.")
         if len(items) > 1:
             raise MultipleObjectsReturned(
                 f"get() returned more than one {self._model.__name__}."
@@ -519,7 +564,14 @@ class Manager:
     # ── Write methods ───────────────────────────────────────────────────────
 
     async def create(self, **kwargs) -> Any:
-        from buraq.core.db import SessionLocal
+        from buraq.core.db import SessionLocal, _current_session
+        active = _current_session.get()
+        if active is not None:
+            obj = self._model(**kwargs)
+            active.add(obj)
+            await active.flush()
+            await active.refresh(obj)
+            return obj
         async with SessionLocal() as db:
             obj = self._model(**kwargs)
             db.add(obj)
@@ -581,32 +633,41 @@ class Manager:
             await db.commit()
 
     async def bulk_create(self, records: list[dict], ignore_conflicts: bool = False) -> list:
-        from buraq.core.db import SessionLocal
+        from buraq.core.db import SessionLocal, _current_session
         from sqlalchemy.engine import make_url as _make_url
-        # Use only column names as keys — never pass SA instance dicts (_sa_instance_state).
         col_names = {c.name for c in self._model.__table__.columns}
         clean_records = [{k: v for k, v in r.items() if k in col_names} for r in records]
-        async with SessionLocal() as db:
-            if ignore_conflicts:
-                from buraq.conf import settings
-                try:
-                    dialect = _make_url(settings.DATABASE_URL).get_dialect().name
-                except Exception:
-                    dialect = "postgresql"
-                if dialect == "sqlite":
-                    from sqlalchemy.dialects.sqlite import insert as _insert
-                elif dialect in ("mysql", "mariadb"):
-                    from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
-                else:
-                    from sqlalchemy.dialects.postgresql import insert as _insert  # type: ignore[no-redef]
-                stmt = _insert(self._model.__table__).values(clean_records).on_conflict_do_nothing()
-                await db.execute(stmt)
+        active = _current_session.get()
+        if ignore_conflicts:
+            from buraq.conf import settings
+            try:
+                dialect = _make_url(settings.DATABASE_URL).get_dialect().name
+            except Exception:
+                dialect = "postgresql"
+            if dialect == "sqlite":
+                from sqlalchemy.dialects.sqlite import insert as _insert
+            elif dialect in ("mysql", "mariadb"):
+                from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
+            else:
+                from sqlalchemy.dialects.postgresql import insert as _insert  # type: ignore[no-redef]
+            stmt = _insert(self._model.__table__).values(clean_records).on_conflict_do_nothing()
+            if active is not None:
+                await active.execute(stmt)
+                await active.flush()
+            else:
+                async with SessionLocal() as db:
+                    await db.execute(stmt)
+                    await db.commit()
+            return []
+        instances = [self._model(**rec) for rec in clean_records]
+        if active is not None:
+            active.add_all(instances)
+            await active.flush()
+        else:
+            async with SessionLocal() as db:
+                db.add_all(instances)
                 await db.commit()
-                return []
-            instances = [self._model(**rec) for rec in clean_records]
-            db.add_all(instances)
-            await db.commit()
-            return instances
+        return instances
 
     async def bulk_update(self, objs: list, fields: list) -> int:
         if not objs:

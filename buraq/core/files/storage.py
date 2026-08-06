@@ -108,16 +108,25 @@ class FileSystemStorage(Storage):
         import asyncio
 
         name = self.get_available_name(name)
-        full_path = self._full_path(name)
-        pathlib.Path(full_path).parent.mkdir(parents=True, exist_ok=True)
 
         def _write():
-            with open(full_path, "wb") as fh:
-                for chunk in content.chunks():
-                    fh.write(chunk)
+            _name = name
+            while True:
+                _full = self._full_path(_name)
+                pathlib.Path(_full).parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    with open(_full, "xb") as fh:
+                        for chunk in content.chunks():
+                            fh.write(chunk)
+                    return _name
+                except FileExistsError:
+                    stem, ext = os.path.splitext(_name)
+                    counter = 1
+                    while os.path.exists(self._full_path(f"{stem}_{counter}{ext}")):
+                        counter += 1
+                    _name = f"{stem}_{counter}{ext}"
 
-        await asyncio.get_running_loop().run_in_executor(None, _write)
-        return name
+        return await asyncio.get_running_loop().run_in_executor(None, _write)
 
     async def open(self, name: str, mode: str = "rb"):
         import asyncio

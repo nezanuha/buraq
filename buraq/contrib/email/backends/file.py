@@ -20,7 +20,8 @@ class FileEmailBackend(BaseEmailBackend):
     async def send(self, message: "EmailMessage") -> bool:
         import asyncio
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
-        filename = self.output_dir / f"{timestamp}_{message.to[0].replace('@', '_')}.eml"
+        first_recipient = message.to[0].replace("@", "_") if message.to else "no_recipient"
+        filename = self.output_dir / f"{timestamp}_{first_recipient}.eml"
         content = message.build_mime().as_string()
         await asyncio.to_thread(filename.write_text, content, "utf-8")
         return True

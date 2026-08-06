@@ -46,10 +46,20 @@ def register_middleware(app: FastAPI) -> None:
 
 async def security_headers_middleware(request: Request, call_next):
     response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
+    if settings.SECURE_CONTENT_TYPE_NOSNIFF:
+        response.headers["X-Content-Type-Options"] = "nosniff"
+    if settings.X_FRAME_OPTIONS:
+        response.headers["X-Frame-Options"] = settings.X_FRAME_OPTIONS
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    if not settings.DEBUG:
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    if settings.SECURE_REFERRER_POLICY:
+        response.headers["Referrer-Policy"] = settings.SECURE_REFERRER_POLICY
+    if settings.SECURE_CROSS_ORIGIN_OPENER_POLICY:
+        response.headers["Cross-Origin-Opener-Policy"] = settings.SECURE_CROSS_ORIGIN_OPENER_POLICY
+    if settings.SECURE_HSTS_SECONDS > 0:
+        hsts = f"max-age={settings.SECURE_HSTS_SECONDS}"
+        if settings.SECURE_HSTS_INCLUDE_SUBDOMAINS:
+            hsts += "; includeSubDomains"
+        if settings.SECURE_HSTS_PRELOAD:
+            hsts += "; preload"
+        response.headers["Strict-Transport-Security"] = hsts
     return response

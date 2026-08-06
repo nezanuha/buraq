@@ -153,7 +153,7 @@ class Subquery:
         return visitors.cloned_traverse(query, {}, {"column": _replace})
 
 
-class Exists:
+class Exists(Subquery):
     """
     EXISTS(...) subquery expression.
 
@@ -161,11 +161,9 @@ class Exists:
         await Post.objects.filter(has_comments=has_comments)
     """
 
-    def __init__(self, queryset):
-        self._queryset = queryset
-
     def resolve(self, outer_model) -> sa.sql.ColumnElement:
         inner_q = self._queryset._query
+        inner_q = self._replace_outer_refs(inner_q, outer_model)
         return sa.exists(inner_q)
 
 

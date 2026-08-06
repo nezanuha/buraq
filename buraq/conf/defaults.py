@@ -49,7 +49,7 @@ class BuraqSettings(BaseSettings):
     MEDIA_DIR: str | None = None
 
     # Email
-    EMAIL_BACKEND: str = "buraq.contrib.email.backends.smtp.EmailBackend"
+    EMAIL_BACKEND: str = "buraq.contrib.email.backends.smtp.SMTPEmailBackend"
     DEFAULT_FROM_EMAIL: str = "webmaster@localhost"
     EMAIL_FILE_PATH: str | None = None
     EMAIL_HOST: str | None = None

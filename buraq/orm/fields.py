@@ -114,7 +114,7 @@ class PositiveIntegerField(Field):
     def to_sa_column(self, name: str = "") -> sa.Column:
         return sa.Column(
             sa.Integer,
-            sa.CheckConstraint(f"{name} >= 0"),
+            sa.CheckConstraint(sa.column(name) >= 0),
             nullable=self.null,
             unique=self.unique,
             index=self.db_index,
@@ -126,7 +126,7 @@ class PositiveSmallIntegerField(Field):
     def to_sa_column(self, name: str = "") -> sa.Column:
         return sa.Column(
             sa.SmallInteger,
-            sa.CheckConstraint(f"{name} >= 0"),
+            sa.CheckConstraint(sa.column(name) >= 0),
             nullable=self.null,
             unique=self.unique,
             index=self.db_index,
@@ -238,7 +238,7 @@ class PositiveBigIntegerField(Field):
     def to_sa_column(self, name: str = "") -> sa.Column:
         return sa.Column(
             sa.BigInteger,
-            sa.CheckConstraint(f"{name} >= 0"),
+            sa.CheckConstraint(sa.column(name) >= 0),
             nullable=self.null,
             unique=self.unique,
             index=self.db_index,
@@ -411,7 +411,13 @@ class ManyToManyField(Field):
             else:
                 self._assoc_table = Base.metadata.tables[assoc_table_name]
         else:
-            self._assoc_table = None
+            if hasattr(through, "__table__"):
+                self._assoc_table = through.__table__
+            elif isinstance(through, str):
+                from buraq.core.db import Base
+                self._assoc_table = Base.metadata.tables.get(through)
+            else:
+                self._assoc_table = None
 
         # Attach M2MManager descriptor to model class
         descriptor = _M2MDescriptor(self)

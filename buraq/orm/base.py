@@ -227,14 +227,21 @@ class Model(Base):
 
     async def delete(self) -> None:
         """Delete this instance from the database."""
-        from buraq.core.db import SessionLocal
+        from buraq.core.db import SessionLocal, _current_session
         from buraq.signals import post_delete, pre_delete
         await pre_delete.send(sender=self.__class__, instance=self)
-        async with SessionLocal() as db:
-            obj = await db.get(self.__class__, self.id)
+        active = _current_session.get()
+        if active is not None:
+            obj = await active.get(self.__class__, self.id)
             if obj:
-                await db.delete(obj)
-                await db.commit()
+                await active.delete(obj)
+                await active.flush()
+        else:
+            async with SessionLocal() as db:
+                obj = await db.get(self.__class__, self.id)
+                if obj:
+                    await db.delete(obj)
+                    await db.commit()
         await post_delete.send(sender=self.__class__, instance=self)
 
     async def refresh_from_db(self, fields: list | None = None) -> None:
@@ -290,14 +297,15 @@ class Model(Base):
 
     async def validate_unique(self) -> None:
         """Check that unique constraints are not violated. Raises ValidationError if they are."""
+        from buraq.core.db import SessionLocal, _current_session
         from buraq.exceptions import ValidationError
-        from buraq.core.db import SessionLocal
         from sqlalchemy import select
 
         errors = []
         table = self.__class__.__table__
         unique_cols = [c for c in table.columns if c.unique and not c.primary_key]
-        async with SessionLocal() as db:
+
+        async def _run(db):
             for col in unique_cols:
                 val = getattr(self, col.name, None)
                 if val is None:
@@ -310,6 +318,14 @@ class Model(Base):
                 result = await db.execute(q.limit(1))
                 if result.scalar_one_or_none() is not None:
                     errors.append(f"{col.name}: Value '{val}' must be unique.")
+
+        active = _current_session.get()
+        if active is not None:
+            await _run(active)
+        else:
+            async with SessionLocal() as db:
+                await _run(db)
+
         if errors:
             raise ValidationError("; ".join(errors))
 

@@ -167,11 +167,25 @@ def _resolve_lookup(model, key: str, value) -> sa.sql.ClauseElement:
 
     if "__" in key:
         field_name, op = key.rsplit("__", 1)
-        col = getattr(model, field_name)
+        try:
+            col = getattr(model, field_name)
+        except AttributeError:
+            from buraq.exceptions import FieldError
+            raise FieldError(
+                f"Cannot resolve keyword '{field_name}' into field. "
+                f"Choices are: {', '.join(c.name for c in model.__table__.columns)}"
+            )
         value = _resolve_value(value, model)
         resolver = _OPS.get(op, lambda c, v: c == v)
         return resolver(col, value)
     else:
-        col = getattr(model, key)
+        try:
+            col = getattr(model, key)
+        except AttributeError:
+            from buraq.exceptions import FieldError
+            raise FieldError(
+                f"Cannot resolve keyword '{key}' into field. "
+                f"Choices are: {', '.join(c.name for c in model.__table__.columns)}"
+            )
         value = _resolve_value(value, model)
         return col == value

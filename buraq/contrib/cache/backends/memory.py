@@ -49,3 +49,19 @@ class MemoryCacheBackend(BaseCacheBackend):
     async def clear(self) -> None:
         async with self._lock:
             self._store.clear()
+
+    async def add(self, key: str, value: Any, timeout: int | None = None) -> bool:
+        """Set key only if not already present. Atomic under the instance lock."""
+        async with self._lock:
+            entry = self._store.get(key)
+            if entry is not None:
+                _, expires_at = entry
+                if not self._is_expired(expires_at):
+                    return False
+                del self._store[key]
+            if len(self._store) >= self._max_size:
+                oldest = next(iter(self._store))
+                del self._store[oldest]
+            expires_at = time.monotonic() + timeout if timeout is not None else None
+            self._store[key] = (value, expires_at)
+            return True

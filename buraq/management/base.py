@@ -130,9 +130,11 @@ class BaseCommand:
                 loop = None
             if loop and loop.is_running():
                 # Inside an already-running loop (e.g., tests with pytest-asyncio).
-                # Schedule as a task; callers must await or use asyncio.ensure_future.
-                future = asyncio.ensure_future(self.handle(*args, **options))
-                return future
+                # Run in a dedicated thread with its own event loop to avoid conflicts.
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    fut = pool.submit(asyncio.run, self.handle(*args, **options))
+                    return fut.result()
             return asyncio.run(self.handle(*args, **options))
         except CommandError as e:
             self.stderr.write(self.style.error(f"CommandError: {e}"))
