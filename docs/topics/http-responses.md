@@ -206,6 +206,88 @@ async def cached_view(request):
 
 ---
 
+## View decorators
+
+### require_http_methods / require_GET / require_POST / require_safe
+
+Restrict a view to specific HTTP methods — returns 405 Method Not Allowed otherwise:
+
+```python
+from buraq.decorators import require_http_methods, require_GET, require_POST, require_safe
+
+@require_GET
+async def read_only_view(request): ...
+
+@require_POST
+async def submit_view(request): ...
+
+@require_safe          # GET and HEAD
+async def idempotent_view(request): ...
+
+@require_http_methods("GET", "POST")
+async def multi_method_view(request): ...
+```
+
+### cache_control
+
+Set `Cache-Control` response headers declaratively:
+
+```python
+from buraq.decorators import cache_control
+
+@cache_control(max_age=3600, public=True)
+async def article_detail(request, pk: int): ...
+
+@cache_control(no_cache=True, no_store=True, must_revalidate=True)
+async def private_view(request): ...
+```
+
+### never_cache
+
+Prevent any caching of the response:
+
+```python
+from buraq.decorators import never_cache
+
+@never_cache
+async def sensitive_view(request): ...
+```
+
+Sets `Cache-Control: max-age=0, no-cache, no-store, must-revalidate, private` plus `Expires` and `Pragma` headers.
+
+### vary_on_headers / vary_on_cookie
+
+Tell caches that the response varies by specific request headers:
+
+```python
+from buraq.decorators import vary_on_headers, vary_on_cookie
+
+@vary_on_headers("Accept-Language", "Accept-Encoding")
+async def localised_view(request): ...
+
+@vary_on_cookie
+async def personalised_view(request): ...
+```
+
+### cache_page
+
+Cache the full response for a view for N seconds:
+
+```python
+from buraq.decorators import cache_page
+
+@cache_page(60 * 15)   # cache for 15 minutes
+async def article_list(request): ...
+
+# Custom cache backend and key prefix
+@cache_page(300, cache="secondary", key_prefix="v2")
+async def search_results(request): ...
+```
+
+Only 200 OK responses are cached. Headers that must never be shared (`Set-Cookie`, `Authorization`) are stripped before storing.
+
+---
+
 ## url_has_allowed_host_and_scheme
 
 Guards against open redirect attacks when redirecting to a user-supplied URL.

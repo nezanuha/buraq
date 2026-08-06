@@ -113,6 +113,16 @@ posts = await Post.objects.filter(
 
 XOR is emulated as `(A OR B) AND NOT (A AND B)` for full compatibility across SQLite, PostgreSQL, and MySQL.
 
+## none() — empty queryset
+
+Return a queryset that always yields zero results — useful for conditional query building:
+
+```python
+qs = Post.objects.none()
+results = await qs.all()   # → []
+count = await qs.count()   # → 0
+```
+
 ## values() and values_list()
 
 Return dicts or tuples instead of model instances — useful for serialization and aggregation:
