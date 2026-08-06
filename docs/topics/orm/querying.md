@@ -80,7 +80,35 @@ Post.objects.filter(views__lt=100)               # less than
 Post.objects.filter(views__lte=100)              # less than or equal
 Post.objects.filter(title__in=["A", "B", "C"])
 Post.objects.filter(category_id__isnull=True)
+Post.objects.filter(title__iexact="hello world")          # case-insensitive exact
+Post.objects.filter(views__range=(100, 500))              # BETWEEN 100 AND 500
+Post.objects.filter(created_at__year=2024)                # extract year
+Post.objects.filter(created_at__month=6)                  # extract month
+Post.objects.filter(created_at__day=15)                   # extract day
 ```
+
+### Full lookup reference
+
+| Lookup | SQL equivalent | Notes |
+|---|---|---|
+| `exact` | `= value` | Default when no lookup given |
+| `iexact` | `ILIKE value` | Case-insensitive exact |
+| `contains` | `LIKE %value%` | |
+| `icontains` | `ILIKE %value%` | Case-insensitive |
+| `startswith` | `LIKE value%` | |
+| `istartswith` | `ILIKE value%` | Case-insensitive |
+| `endswith` | `LIKE %value` | |
+| `iendswith` | `ILIKE %value` | Case-insensitive |
+| `gt` | `> value` | |
+| `gte` | `>= value` | |
+| `lt` | `< value` | |
+| `lte` | `<= value` | |
+| `in` | `IN (...)` | Pass a list |
+| `isnull` | `IS NULL` / `IS NOT NULL` | Pass `True` or `False` |
+| `range` | `BETWEEN v1 AND v2` | Pass a 2-tuple |
+| `year` | `EXTRACT(year ...)` | DateTimeField only |
+| `month` | `EXTRACT(month ...)` | DateTimeField only |
+| `day` | `EXTRACT(day ...)` | DateTimeField only |
 
 ## Q objects — complex filters
 
