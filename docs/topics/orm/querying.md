@@ -113,6 +113,32 @@ posts = await Post.objects.filter(
 
 XOR is emulated as `(A OR B) AND NOT (A AND B)` for full compatibility across SQLite, PostgreSQL, and MySQL.
 
+## get_or_create()
+
+Fetch an object matching kwargs, or create it if it doesn't exist. Returns `(instance, created)`:
+
+```python
+post, created = await Post.objects.get_or_create(
+    slug="hello-world",
+    defaults={"title": "Hello World", "content": "..."},
+)
+# created=True  → new object was inserted
+# created=False → existing object was returned
+```
+
+`defaults` are only used when creating — they are not used in the lookup.
+
+## update_or_create()
+
+Like `get_or_create()` but updates the existing object with `defaults` if found:
+
+```python
+post, created = await Post.objects.update_or_create(
+    slug="hello-world",
+    defaults={"title": "Updated Title", "views": 0},
+)
+```
+
 ## none() — empty queryset
 
 Return a queryset that always yields zero results — useful for conditional query building:
@@ -203,6 +229,39 @@ page      = await paginator.page(request.query_params.get("page", 1))
 # paginator.num_pages
 ```
 
+## distinct()
+
+Remove duplicate rows from results:
+
+```python
+# Unique category IDs
+category_ids = await Post.objects.values_list("category_id", flat=True).distinct().all()
+```
+
+## select_related() / prefetch_related()
+
+Eagerly load related objects to avoid N+1 queries:
+
+```python
+# JOIN load (one query) — use for ForeignKey / OneToOneField
+posts = await Post.objects.select_related("author").all()
+
+# Subquery load (two queries) — use for ManyToManyField / reverse FK
+posts = await Post.objects.prefetch_related("tags").all()
+
+# Chain both
+posts = await Post.objects.select_related("author").prefetch_related("tags").all()
+```
+
+## last()
+
+Return the last object by primary key, or `None`:
+
+```python
+latest_post = await Post.objects.last()
+latest_published = await Post.objects.filter(is_published=True).last()
+```
+
 ## Bulk operations
 
 ```python
@@ -214,6 +273,12 @@ await Post.objects.bulk_create([
 
 # With ignore_conflicts (skip duplicates)
 await Post.objects.bulk_create(records, ignore_conflicts=True)
+
+# Bulk update — update specific fields on a list of instances
+posts = await Post.objects.filter(is_published=False).all()
+for post in posts:
+    post.status = "archived"
+await Post.objects.bulk_update(posts, fields=["status"])
 ```
 
 ## Streaming large querysets
