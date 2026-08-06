@@ -5,7 +5,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse
 
 from buraq.contrib.flatpages.models import FlatPage
-from buraq.exceptions import Http404
+from buraq.http import Http404
 
 
 async def flatpage(request: Request) -> HTMLResponse:

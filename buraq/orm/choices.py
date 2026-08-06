@@ -1,21 +1,4 @@
-import enum
+# Re-exports from buraq.utils.choices — canonical location for TextChoices/IntegerChoices.
+from buraq.utils.choices import IntegerChoices, TextChoices
 
-
-class TextChoices(enum.StrEnum):
-    @classmethod
-    def choices(cls):
-        return [(m.value, m.name.replace("_", " ").title()) for m in cls]
-
-    @classmethod
-    def values(cls):
-        return [m.value for m in cls]
-
-
-class IntegerChoices(enum.IntEnum):
-    @classmethod
-    def choices(cls):
-        return [(m.value, m.name.replace("_", " ").title()) for m in cls]
-
-    @classmethod
-    def values(cls):
-        return [m.value for m in cls]
+__all__ = ["TextChoices", "IntegerChoices"]

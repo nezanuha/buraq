@@ -40,11 +40,12 @@ class QuerySet:
     def filter(self, *q_objs, **kwargs) -> "QuerySet":
         from buraq.orm.query import F, Q, _resolve_lookup
         q = self._query
-        # Apply Q objects
         for q_obj in q_objs:
             if isinstance(q_obj, Q):
                 q = q.where(q_obj.resolve(self._model))
-        # Apply kwargs
+            elif hasattr(q_obj, "resolve"):
+                # Supports SearchQuery and any other resolvable filter objects
+                q = q.where(q_obj.resolve(self._model))
         for key, value in kwargs.items():
             if isinstance(value, F):
                 value = value.resolve(self._model)
@@ -143,9 +144,14 @@ class QuerySet:
         q = self._query
         for label, expr in kwargs.items():
             if hasattr(expr, "resolve"):
-                q = q.add_columns(expr.resolve(self._model).label(label))
+                # Standard resolvable objects (Aggregate, ExpressionWrapper, etc.)
+                col = expr.resolve(self._model)
+            elif callable(expr):
+                # Callable builders like SearchRank("field", "query") and SearchVector(...)
+                col = expr(self._model)
             else:
-                q = q.add_columns(expr.label(label))
+                col = expr
+            q = q.add_columns(col.label(label))
         return self._clone(q)
 
     # ── Async terminal methods ──────────────────────────────────────────────
