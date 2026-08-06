@@ -195,10 +195,63 @@ following = models.ManyToManyField("self", symmetrical=False)
 
 ## Meta class
 
+All `Meta` options are optional.
+
 ```python
+from buraq import models
+
 class Post(models.Model):
-    title = models.CharField(max_length=200)
+    title     = models.CharField(max_length=200)
+    author_id = models.ForeignKey("buraq_users")
+    views     = models.IntegerField(default=0)
 
     class Meta:
-        table_name = "blog_posts"   # custom table name (default: class name lowercased + "s")
+        table_name          = "blog_posts"          # override table name (default: lowercased plural)
+        ordering            = ["-created_at"]       # default ORDER BY — prefix with - for DESC
+        verbose_name        = "blog post"           # human-readable singular name
+        verbose_name_plural = "blog posts"          # human-readable plural (auto-derived if omitted)
+        unique_together     = [["author_id", "title"]]  # composite unique constraint(s)
+        indexes = [
+            models.Index(fields=["title"]),
+            models.Index(fields=["author_id", "created_at"], name="post_author_date_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=["author_id", "title"], name="unique_author_title"),
+            models.CheckConstraint(check="views >= 0", name="positive_views"),
+        ]
+```
+
+### Meta options reference
+
+| Option | Type | Description |
+|---|---|---|
+| `table_name` | `str` | Database table name. Also accepted as `db_table` (Django alias). |
+| `ordering` | `list[str]` | Default sort order. Prefix field name with `-` for descending. |
+| `verbose_name` | `str` | Singular display name used in admin and error messages. |
+| `verbose_name_plural` | `str` | Plural display name. Defaults to `verbose_name + "s"`. |
+| `unique_together` | `list[list[str]]` | Shorthand for composite unique constraints. |
+| `indexes` | `list[Index]` | Database indexes to create on the table. |
+| `constraints` | `list[UniqueConstraint \| CheckConstraint]` | Named database-level constraints. |
+
+### Index
+
+```python
+models.Index(fields=["field1", "field2"], name="optional_name", unique=False)
+```
+
+`unique=True` creates a unique index (equivalent to `UniqueConstraint` but without a name requirement).
+
+### UniqueConstraint
+
+```python
+models.UniqueConstraint(fields=["author_id", "slug"], name="unique_author_slug")
+```
+
+### CheckConstraint
+
+Enforce a SQL-level condition. The `check` string is passed directly to the database:
+
+```python
+models.CheckConstraint(check="price > 0", name="positive_price")
+models.CheckConstraint(check="end_date >= start_date", name="valid_date_range")
 ```
