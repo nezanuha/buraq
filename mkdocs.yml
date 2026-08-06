@@ -92,6 +92,9 @@ nav:
       - Models: topics/orm/models.md
       - Querying: topics/orm/querying.md
       - Advanced Querying: topics/orm/advanced-querying.md
+      - Aggregates: topics/orm/aggregates.md
+      - Window Functions: topics/orm/window-functions.md
+      - Pagination: topics/orm/pagination.md
       - Expressions: topics/orm/expressions.md
       - Database Functions: topics/orm/functions.md
       - Relationships: topics/orm/relationships.md
@@ -133,6 +136,8 @@ nav:
     - Validators: topics/validators.md
     - Testing: topics/testing.md
     - Utilities: topics/utils.md
+    - Humanize: topics/humanize.md
+    - Transactions: topics/transactions.md
     - Choices: topics/choices.md
     - Serialization: topics/serialization.md
     - Feeds (RSS/Atom): topics/feeds.md

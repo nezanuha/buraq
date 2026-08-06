@@ -113,6 +113,60 @@ posts = await Post.objects.filter(
 
 XOR is emulated as `(A OR B) AND NOT (A AND B)` for full compatibility across SQLite, PostgreSQL, and MySQL.
 
+## values() and values_list()
+
+Return dicts or tuples instead of model instances — useful for serialization and aggregation:
+
+```python
+# List of dicts
+posts = await Post.objects.values("id", "title", "views").all()
+# → [{"id": 1, "title": "Hello", "views": 42}, ...]
+
+# List of tuples
+posts = await Post.objects.values_list("id", "title").all()
+# → [(1, "Hello"), (2, "World"), ...]
+
+# Single-column flat list
+ids = await Post.objects.values_list("id", flat=True).all()
+# → [1, 2, 3, ...]
+
+# Combine with filters and ordering
+slugs = await (
+    Post.objects
+    .filter(is_published=True)
+    .order_by("-created_at")
+    .values_list("slug", flat=True)
+    .all()
+)
+```
+
+## annotate_expr()
+
+Add arbitrary SQL expression columns to each result row. Accepts aggregates, window functions, ORM expressions, or raw SQLAlchemy constructs:
+
+```python
+from buraq.orm.aggregates import Count
+from buraq.orm.window import Window, Rank
+from buraq.orm.expressions import Case, When, Value
+
+posts = await Post.objects.annotate_expr(
+    rank=Window(Rank(), partition_by="category_id", order_by="-views"),
+    label=Case(
+        When(is_featured=True, then=Value("featured")),
+        default=Value("regular"),
+    ),
+).all()
+```
+
+Combined with `values()`:
+
+```python
+rows = await Post.objects.values("author_id").annotate_expr(
+    post_count=Count("id")
+).all()
+# → [{"author_id": 1, "post_count": 5}, ...]
+```
+
 ## F expressions — field references
 
 ```python
