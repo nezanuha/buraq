@@ -94,6 +94,34 @@ execute_from_command_line(sys.argv)
 
 This is generated automatically when you run `buraq startproject`.
 
+## URL inspection
+
+```bash
+# List all registered routes
+buraq listurls
+
+# Inspect a non-default app
+buraq listurls --app config.urls:app
+```
+
+Output:
+
+```
+Path                  Methods          Name
+----------------------------------------------
+/                     GET              home
+/posts                GET              post_list
+/posts                POST             post_create
+/posts/{pk}           GET              post_detail
+/posts/{pk}           PUT,PATCH        post_update
+/posts/{pk}           DELETE           post_delete
+/api/docs             GET,HEAD
+
+7 route(s) total.
+```
+
+Named routes are highlighted. Unnamed routes (e.g. FastAPI auto-generated docs) appear without a name.
+
 ## Package management (uv wrappers)
 
 ```bash

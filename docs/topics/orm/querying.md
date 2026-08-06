@@ -104,7 +104,14 @@ posts = await Post.objects.filter(~Q(is_published=False))
 posts = await Post.objects.filter(
     Q(is_published=True) & (Q(title__contains="async") | Q(views__gt=500))
 )
+
+# XOR — exactly one condition must be true
+posts = await Post.objects.filter(
+    Q(is_featured=True) ^ Q(is_editor_pick=True)
+)
 ```
+
+XOR is emulated as `(A OR B) AND NOT (A AND B)` for full compatibility across SQLite, PostgreSQL, and MySQL.
 
 ## F expressions — field references
 
