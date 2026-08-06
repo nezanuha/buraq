@@ -9,6 +9,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+**ORM — QuerySet**
+- `Q.__xor__` — XOR set operation on Q objects (emulated as `(A OR B) AND NOT (A AND B)` for full database compatibility)
+
+**Security Middleware**
+- `buraq.middleware.SecurityMiddleware` — ASGI middleware that injects security headers on every response: `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy`; optional HTTP→HTTPS redirect via `SECURE_SSL_REDIRECT`
+- New settings: `SECURE_HSTS_SECONDS`, `SECURE_HSTS_INCLUDE_SUBDOMAINS`, `SECURE_HSTS_PRELOAD`, `SECURE_CONTENT_TYPE_NOSNIFF`, `SECURE_REFERRER_POLICY`, `SECURE_CROSS_ORIGIN_OPENER_POLICY`, `SECURE_SSL_REDIRECT`, `SECURE_PERMISSIONS_POLICY`, `X_FRAME_OPTIONS`
+
+**Forms**
+- `RadioSelect` widget — renders radio button list, one per choice
+- `CheckboxSelectMultiple` widget — renders checkbox list, multiple selections
+- `MultipleHiddenInput` widget — renders multiple hidden inputs for list values (used by formsets)
+
+**Utilities**
+- `buraq.utils.choices` — `TextChoices` and `IntegerChoices` enum base classes with `.choices`, `.labels`, `.values`, `.names` class properties; use for `CharField`/`IntegerField` choice definitions
+- `buraq.utils.feedgenerator` — `Rss201rev2Feed` (RSS 2.0.1) and `Atom1Feed` (Atom 1.0) feed generators; pure stdlib, no external dependencies; `add_item()`, `writeString()`, `latest_post_date()`
+
+**Serialization**
+- `buraq.serializers` — serialize querysets and model instances to JSON, Python, or XML via `serialize(format, queryset)` / `deserialize(format, data)`; JSON backend uses `orjson` (Rust-based, 2–10× faster than stdlib) with automatic stdlib fallback; XML via `xml.etree.ElementTree`
+
+**PostgreSQL**
+- `buraq.contrib.postgres.fields` — `JSONField` (JSONB), `ArrayField` (ARRAY), `HStoreField` (hstore) column types for SQLAlchemy models
+- `buraq.contrib.postgres.search` — `SearchQuery` (full-text WHERE clause), `SearchVector` (multi-field tsvector), `SearchRank` (ts_rank annotation expression); all use `plainto_tsquery` for safe user input
+- `buraq.contrib.postgres.aggregates` — `ArrayAgg`, `StringAgg`, `JsonAgg`, `BitAnd`, `BitOr` aggregate functions for use with `aggregate()` / `annotate()`
+- `buraq.contrib.postgres.functions` — `Unaccent`, `Now`, `Random` SQL function helpers
+
+**System Checks**
+- `buraq.checks` — startup validation framework: `@register` decorator, `run_checks()`, message classes `Debug` / `Info` / `Warning` / `Error` / `Critical`
+- Built-in checks: `SECRET_KEY` strength (`security.E001`, `security.W001`), `DEBUG + ALLOWED_HOSTS` safety (`security.W002`), SQLite in production (`database.W001`)
+
+**Template Context Processors**
+- `buraq.template.context_processors` — `request`, `auth`, `debug`, `i18n` processors; `run_context_processors(request)` merges all configured processors into a single context dict
+- New setting: `TEMPLATE_CONTEXT_PROCESSORS` (defaults to `request` + `auth`)
+
+**Content Types**
+- `buraq.contrib.contenttypes.models.ContentType` — maps `app_label + model` to a unique ID for generic relations
+- `buraq.contrib.contenttypes.fields.GenericForeignKey` — descriptor that resolves `(content_type_id, object_id)` to any model instance asynchronously
+
+**Flatpages**
+- `buraq.contrib.flatpages.models.FlatPage` — database-backed static content pages with `url`, `title`, `content`, `template_name`, `registration_required`
+- `buraq.contrib.flatpages.views.flatpage` — async view that serves a `FlatPage` by URL path
+
+**Redirects**
+- `buraq.contrib.redirects.models.Redirect` — database-driven URL redirect rules (`old_path` → `new_path`; empty `new_path` returns 410 Gone)
+- `buraq.contrib.redirects.middleware.RedirectFallbackMiddleware` — intercepts 404 responses and checks the `Redirect` table before giving up
+
+**Sites**
+- `buraq.contrib.sites.models.Site` — multi-domain support; `Site.get_current(request)` resolves the current domain from the Host header
+
+**App Registry**
+- `buraq.apps.AppConfig` — base class for application configuration with `name`, `verbose_name`, `label`, `async ready()` hook
+- `buraq.apps.apps` — global `Apps` registry; `populate(INSTALLED_APPS)`, `run_ready_hooks()`, `get_app_config(label)`, `is_installed(app_name)`
+
+### Fixed
+- **`QuerySet.exists()` performance** — previously called `first()` which loaded a full model instance; now issues `SELECT 1 FROM (subquery) LIMIT 1` — no object hydration, minimal I/O
+
+### Added
+
 **ORM — Expressions & Functions**
 - `buraq.orm.expressions` — `Case`, `When`, `Value`, `OuterRef`, `Subquery`, `Exists`, `ExpressionWrapper` for conditional queries and correlated subqueries
 - `buraq.orm.functions` — 60+ database functions: date/time (`Now`, `TruncDate`, `TruncMonth`, `TruncYear`, `ExtractYear`, …), string (`Concat`, `Upper`, `Lower`, `Trim`, `Replace`, `Substr`, `LPad`, …), math (`Abs`, `Ceil`, `Floor`, `Round`, `Sqrt`, `Power`, …), NULL handling (`Coalesce`, `NullIf`, `Greatest`, `Least`), type casting (`Cast`), hash (`MD5`, `SHA1`, `SHA256`, `SHA512`)

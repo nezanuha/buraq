@@ -81,6 +81,37 @@ class HiddenInput(Widget):
         return f'<input type="hidden" name="{name}" value="{value or ""}">'
 
 
+class RadioSelect(Widget):
+    """Renders a list of radio buttons — one per choice."""
+
+    def render(self, name, value, choices=None, attrs=None):
+        items = ""
+        for val, label in (choices or []):
+            checked = ' checked' if str(val) == str(value) else ''
+            items += f'<label><input type="radio" name="{name}" value="{val}"{checked}> {label}</label>'
+        return f'<div class="radio-select">{items}</div>'
+
+
+class CheckboxSelectMultiple(Widget):
+    """Renders a list of checkboxes — multiple values may be selected."""
+
+    def render(self, name, value, choices=None, attrs=None):
+        selected = {str(v) for v in (value or [])}
+        items = ""
+        for val, label in (choices or []):
+            checked = ' checked' if str(val) in selected else ''
+            items += f'<label><input type="checkbox" name="{name}" value="{val}"{checked}> {label}</label>'
+        return f'<div class="checkbox-select">{items}</div>'
+
+
+class MultipleHiddenInput(Widget):
+    """Renders multiple hidden inputs for a list of values (used by formsets)."""
+
+    def render(self, name, value, attrs=None):
+        values = value if isinstance(value, (list, tuple)) else [value]
+        return "".join(f'<input type="hidden" name="{name}" value="{v}">' for v in values)
+
+
 def _attrs_to_str(attrs: dict) -> str:
     if not attrs:
         return ""

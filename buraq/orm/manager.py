@@ -193,7 +193,11 @@ class QuerySet:
             return result.scalar() or 0
 
     async def exists(self) -> bool:
-        return bool(await self.first())
+        from buraq.core.db import SessionLocal
+        q = sa.select(sa.literal(1)).select_from(self._query.subquery()).limit(1)
+        async with SessionLocal() as db:
+            result = await db.execute(q)
+            return result.first() is not None
 
     async def delete(self) -> int:
         """Bulk delete all rows matching current filters."""

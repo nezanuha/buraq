@@ -63,6 +63,23 @@ class BuraqSettings(BaseSettings):
     # Static files
     STATIC_ROOT: str | None = None
 
+    # Security headers (SecurityMiddleware)
+    SECURE_HSTS_SECONDS: int = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS: bool = False
+    SECURE_HSTS_PRELOAD: bool = False
+    SECURE_CONTENT_TYPE_NOSNIFF: bool = True
+    SECURE_REFERRER_POLICY: str = "same-origin"
+    SECURE_CROSS_ORIGIN_OPENER_POLICY: str = "same-origin"
+    SECURE_SSL_REDIRECT: bool = False
+    SECURE_PERMISSIONS_POLICY: dict = {}
+    X_FRAME_OPTIONS: str = "SAMEORIGIN"
+
+    # Template context processors
+    TEMPLATE_CONTEXT_PROCESSORS: list[str] = [
+        "buraq.template.context_processors.request",
+        "buraq.template.context_processors.auth",
+    ]
+
     # Timezone
     USE_TZ: bool = True
     TIME_ZONE: str = "UTC"

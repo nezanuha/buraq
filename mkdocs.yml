@@ -133,6 +133,18 @@ nav:
     - Validators: topics/validators.md
     - Testing: topics/testing.md
     - Utilities: topics/utils.md
+    - Choices: topics/choices.md
+    - Serialization: topics/serialization.md
+    - Feeds (RSS/Atom): topics/feeds.md
+    - System Checks: topics/checks.md
+    - Context Processors: topics/context-processors.md
+    - Security Middleware: topics/security-middleware.md
+    - Content Types: topics/contenttypes.md
+    - Flatpages: topics/flatpages.md
+    - Redirects: topics/redirects.md
+    - Sites: topics/sites.md
+    - App Registry: topics/apps.md
+    - PostgreSQL: topics/postgres.md
   - Management Commands:
     - Built-in Commands: management/commands.md
     - Custom Commands: management/custom-commands.md

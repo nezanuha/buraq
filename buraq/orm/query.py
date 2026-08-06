@@ -75,6 +75,7 @@ class Q:
 
     AND = "AND"
     OR = "OR"
+    XOR = "XOR"
 
     def __init__(self, _connector=AND, _negated=False, **kwargs):
         self.connector = _connector
@@ -88,6 +89,7 @@ class Q:
 
     def __and__(self, other): return self._combine(other, Q.AND)
     def __or__(self, other): return self._combine(other, Q.OR)
+    def __xor__(self, other): return self._combine(other, Q.XOR)
     def __invert__(self):
         q = Q(_connector=self.connector, _negated=not self.negated)
         q.children = list(self.children)
@@ -106,7 +108,12 @@ class Q:
         if not clauses:
             return sa.true()
 
-        clause = sa.and_(*clauses) if self.connector == Q.AND else sa.or_(*clauses)
+        if self.connector == Q.AND:
+            clause = sa.and_(*clauses)
+        elif self.connector == Q.XOR:
+            clause = sa.and_(sa.or_(*clauses), sa.not_(sa.and_(*clauses)))
+        else:
+            clause = sa.or_(*clauses)
 
         return sa.not_(clause) if self.negated else clause
 
