@@ -135,6 +135,23 @@ class EscapeTests(SimpleTestCase):
         self.assertEqual(escape("<b>Hello</b>"), "&lt;b&gt;Hello&lt;/b&gt;")
 ```
 
+## TransactionTestCase
+
+Like `TestCase` but wraps each test in a real transaction that rolls back after the test. Use when a test modifies data that must be isolated from other tests, or when the code under test calls `commit()` explicitly:
+
+```python
+from buraq.test import TransactionTestCase
+
+
+class PaymentTests(TransactionTestCase):
+    async def test_transfer(self):
+        await transfer_funds(from_id=1, to_id=2, amount=100)
+        # each test starts with a clean rolled-back state
+```
+
+!!! note
+    Requires a database with savepoint support (PostgreSQL, MySQL). For most tests, plain `TestCase` is faster and sufficient.
+
 ## RequestFactory
 
 Build `Request` objects directly without hitting the ASGI stack — useful for unit-testing a single view function in isolation:
