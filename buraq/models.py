@@ -16,7 +16,7 @@ Usage:
             verbose_name = "post"
 """
 from buraq.orm.base import CheckConstraint, Index, Model, UniqueConstraint
-from buraq.orm.choices import IntegerChoices, TextChoices
+from buraq.utils.choices import IntegerChoices, TextChoices
 from buraq.orm.fields import (
     CASCADE,
     DO_NOTHING,
