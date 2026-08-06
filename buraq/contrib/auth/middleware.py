@@ -48,10 +48,14 @@ async def _get_user(request: Request):
 
     try:
         from buraq.contrib.auth.models import User
+        from buraq.orm.manager import DoesNotExist, MultipleObjectsReturned
         user = await User.objects.get(id=int(user_id))
         if not user.is_active:
             return AnonymousUser()
         return user
-    except Exception:
+    except (DoesNotExist, ValueError):
         _log.debug("AuthenticationMiddleware: user %r not found — returning AnonymousUser", user_id)
+        return AnonymousUser()
+    except Exception:
+        _log.exception("AuthenticationMiddleware: unexpected error fetching user %r", user_id)
         return AnonymousUser()

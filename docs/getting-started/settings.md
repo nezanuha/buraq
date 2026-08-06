@@ -163,6 +163,40 @@ JWT_ALGORITHM       = "HS256"
 JWT_EXPIRY_MINUTES  = 60
 ```
 
+## Password validators
+
+Control which password-strength rules are enforced on registration and password-change:
+
+```python
+AUTH_PASSWORD_VALIDATORS = [
+    # Minimum 8 characters (default)
+    {"NAME": "buraq.contrib.auth.password_validation.MinimumLengthValidator"},
+
+    # Custom minimum length
+    {"NAME": "buraq.contrib.auth.password_validation.MinimumLengthValidator",
+     "OPTIONS": {"min_length": 12}},
+
+    # Reject common passwords (e.g. "password", "123456")
+    {"NAME": "buraq.contrib.auth.password_validation.CommonPasswordValidator"},
+
+    # Reject passwords that are entirely numeric
+    {"NAME": "buraq.contrib.auth.password_validation.NumericPasswordValidator"},
+
+    # Reject passwords too similar to username / email
+    {"NAME": "buraq.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+
+    # Guard against bcrypt DoS — reject very long passwords
+    {"NAME": "buraq.contrib.auth.password_validation.MaximumLengthValidator",
+     "OPTIONS": {"max_length": 4096}},
+]
+```
+
+See [Password Validation](../topics/authentication.md#password-validation) for usage details.
+
+!!! note "Unknown setting names"
+    Buraq silently ignores unrecognised setting keys (it does not raise on typos).
+    Use an IDE with type hints for `BuraqSettings` to catch misspelled names early.
+
 ## Timezone
 
 ```python

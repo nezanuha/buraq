@@ -128,8 +128,29 @@ class Subquery:
         return inner_q.scalar_subquery()
 
     def _replace_outer_refs(self, query, outer_model):
-        """Walk the query tree and replace OuterRef placeholders."""
-        return query
+        """Walk the query tree and replace __outerref__<field> placeholders."""
+        from buraq.orm.query import _OUTER_REF_PREFIX
+        from sqlalchemy.sql import visitors
+        from sqlalchemy.sql.elements import ColumnClause
+
+        replacements: dict[str, sa.sql.ColumnElement] = {}
+
+        def _collect(elem):
+            if isinstance(elem, ColumnClause) and elem.key.startswith(_OUTER_REF_PREFIX):
+                field_name = elem.key[len(_OUTER_REF_PREFIX):]
+                replacements[elem.key] = getattr(outer_model, field_name)
+
+        visitors.traverse(query, {}, {"column": _collect})
+
+        if not replacements:
+            return query
+
+        def _replace(elem):
+            if isinstance(elem, ColumnClause) and elem.key in replacements:
+                return replacements[elem.key]
+            return None
+
+        return visitors.cloned_traverse(query, {}, {"column": _replace})
 
 
 class Exists:

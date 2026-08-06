@@ -151,3 +151,24 @@ Register it in settings:
 ```python title="config/settings.py"
 DEFAULT_FILE_STORAGE = "myapp.storage.S3Storage"
 ```
+
+## Path traversal protection
+
+`FileSystemStorage` prevents path traversal attacks automatically.  Any file
+name that would resolve outside the configured `location` (for example
+`../../etc/passwd`) raises `SuspiciousFileOperation` before any disk I/O:
+
+```python
+from buraq.exceptions import SuspiciousFileOperation
+
+try:
+    await storage.save("../../etc/passwd", content)
+except SuspiciousFileOperation:
+    # request rejected — name escapes storage root
+    ...
+```
+
+The check uses `os.path.realpath()` to resolve symlinks and `..` components, so
+symlink-based escapes are also caught.  You do not need to sanitise file names
+yourself before passing them to `save()` or `open()` — the storage layer handles
+it.

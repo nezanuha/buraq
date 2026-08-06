@@ -10,7 +10,7 @@ class BuraqSettings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="allow",
+        extra="ignore",
     )
 
     # Core
@@ -26,6 +26,11 @@ class BuraqSettings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     ALGORITHM: str = "HS256"
     AUTHENTICATION_BACKENDS: list[str] = ["buraq.contrib.auth.backends.ModelBackend"]
+    AUTH_PASSWORD_VALIDATORS: list[dict] = [
+        {"NAME": "buraq.contrib.auth.password_validation.MinimumLengthValidator"},
+        {"NAME": "buraq.contrib.auth.password_validation.CommonPasswordValidator"},
+        {"NAME": "buraq.contrib.auth.password_validation.NumericPasswordValidator"},
+    ]
 
     # CORS
     CORS_ORIGINS: list[str] = []
@@ -112,6 +117,12 @@ class BuraqSettings(BaseSettings):
 settings = BuraqSettings()
 
 if settings.SECRET_KEY == _INSECURE_SECRET_KEY:
+    if not settings.DEBUG:
+        from buraq.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured(
+            "SECRET_KEY must not be the default insecure value in production. "
+            "Set a strong random SECRET_KEY in your .env file."
+        )
     warnings.warn(
         "SECRET_KEY is set to the default insecure value. "
         "Set a strong SECRET_KEY in your .env file before deploying to production.",

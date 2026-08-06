@@ -108,7 +108,10 @@ class User(models.Model):
         return f"{self.first_name or ''} {self.last_name or ''}".strip() or self.username
 
     async def _get_all_permission_codenames(self) -> set[str]:
-        """Fetch all permission codenames for this user in 3 queries (direct + group)."""
+        """Fetch all permission codenames for this user, cached on the instance."""
+        if hasattr(self, "_perm_cache"):
+            return self._perm_cache
+
         # Query 1 — direct permission IDs
         ups = await UserPermission.objects.filter(user_id=self.id).all()
         perm_ids = {up.permission_id for up in ups}
@@ -121,11 +124,17 @@ class User(models.Model):
             perm_ids |= {gp.permission_id for gp in gps}
 
         if not perm_ids:
-            return set()
+            self._perm_cache: set[str] = set()
+            return self._perm_cache
 
         # Query 3 — fetch codenames for all collected IDs at once
         perms = await Permission.objects.filter(id__in=list(perm_ids)).all()
-        return {p.codename for p in perms}
+        self._perm_cache = {p.codename for p in perms}
+        return self._perm_cache
+
+    def _invalidate_perm_cache(self) -> None:
+        """Call after changing a user's permissions to force a fresh fetch."""
+        self.__dict__.pop("_perm_cache", None)
 
     async def has_perm(self, perm: str) -> bool:
         """Return True if the user has the given permission codename."""

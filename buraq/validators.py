@@ -176,7 +176,7 @@ class BaseValidator:
         self.limit_value = limit_value
 
     def compare(self, a, b) -> bool:
-        return a is not b
+        return a != b
 
     def clean(self, value):
         return value

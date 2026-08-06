@@ -20,10 +20,10 @@ def register_middleware(app: FastAPI) -> None:
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-    cors_origins = settings.CORS_ORIGINS or ["*"]
+    cors_origins = settings.CORS_ORIGINS  # empty list = CORS disabled (no wildcard fallback)
     # Browsers reject allow_credentials=True with wildcard origins.
     # Disable credentials automatically when origins are not explicitly scoped.
-    cors_credentials = settings.CORS_ALLOW_CREDENTIALS and cors_origins != ["*"]
+    cors_credentials = bool(cors_origins) and settings.CORS_ALLOW_CREDENTIALS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,

@@ -1,46 +1,17 @@
+"""
+Cache decorators — re-exported from the canonical implementation in buraq.decorators.
+
+Import from here for convenience:
+    from buraq.contrib.cache.decorators import cache_page, cache_result, never_cache
+"""
+from buraq.decorators import cache_page, never_cache  # noqa: F401
+
 import functools
 import hashlib
 import json
 from collections.abc import Callable
-from typing import Any
 
 from buraq.contrib.cache.core import cache
-
-
-def cache_page(timeout: int = 300, key_prefix: str = "page"):
-    """
-    Cache the full response of a view for `timeout` seconds.
-    Cache key is based on the request URL.
-
-    Usage:
-        @router.get("/products/")
-        @cache_page(timeout=60)
-        async def product_list(request: Request):
-            ...
-    """
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            request: Any | None = kwargs.get("request")
-            if request is None:
-                for arg in args:
-                    if hasattr(arg, "url"):
-                        request = arg
-                        break
-
-            cache_key = (
-                f"{key_prefix}:{request.url}" if request else f"{key_prefix}:{func.__name__}"
-            )
-            cached = await cache.get(cache_key)
-            if cached is not None:
-                return cached
-
-            result = await func(*args, **kwargs)
-            await cache.set(cache_key, result, timeout)
-            return result
-
-        return wrapper
-    return decorator
 
 
 def cache_result(key: str | None = None, timeout: int = 300):
@@ -73,16 +44,3 @@ def cache_result(key: str | None = None, timeout: int = 300):
 
         return wrapper
     return decorator
-
-
-def never_cache(func):
-    """Prevent caching of a response by setting appropriate headers."""
-    @functools.wraps(func)
-    async def wrapper(request, *args, **kwargs):
-        response = await func(request, *args, **kwargs)
-        response.headers["Cache-Control"] = (
-            "max-age=0, no-cache, no-store, must-revalidate, private"
-        )
-        response.headers["Expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
-        return response
-    return wrapper

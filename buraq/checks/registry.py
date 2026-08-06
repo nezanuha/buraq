@@ -66,5 +66,19 @@ class CheckRegistry:
                 ))
         return messages
 
+    def run_checks_or_raise(self) -> None:
+        """Run all checks; raise ImproperlyConfigured if any Error-level messages exist in non-DEBUG mode."""
+        from buraq.conf import settings
+        if settings.DEBUG:
+            return
+        messages = self.run_checks()
+        errors = [m for m in messages if m.level >= Error.level]
+        if errors:
+            from buraq.exceptions import ImproperlyConfigured
+            summary = "; ".join(f"[{e.id}] {e.msg}" for e in errors)
+            raise ImproperlyConfigured(
+                f"System checks found {len(errors)} error(s): {summary}"
+            )
+
 
 registry = CheckRegistry()

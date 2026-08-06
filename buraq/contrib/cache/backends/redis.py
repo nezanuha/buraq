@@ -56,6 +56,30 @@ class RedisCacheBackend(BaseCacheBackend):
         if keys:
             await client.delete(*keys)
 
+    async def get_many(self, keys: list[str]) -> dict[str, Any]:
+        if not keys:
+            return {}
+        client = await self._get_client()
+        prefixed = [self._make_key(k) for k in keys]
+        values = await client.mget(*prefixed)
+        result = {}
+        for k, raw in zip(keys, values):
+            result[k] = json.loads(raw) if raw is not None else None
+        return result
+
+    async def set_many(self, mapping: dict[str, Any], timeout: int | None = None) -> None:
+        if not mapping:
+            return
+        client = await self._get_client()
+        async with client.pipeline(transaction=False) as pipe:
+            for key, value in mapping.items():
+                serialized = json.dumps(value, default=str)
+                if timeout:
+                    pipe.setex(self._make_key(key), timeout, serialized)
+                else:
+                    pipe.set(self._make_key(key), serialized)
+            await pipe.execute()
+
     async def close(self) -> None:
         if self._client:
             await self._client.aclose()

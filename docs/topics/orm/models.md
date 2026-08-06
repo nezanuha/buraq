@@ -255,3 +255,59 @@ Enforce a SQL-level condition. The `check` string is passed directly to the data
 models.CheckConstraint(check="price > 0", name="positive_price")
 models.CheckConstraint(check="end_date >= start_date", name="valid_date_range")
 ```
+
+## Model validation
+
+Buraq models support the same pre-save validation chain as Django.
+
+### full_clean()
+
+Run all validation steps in order. Called automatically by `ModelForm`; call
+manually when saving outside a form:
+
+```python
+from buraq.exceptions import ValidationError
+
+try:
+    await post.full_clean()
+    await post.save()
+except ValidationError as e:
+    print(e.message_dict)
+```
+
+The chain is: `clean_fields()` → `clean()` → `validate_unique()`.
+
+### clean_fields()
+
+Validates each field value using the field's built-in validators.
+Raises `ValidationError` with per-field messages if any field fails:
+
+```python
+await post.clean_fields()           # validate all fields
+await post.clean_fields(exclude=["content"])  # skip specific fields
+```
+
+### clean()
+
+Override to add cross-field or object-level validation logic:
+
+```python
+class Event(models.Model):
+    start = models.DateTimeField()
+    end   = models.DateTimeField()
+
+    async def clean(self):
+        if self.end <= self.start:
+            raise ValidationError({"end": "End must be after start."})
+```
+
+### validate_unique()
+
+Checks that all `unique=True` fields and `unique_together` constraints are not
+violated by an existing database row. Raises `ValidationError` if a duplicate
+is found:
+
+```python
+await event.validate_unique()
+await event.validate_unique(exclude=["slug"])  # skip specific fields
+```

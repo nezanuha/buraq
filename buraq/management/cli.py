@@ -96,13 +96,17 @@ def migrate(revision: str = typer.Argument("head", help="Target revision")):
 def rollback(steps: int = typer.Argument(1, help="Number of migrations to roll back")):
     """Roll back N migrations."""
     typer.echo(f"Rolling back {steps} migration(s)")
-    subprocess.run(["alembic", "downgrade", f"-{steps}"])
+    result = subprocess.run(["alembic", "downgrade", f"-{steps}"])
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
 
 
 @app.command()
 def showmigrations():
     """List all migrations and their status."""
-    subprocess.run(["alembic", "history", "--verbose"])
+    result = subprocess.run(["alembic", "history", "--verbose"])
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
 
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
@@ -486,17 +490,24 @@ def startproject(
         f'testpaths = ["tests"]\n'
     )
 
+    # Generate a random secret key for this project
+    import secrets as _secrets
+    _secret_key = _secrets.token_hex(50)
+
     # .env
     (project_dir / ".env").write_text(
-        f"SECRET_KEY=change-me-in-production\n"
+        f"SECRET_KEY={_secret_key}\n"
         f"DEBUG=True\n"
         f'DATABASE_URL={db_url}\n'
         f"ALLOWED_HOSTS=[\"localhost\", \"127.0.0.1\"]\n"
     )
 
-    # .env.example
+    # .env.example — use a placeholder so the real key is never committed
     (project_dir / ".env.example").write_text(
-        (project_dir / ".env").read_text()
+        f"SECRET_KEY=<generate-with: python -c \"import secrets; print(secrets.token_hex(50))\">\n"
+        f"DEBUG=False\n"
+        f'DATABASE_URL={db_url}\n'
+        f"ALLOWED_HOSTS=[\"yourdomain.com\"]\n"
     )
 
     # .gitignore — uv.lock must NOT be ignored, it should be committed
@@ -581,11 +592,13 @@ def startproject(
 
     # config/settings.py
     (project_dir / "config" / "settings.py").write_text(
+        "import os\n"
         "from pathlib import Path\n\n"
         "BASE_DIR = Path(__file__).resolve().parent.parent\n\n"
-        "SECRET_KEY = 'change-me-in-production'\n"
-        "DEBUG = True\n"
-        "ALLOWED_HOSTS = ['*']\n\n"
+        "# Load from .env — never hardcode these values\n"
+        "SECRET_KEY = os.environ.get('SECRET_KEY', '')\n"
+        "DEBUG = os.environ.get('DEBUG', 'False') == 'True'\n"
+        "ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')\n\n"
         "INSTALLED_APPS = [\n"
         "    'buraq.contrib.auth',\n"
         "]\n\n"

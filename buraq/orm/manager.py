@@ -6,6 +6,8 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
 from sqlalchemy import update as sa_update
 
+from buraq.orm.prefetch import Prefetch
+
 T = TypeVar("T")
 
 
@@ -91,7 +93,10 @@ class QuerySet:
         return self._clone(self._query.where(sa.false()))
 
     def using(self, db) -> "QuerySet":
-        return self
+        raise NotImplementedError(
+            "Multi-database routing via using() is not yet implemented in Buraq. "
+            "All queries use the single DATABASE_URL connection."
+        )
 
     def select_related(self, *fields) -> "QuerySet":
         from sqlalchemy.orm import joinedload
@@ -106,9 +111,18 @@ class QuerySet:
         from sqlalchemy.orm import selectinload
         q = self._query
         for field in fields:
-            rel = getattr(self._model, field, None)
-            if rel is not None:
-                q = q.options(selectinload(rel))
+            if isinstance(field, Prefetch):
+                # Custom queryset on Prefetch — store for post-processing.
+                # (Full ORM-level integration requires result rewriting; for now
+                # we apply selectinload so the relation is loaded, then callers
+                # can use .prefetch_objects on the queryset for advanced cases.)
+                rel = getattr(self._model, field.field, None)
+                if rel is not None:
+                    q = q.options(selectinload(rel))
+            else:
+                rel = getattr(self._model, field, None)
+                if rel is not None:
+                    q = q.options(selectinload(rel))
         return self._clone(q)
 
     def values(self, *fields) -> "QuerySet":
@@ -137,6 +151,24 @@ class QuerySet:
     def select_for_update(self, nowait: bool = False, skip_locked: bool = False) -> "QuerySet":
         """Lock selected rows with SELECT ... FOR UPDATE."""
         q = self._query.with_for_update(nowait=nowait, skip_locked=skip_locked)
+        return self._clone(q)
+
+    def alias(self, **kwargs) -> "QuerySet":
+        """
+        Add named subquery aliases that can be reused in further filter/annotate calls.
+
+        Example:
+            qs = Post.objects.alias(
+                comment_count=Count("comments"),
+            ).filter(comment_count__gt=5)
+        """
+        q = self._query
+        for label, expr in kwargs.items():
+            if hasattr(expr, "resolve"):
+                col = expr.resolve(self._model)
+            else:
+                col = expr
+            q = q.add_columns(col.label(label))
         return self._clone(q)
 
     def annotate_expr(self, **kwargs) -> "QuerySet":
@@ -371,6 +403,44 @@ class QuerySet:
             keys = list(result.keys())
             return [dict(zip(keys, row, strict=False)) for row in result.all()]
 
+    async def explain(self, *, analyze: bool = False, verbose: bool = False) -> str:
+        """
+        Return the database query plan as a string.
+
+        Args:
+            analyze: Run EXPLAIN ANALYZE (executes the query).
+            verbose: Include extra plan detail (EXPLAIN VERBOSE on PostgreSQL).
+
+        Example:
+            plan = await Post.objects.filter(is_published=True).explain()
+        """
+        from buraq.conf import settings
+        from buraq.core.db import SessionLocal
+        from sqlalchemy.engine import make_url as _make_url
+        try:
+            dialect = _make_url(settings.DATABASE_URL).get_dialect().name
+        except Exception:
+            dialect = "postgresql"
+
+        if dialect == "sqlite":
+            prefix = "EXPLAIN QUERY PLAN"
+        elif dialect in ("mysql", "mariadb"):
+            prefix = "EXPLAIN ANALYZE" if analyze else "EXPLAIN"
+        else:
+            parts = ["EXPLAIN"]
+            if analyze:
+                parts.append("ANALYZE")
+            if verbose:
+                parts.append("VERBOSE")
+            prefix = " ".join(parts)
+
+        compiled = self._query.compile(compile_kwargs={"literal_binds": True})
+        raw_sql = f"{prefix} {compiled}"
+        async with SessionLocal() as db:
+            result = await db.execute(sa.text(raw_sql))
+            rows = result.fetchall()
+        return "\n".join(" | ".join(str(c) for c in row) for row in rows)
+
     # ── Helpers ─────────────────────────────────────────────────────────────
 
     def _clone(self, query=None) -> "QuerySet":
@@ -458,21 +528,26 @@ class Manager:
             return obj
 
     async def get_or_create(self, defaults: dict | None = None, **kwargs) -> tuple:
-        obj = await self.get_or_none(**kwargs)
-        if obj:
+        from sqlalchemy.exc import IntegrityError
+        try:
+            obj = await self.create(**{**kwargs, **(defaults or {})})
+            return obj, True
+        except IntegrityError:
+            # Concurrent insert won the race — fetch the existing row.
+            obj = await self.get(**kwargs)
             return obj, False
-        obj = await self.create(**{**kwargs, **(defaults or {})})
-        return obj, True
 
     async def update_or_create(self, defaults: dict | None = None, **kwargs) -> tuple:
-        obj = await self.get_or_none(**kwargs)
-        if obj:
+        from sqlalchemy.exc import IntegrityError
+        try:
+            obj = await self.create(**{**kwargs, **(defaults or {})})
+            return obj, True
+        except IntegrityError:
+            obj = await self.get(**kwargs)
             for key, value in (defaults or {}).items():
                 setattr(obj, key, value)
             await obj.save()
             return obj, False
-        obj = await self.create(**{**kwargs, **(defaults or {})})
-        return obj, True
 
     async def update(self, pk: int, **kwargs) -> Any:
         from buraq.core.db import SessionLocal
@@ -507,17 +582,23 @@ class Manager:
 
     async def bulk_create(self, records: list[dict], ignore_conflicts: bool = False) -> list:
         from buraq.core.db import SessionLocal
+        from sqlalchemy.engine import make_url as _make_url
         # Use only column names as keys — never pass SA instance dicts (_sa_instance_state).
         col_names = {c.name for c in self._model.__table__.columns}
         clean_records = [{k: v for k, v in r.items() if k in col_names} for r in records]
         async with SessionLocal() as db:
             if ignore_conflicts:
                 from buraq.conf import settings
-                url = settings.DATABASE_URL
-                if "sqlite" in url:
+                try:
+                    dialect = _make_url(settings.DATABASE_URL).get_dialect().name
+                except Exception:
+                    dialect = "postgresql"
+                if dialect == "sqlite":
                     from sqlalchemy.dialects.sqlite import insert as _insert
+                elif dialect in ("mysql", "mariadb"):
+                    from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
                 else:
-                    from sqlalchemy.dialects.postgresql import insert as _insert
+                    from sqlalchemy.dialects.postgresql import insert as _insert  # type: ignore[no-redef]
                 stmt = _insert(self._model.__table__).values(clean_records).on_conflict_do_nothing()
                 await db.execute(stmt)
                 await db.commit()
@@ -528,15 +609,21 @@ class Manager:
             return instances
 
     async def bulk_update(self, objs: list, fields: list) -> int:
+        if not objs:
+            return 0
         from buraq.core.db import SessionLocal
+        # Build a list of dicts {id, field1, field2, ...} for bulk parameter binding.
+        # SQLAlchemy executes this as a single round-trip with multi-row binding.
+        params = [{"_pk": obj.id, **{f: getattr(obj, f) for f in fields}} for obj in objs]
+        stmt = (
+            sa_update(self._model)
+            .where(self._model.id == sa.bindparam("_pk"))
+            .values({f: sa.bindparam(f) for f in fields})
+        )
         async with SessionLocal() as db:
-            for obj in objs:
-                data = {f: getattr(obj, f) for f in fields}
-                await db.execute(
-                    sa_update(self._model).where(self._model.id == obj.id).values(**data)
-                )
+            await db.execute(stmt, params)
             await db.commit()
-            return len(objs)
+        return len(objs)
 
     async def count(self) -> int:
         return await QuerySet(self._model).count()

@@ -111,7 +111,7 @@ class BigIntegerField(Field):
 
 
 class PositiveIntegerField(Field):
-    def to_sa_column(self, name: str = "value") -> sa.Column:
+    def to_sa_column(self, name: str = "") -> sa.Column:
         return sa.Column(
             sa.Integer,
             sa.CheckConstraint(f"{name} >= 0"),
@@ -123,7 +123,15 @@ class PositiveIntegerField(Field):
 
 
 class PositiveSmallIntegerField(Field):
-    _sa_type = sa.SmallInteger
+    def to_sa_column(self, name: str = "") -> sa.Column:
+        return sa.Column(
+            sa.SmallInteger,
+            sa.CheckConstraint(f"{name} >= 0"),
+            nullable=self.null,
+            unique=self.unique,
+            index=self.db_index,
+            default=self.default,
+        )
 
 
 class FloatField(Field):
@@ -227,7 +235,7 @@ class UUIDField(Field):
 
 
 class PositiveBigIntegerField(Field):
-    def to_sa_column(self, name: str = "value") -> sa.Column:
+    def to_sa_column(self, name: str = "") -> sa.Column:
         return sa.Column(
             sa.BigInteger,
             sa.CheckConstraint(f"{name} >= 0"),
@@ -445,26 +453,27 @@ class _M2MManager:
             return list(result.scalars().all())
 
     async def add(self, *objs) -> None:
-        import sqlalchemy as sa
-
+        if not objs:
+            return
+        from buraq.conf import settings
         from buraq.core.db import SessionLocal
         assoc = self._field._assoc_table
+        rows = [{"source_id": self._instance.id, "target_id": obj.id} for obj in objs]
+        url = settings.DATABASE_URL
         async with SessionLocal() as db:
-            for obj in objs:
-                # Check existence before insert to stay dialect-agnostic.
-                exists = await db.execute(
-                    sa.select(assoc.c.source_id).where(
-                        assoc.c.source_id == self._instance.id,
-                        assoc.c.target_id == obj.id,
-                    ).limit(1)
-                )
-                if exists.scalar() is None:
-                    await db.execute(
-                        assoc.insert().values(
-                            source_id=self._instance.id,
-                            target_id=obj.id,
-                        )
-                    )
+            try:
+                from sqlalchemy.engine import make_url as _make_url
+                dialect = _make_url(url).get_dialect().name
+            except Exception:
+                dialect = "postgresql"
+            if dialect == "sqlite":
+                from sqlalchemy.dialects.sqlite import insert as _insert
+            elif dialect in ("mysql", "mariadb"):
+                from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
+            else:
+                from sqlalchemy.dialects.postgresql import insert as _insert  # type: ignore[no-redef]
+            stmt = _insert(assoc).values(rows).on_conflict_do_nothing()
+            await db.execute(stmt)
             await db.commit()
 
     async def remove(self, *objs) -> None:
@@ -482,8 +491,29 @@ class _M2MManager:
             await db.commit()
 
     async def set(self, objs) -> None:
-        await self.clear()
-        await self.add(*objs)
+        """Replace all related objects atomically (clear + add in one session)."""
+        from buraq.conf import settings
+        from buraq.core.db import SessionLocal
+        assoc = self._field._assoc_table
+        rows = [{"source_id": self._instance.id, "target_id": obj.id} for obj in objs]
+        async with SessionLocal() as db:
+            await db.execute(
+                assoc.delete().where(assoc.c.source_id == self._instance.id)
+            )
+            if rows:
+                try:
+                    from sqlalchemy.engine import make_url as _make_url
+                    dialect = _make_url(settings.DATABASE_URL).get_dialect().name
+                except Exception:
+                    dialect = "postgresql"
+                if dialect == "sqlite":
+                    from sqlalchemy.dialects.sqlite import insert as _insert
+                elif dialect in ("mysql", "mariadb"):
+                    from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
+                else:
+                    from sqlalchemy.dialects.postgresql import insert as _insert  # type: ignore[no-redef]
+                await db.execute(_insert(assoc).values(rows).on_conflict_do_nothing())
+            await db.commit()
 
     async def clear(self) -> None:
         from buraq.core.db import SessionLocal

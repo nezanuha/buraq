@@ -16,19 +16,41 @@ Usage:
         for tag in tags:
             await post.tags.add(tag)
         return post
+
+    # on_commit — runs AFTER the enclosing atomic() block commits.
+    # Falls back to immediate execution when called outside any atomic block.
+    async with transaction.atomic():
+        await transaction.on_commit(lambda: send_welcome_email(user))
 """
 import functools
+import inspect
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 
-# Internal generator — named separately so _Atomic can reference it without
-# recursive self-reference after `atomic = _Atomic()` rebinds the name.
 @asynccontextmanager
 async def _atomic_cm() -> AsyncGenerator:
-    from buraq.core.db import SessionLocal
+    from buraq.core.db import SessionLocal, _current_session, _on_commit_callbacks
+    callbacks: list = []
+    tok_session = None
+    tok_callbacks = None
     async with SessionLocal() as db, db.begin():
-        yield db
+        tok_session = _current_session.set(db)
+        tok_callbacks = _on_commit_callbacks.set(callbacks)
+        try:
+            yield db
+        except Exception:
+            _current_session.reset(tok_session)
+            _on_commit_callbacks.reset(tok_callbacks)
+            raise
+    # Commit succeeded — run callbacks
+    _current_session.reset(tok_session)
+    _on_commit_callbacks.reset(tok_callbacks)
+    for cb in callbacks:
+        if inspect.iscoroutinefunction(cb):
+            await cb()
+        else:
+            cb()
 
 
 def non_atomic(func):
@@ -39,15 +61,24 @@ def non_atomic(func):
 
 async def on_commit(func):
     """
-    Run a callback after the current transaction commits.
-    In Buraq this runs immediately (no transaction stack tracking).
-    Must be awaited inside an async context.
+    Schedule a callback to run after the current transaction commits.
+
+    If called inside an ``async with atomic():`` block, the callback is deferred
+    until the block's commit succeeds.  If called outside any atomic block,
+    the callback runs immediately (the same behaviour as Django outside a
+    transaction — the "transaction" is already committed at that point).
+
+    Must be awaited.
     """
-    import inspect
-    if inspect.iscoroutinefunction(func):
-        await func()
+    from buraq.core.db import _on_commit_callbacks
+    callbacks = _on_commit_callbacks.get()
+    if callbacks is not None:
+        callbacks.append(func)
     else:
-        func()
+        if inspect.iscoroutinefunction(func):
+            await func()
+        else:
+            func()
 
 
 class TransactionManagementError(Exception):
@@ -74,16 +105,28 @@ class _Atomic:
         return wrapper
 
     async def __aenter__(self):
-        from buraq.core.db import SessionLocal
-        self._session = SessionLocal()
-        self._db = await self._session.__aenter__()
+        from buraq.core.db import SessionLocal, _current_session, _on_commit_callbacks
+        self._callbacks: list = []
+        self._session_ctx = SessionLocal()
+        self._db = await self._session_ctx.__aenter__()
         self._txn = self._db.begin()
         await self._txn.__aenter__()
+        self._tok_session = _current_session.set(self._db)
+        self._tok_callbacks = _on_commit_callbacks.set(self._callbacks)
         return self._db
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        from buraq.core.db import _current_session, _on_commit_callbacks
+        _current_session.reset(self._tok_session)
+        _on_commit_callbacks.reset(self._tok_callbacks)
         await self._txn.__aexit__(exc_type, exc_val, exc_tb)
-        await self._session.__aexit__(exc_type, exc_val, exc_tb)
+        await self._session_ctx.__aexit__(exc_type, exc_val, exc_tb)
+        if exc_type is None:
+            for cb in self._callbacks:
+                if inspect.iscoroutinefunction(cb):
+                    await cb()
+                else:
+                    cb()
 
 
 atomic = _Atomic()

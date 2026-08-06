@@ -16,6 +16,7 @@ Usage:
             verbose_name = "post"
 """
 from buraq.orm.base import CheckConstraint, Index, Model, UniqueConstraint
+from buraq.orm.prefetch import Prefetch
 from buraq.utils.choices import IntegerChoices, TextChoices
 from buraq.orm.fields import (
     CASCADE,
@@ -79,4 +80,5 @@ __all__ = [
     "FileField", "ImageField",
     "GenericIPAddressField",
     "ForeignKey", "OneToOneField", "ManyToManyField",
+    "Prefetch",
 ]

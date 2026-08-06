@@ -58,12 +58,15 @@ class BaseCacheBackend(ABC):
             await self.delete(key)
 
     # ── Sync wrappers ──────────────────────────────────────────────────────────
+    # These run the coroutine in a dedicated background thread with its own
+    # event loop so they work correctly regardless of whether the caller is
+    # already inside a running loop (e.g. in an async request handler).
 
     def _run_async(self, coro):
-        try:
-            return asyncio.run(coro)
-        except RuntimeError:
-            return asyncio.get_event_loop().run_until_complete(coro)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(asyncio.run, coro)
+            return future.result()
 
     def get_sync(self, key: str) -> Any | None:
         return self._run_async(self.get(key))

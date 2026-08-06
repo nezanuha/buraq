@@ -1,8 +1,8 @@
 """
 CSRF utilities — get_token, csrf_protect decorator, ensure_csrf_cookie decorator.
 
-The CSRF middleware in buraq.middleware.csrf handles automatic protection.
-These helpers let you manage CSRF tokens in views manually.
+Buraq's CSRF protection is opt-in via @csrf_protect on individual views.
+Use ensure_csrf_cookie on views that need the token pre-set for AJAX clients.
 
 Usage:
     from buraq.contrib.csrf import get_token, csrf_protect, ensure_csrf_cookie
@@ -94,11 +94,13 @@ def ensure_csrf_cookie(func):
         token = get_token(request)
         response = await func(request, *args, **kwargs)
         if hasattr(response, "set_cookie"):
+            from buraq.conf import settings
             response.set_cookie(
                 CSRF_COOKIE_NAME,
                 token,
                 httponly=False,
                 samesite="lax",
+                secure=not settings.DEBUG,
             )
         return response
     return wrapper

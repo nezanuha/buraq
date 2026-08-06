@@ -197,12 +197,76 @@ from buraq.contrib.auth import make_password, check_password, validate_password
 hashed = make_password("my-secret")
 ok     = check_password("my-secret", hashed)
 
-# Raises ValidationError if too short or entirely numeric
-validate_password("weakpass")
-
 # Keep the user logged in after a password change
 from buraq.contrib.auth import update_session_auth_hash
 await update_session_auth_hash(request, user)
+```
+
+---
+
+## Password validation
+
+Buraq ships a set of password validators that run during registration and
+password-change flows.  Configure them in settings:
+
+```python title="config/settings.py"
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "buraq.contrib.auth.password_validation.MinimumLengthValidator",
+     "OPTIONS": {"min_length": 8}},
+    {"NAME": "buraq.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "buraq.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "buraq.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "buraq.contrib.auth.password_validation.MaximumLengthValidator"},
+]
+```
+
+### validate_password()
+
+Call from registration or change-password views — raises `ValidationError`
+listing all failures from all configured validators:
+
+```python
+from buraq.contrib.auth.password_validation import validate_password
+from buraq.exceptions import ValidationError
+
+try:
+    validate_password("abc123", user=request.user)
+except ValidationError as e:
+    # e.messages → list of failure strings
+    return render(request, "auth/register.html", {"errors": e.messages})
+```
+
+### Available validators
+
+| Class | Description | Default option |
+|---|---|---|
+| `MinimumLengthValidator` | Minimum number of characters | `min_length=8` |
+| `CommonPasswordValidator` | Rejects commonly used passwords | — |
+| `NumericPasswordValidator` | Rejects all-digit passwords | — |
+| `UserAttributeSimilarityValidator` | Rejects passwords too similar to user fields | `max_similarity=0.7` |
+| `MaximumLengthValidator` | Guards against DoS via bcrypt | `max_length=4096` |
+
+### Custom validator
+
+Implement `validate(password, user=None)` and optionally `get_help_text()`:
+
+```python
+class NoSpacesValidator:
+    def validate(self, password, user=None):
+        if " " in password:
+            raise ValidationError("Password may not contain spaces.")
+
+    def get_help_text(self):
+        return "Your password may not contain spaces."
+```
+
+Register it just like a built-in validator:
+
+```python
+AUTH_PASSWORD_VALIDATORS = [
+    ...,
+    {"NAME": "myapp.validators.NoSpacesValidator"},
+]
 ```
 
 ---

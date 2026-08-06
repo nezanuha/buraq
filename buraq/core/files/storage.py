@@ -85,8 +85,14 @@ class FileSystemStorage(Storage):
         self.base_url = base_url.rstrip("/") + "/"
 
     def _full_path(self, name: str) -> str:
+        from buraq.exceptions import SuspiciousFileOperation
         safe = os.path.normpath(name).lstrip(os.sep)
-        return os.path.join(self.location, safe)
+        full = os.path.realpath(os.path.join(self.location, safe))
+        if not full.startswith(self.location + os.sep) and full != self.location:
+            raise SuspiciousFileOperation(
+                f"Attempted access to '{name}' outside the storage root."
+            )
+        return full
 
     def get_available_name(self, name: str) -> str:
         path = self._full_path(name)

@@ -281,6 +281,8 @@ posts = await Post.objects.prefetch_related("tags").all()
 posts = await Post.objects.select_related("author").prefetch_related("tags").all()
 ```
 
+For custom filtering on prefetched relations, use a `Prefetch` object (see [Prefetch objects](#prefetch-objects) below).
+
 ## last()
 
 Return the last object by primary key, or `None`:
@@ -401,4 +403,96 @@ post_map = await Post.objects.in_bulk([1, 2, 3])
 
 # Keyed by a different field
 slug_map = await Post.objects.in_bulk(["hello", "world"], field_name="slug")
+```
+
+## explain()
+
+Retrieve the database's query plan for debugging slow queries:
+
+```python
+# Basic EXPLAIN
+plan = await Post.objects.filter(is_published=True).explain()
+print(plan)
+
+# With ANALYZE (actually executes the query — PostgreSQL / SQLite)
+plan = await Post.objects.filter(is_published=True).explain(analyze=True)
+
+# With VERBOSE (PostgreSQL)
+plan = await Post.objects.filter(is_published=True).explain(analyze=True, verbose=True)
+```
+
+The returned value is a string containing the database's plan output.
+
+## alias()
+
+Create a named subquery alias so the same queryset can be reused in multiple
+`filter()` or `annotate_expr()` calls without repeating SQL:
+
+```python
+# Build once
+recent_posts = Post.objects.filter(created_at__gte=cutoff).alias("recent")
+
+# Reuse in outer queries
+popular = await Post.objects.filter(id__in=recent_posts, views__gte=100).all()
+long_read = await Post.objects.filter(id__in=recent_posts, read_time__gte=10).all()
+```
+
+## Prefetch objects
+
+`Prefetch` gives you fine-grained control over the queryset used when calling
+`prefetch_related()`.  Import it from `buraq.models` (or `buraq.orm.prefetch`):
+
+```python
+from buraq.models import Prefetch
+
+# Load only approved comments, ordered by date
+posts = await Post.objects.prefetch_related(
+    Prefetch(
+        "comments",
+        queryset=Comment.objects.filter(approved=True).order_by("-created_at"),
+    )
+).all()
+
+# Access the pre-fetched set on each instance
+for post in posts:
+    approved = post._prefetched_comments   # list[Comment]
+```
+
+Store the result under a custom attribute with `to_attr`:
+
+```python
+posts = await Post.objects.prefetch_related(
+    Prefetch("comments", queryset=Comment.objects.filter(approved=True), to_attr="approved_comments"),
+    Prefetch("comments", queryset=Comment.objects.filter(approved=False), to_attr="pending_comments"),
+).all()
+```
+
+## get_or_create() — race safety
+
+`get_or_create` uses a **try-create-catch-IntegrityError** pattern internally,
+so it is safe under concurrent requests: if two coroutines race to create the
+same row, the loser catches the database's `IntegrityError` and falls back to
+fetching the row the winner created — no `DoesNotExist` is leaked.
+
+```python
+post, created = await Post.objects.get_or_create(
+    slug="hello-world",
+    defaults={"title": "Hello World", "content": "..."},
+)
+```
+
+`update_or_create` is race-safe by the same mechanism.
+
+## bulk_update — single round-trip
+
+`bulk_update` sends a single parameterised UPDATE statement (via `sa.bindparam`
+bulk binding) regardless of how many instances are passed — no N-query loop:
+
+```python
+posts = await Post.objects.filter(is_published=False).all()
+for post in posts:
+    post.status = "archived"
+
+# One SQL statement, no matter how many posts
+await Post.objects.bulk_update(posts, fields=["status"])
 ```

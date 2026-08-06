@@ -69,6 +69,36 @@ async def on_order_completed(sender, instance, total, **kwargs):
 post_save.disconnect(on_post_saved)
 ```
 
+## Weak references
+
+By default, signals hold a **strong** reference to the handler so it is never
+garbage-collected while the signal exists.  Pass `weak=True` to hold only a
+weak reference — the handler is automatically unregistered when it is collected:
+
+```python
+post_save.connect(on_post_saved, weak=True)
+```
+
+!!! warning
+    `weak=True` only makes sense for module-level functions stored in a
+    long-lived variable.  Avoid it for lambdas or locally-defined functions —
+    they will be collected immediately and the handler will never fire.
+
+## dispatch_uid — deduplication
+
+Prevent the same handler from being registered twice (common in tests that
+import and re-import modules):
+
+```python
+post_save.connect(
+    on_post_saved,
+    dispatch_uid="posts.handlers.on_post_saved",
+)
+```
+
+If `connect()` is called again with the same `dispatch_uid`, the existing
+registration is replaced rather than duplicated.
+
 ## connect_via() — sender-scoped shortcut
 
 ```python

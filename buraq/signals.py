@@ -23,13 +23,30 @@ Usage:
 """
 import asyncio
 import inspect
+import weakref
 from collections.abc import Callable
 
 
 class Signal:
     def __init__(self, providing_args: list = None):
-        self._receivers: list[tuple[type | None, Callable]] = []
+        # Each entry: (sender_filter, handler_ref, dispatch_uid | None)
+        # handler_ref is a weakref.ref (or weakref.WeakMethod) when weak=True,
+        # or the callable itself when weak=False.
+        self._receivers: list[tuple] = []
         self.providing_args = providing_args or []
+
+    def _make_ref(self, func, weak: bool):
+        if not weak:
+            return func
+        if inspect.ismethod(func):
+            return weakref.WeakMethod(func)
+        return weakref.ref(func)
+
+    def _resolve_ref(self, ref):
+        """Return the live callable or None if the weakref is dead."""
+        if callable(ref) and not isinstance(ref, weakref.ref):
+            return ref
+        return ref()
 
     def connect(self, receiver=None, sender=None, weak=True, dispatch_uid=None):
         """
@@ -42,58 +59,77 @@ class Signal:
             signal.connect(handler, sender=MyModel)
         """
         if receiver is None:
-            # Called as @signal.connect(sender=X) — return decorator
             def decorator(func):
-                self._receivers.append((sender, func))
+                self._do_connect(func, sender=sender, weak=weak, dispatch_uid=dispatch_uid)
                 return func
             return decorator
 
         if callable(receiver):
-            # Used as @signal.connect (no parens) or signal.connect(func)
-            self._receivers.append((sender, receiver))
+            self._do_connect(receiver, sender=sender, weak=weak, dispatch_uid=dispatch_uid)
             return receiver
 
         return receiver
 
-    def connect_via(self, sender):
+    def _do_connect(self, func, sender, weak, dispatch_uid):
+        if dispatch_uid is not None:
+            # Deduplicate — remove existing entry with same uid before adding.
+            self._receivers = [
+                entry for entry in self._receivers if entry[2] != dispatch_uid
+            ]
+        ref = self._make_ref(func, weak)
+        self._receivers.append((sender, ref, dispatch_uid))
+
+    def connect_via(self, sender, weak=True, dispatch_uid=None):
         """Shortcut decorator: @signal.connect_via(MyModel)"""
         def decorator(func):
-            self._receivers.append((sender, func))
+            self._do_connect(func, sender=sender, weak=weak, dispatch_uid=dispatch_uid)
             return func
         return decorator
 
     def disconnect(self, receiver, sender=None):
-        self._receivers = [
-            (s, r) for s, r in self._receivers
-            if not (r is receiver and (sender is None or s is sender))
-        ]
+        def _matches(entry):
+            _, ref, _ = entry
+            live = self._resolve_ref(ref)
+            return live is receiver and (sender is None or entry[0] is sender)
+        self._receivers = [e for e in self._receivers if not _matches(e)]
+
+    def _live_receivers(self, sender):
+        """Yield (handler, ) for all live receivers matching sender, pruning dead weakrefs."""
+        alive = []
+        for entry in self._receivers:
+            sender_filter, ref, uid = entry
+            live = self._resolve_ref(ref)
+            if live is None:
+                continue  # weakref is dead — skip and don't re-add
+            alive.append(entry)
+            if sender_filter is None or sender_filter is sender:
+                yield live
+        self._receivers = alive
 
     async def send(self, sender, **kwargs) -> list:
         """Call all matching receivers. Supports both sync and async handlers.
         Sync handlers are run in a thread pool to avoid blocking the event loop."""
         responses = []
-        for sender_filter, handler in self._receivers:
-            if sender_filter is None or sender_filter is sender:
-                if inspect.iscoroutinefunction(handler):
-                    result = await handler(sender=sender, **kwargs)
-                else:
-                    result = await asyncio.to_thread(handler, sender=sender, **kwargs)
-                responses.append((handler, result))
+        for handler in self._live_receivers(sender):
+            if inspect.iscoroutinefunction(handler):
+                result = await handler(sender=sender, **kwargs)
+            else:
+                result = await asyncio.to_thread(handler, sender=sender, **kwargs)
+            responses.append((handler, result))
         return responses
 
     async def send_robust(self, sender, **kwargs) -> list:
         """Like send() but catches exceptions instead of raising."""
         responses = []
-        for sender_filter, handler in self._receivers:
-            if sender_filter is None or sender_filter is sender:
-                try:
-                    if inspect.iscoroutinefunction(handler):
-                        result = await handler(sender=sender, **kwargs)
-                    else:
-                        result = await asyncio.to_thread(handler, sender=sender, **kwargs)
-                    responses.append((handler, result))
-                except Exception as e:
-                    responses.append((handler, e))
+        for handler in self._live_receivers(sender):
+            try:
+                if inspect.iscoroutinefunction(handler):
+                    result = await handler(sender=sender, **kwargs)
+                else:
+                    result = await asyncio.to_thread(handler, sender=sender, **kwargs)
+                responses.append((handler, result))
+            except Exception as e:
+                responses.append((handler, e))
         return responses
 
 

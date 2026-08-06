@@ -261,8 +261,8 @@ def cache_page(timeout: int, *, cache: str = "default", key_prefix: str = ""):
     def decorator(view_func):
         @functools.wraps(view_func)
         async def wrapper(request, *args, **kwargs):
-            from buraq.contrib.cache import get_cache
-            c = get_cache(cache)
+            from buraq.contrib.cache.core import cache as _default_cache
+            c = _default_cache
 
             # Build cache key from prefix + method + path + query string
             qs = str(request.url.query) if request.url.query else ""

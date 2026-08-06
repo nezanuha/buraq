@@ -128,8 +128,13 @@ def _escape_like(value: str, escape_char: str = "\\") -> str:
     )
 
 
+_OUTER_REF_PREFIX = "__outerref__"
+
+
 def _resolve_lookup(model, key: str, value) -> sa.sql.ClauseElement:
     """Turn a filter kwarg into a SQLAlchemy clause (same logic as QuerySet.filter)."""
+    from buraq.orm.expressions import OuterRef
+
     _OPS = {
         "contains":    lambda c, v: c.contains(v),
         "icontains":   lambda c, v: c.ilike(f"%{_escape_like(v)}%", escape="\\"),
@@ -150,15 +155,23 @@ def _resolve_lookup(model, key: str, value) -> sa.sql.ClauseElement:
         "month":      lambda c, v: sa.extract("month", c) == v,
         "day":        lambda c, v: sa.extract("day", c) == v,
     }
+
+    def _resolve_value(v, col_model):
+        if isinstance(v, F):
+            return v.resolve(col_model)
+        if isinstance(v, OuterRef):
+            # Store as a named column placeholder; Subquery._replace_outer_refs
+            # will substitute the real outer column when the subquery is built.
+            return sa.column(f"{_OUTER_REF_PREFIX}{v.field}")
+        return v
+
     if "__" in key:
         field_name, op = key.rsplit("__", 1)
         col = getattr(model, field_name)
-        if isinstance(value, F):
-            value = value.resolve(model)
+        value = _resolve_value(value, model)
         resolver = _OPS.get(op, lambda c, v: c == v)
         return resolver(col, value)
     else:
         col = getattr(model, key)
-        if isinstance(value, F):
-            value = value.resolve(model)
+        value = _resolve_value(value, model)
         return col == value

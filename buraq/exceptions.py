@@ -21,6 +21,10 @@ class SuspiciousOperation(BuraqException):
     pass
 
 
+class SuspiciousFileOperation(SuspiciousOperation):
+    pass
+
+
 class ImproperlyConfigured(BuraqException):
     pass
 

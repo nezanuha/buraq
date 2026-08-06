@@ -99,6 +99,9 @@ class Buraq(FastAPI):
             return HTMLResponse(content=detail, status_code=404)
 
     async def _on_startup(self) -> None:
+        from buraq.checks.registry import registry
+        registry.run_checks_or_raise()
+
         from buraq.core.templating import discover_templatetags
         discover_templatetags()
 
@@ -107,5 +110,6 @@ class Buraq(FastAPI):
             warmup_catalogs()
 
     async def _on_shutdown(self) -> None:
-        from buraq.core.db import engine
-        await engine.dispose()
+        from buraq.core.db import _lazy
+        if _lazy._engine is not None:
+            await _lazy._engine.dispose()

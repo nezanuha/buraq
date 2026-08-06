@@ -47,6 +47,14 @@ class SecurityMiddleware:
         if self._ssl_redirect:
             scheme = scope.get("scheme", "http")
             if scheme == "http":
+                from buraq.conf import settings
+                host_raw = dict(scope.get("headers", [])).get(b"host", b"").decode().split(":")[0]
+                allowed = settings.ALLOWED_HOSTS
+                if allowed != ["*"] and host_raw not in allowed:
+                    from starlette.responses import Response
+                    bad = Response("Bad Request: invalid Host header.", status_code=400)
+                    await bad(scope, receive, send)
+                    return
                 host = dict(scope.get("headers", [])).get(b"host", b"").decode()
                 path = scope.get("path", "/")
                 qs = scope.get("query_string", b"").decode()

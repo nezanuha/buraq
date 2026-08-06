@@ -101,6 +101,23 @@ if not url_has_allowed_host_and_scheme(next_url, allowed_hosts=ALLOWED_HOSTS):
     raise SuspiciousOperation("Unsafe redirect target.")
 ```
 
+### SuspiciousFileOperation
+
+Subclass of `SuspiciousOperation`. Raised by `FileSystemStorage` when a file
+name resolves outside the configured storage root (path traversal attempt):
+
+```python
+from buraq.exceptions import SuspiciousFileOperation
+
+try:
+    await storage.open("../../etc/passwd")
+except SuspiciousFileOperation as e:
+    logger.warning("Path traversal blocked: %s", e)
+```
+
+You do not normally raise this yourself — `FileSystemStorage` raises it
+automatically before any disk access occurs.
+
 ## Reference
 
 | Exception | Module | When to raise / catch |
@@ -112,4 +129,5 @@ if not url_has_allowed_host_and_scheme(next_url, allowed_hosts=ALLOWED_HOSTS):
 | `PermissionDenied` | `buraq.exceptions` | Access control → 403 |
 | `ImproperlyConfigured` | `buraq.exceptions` | Bad settings / startup |
 | `SuspiciousOperation` | `buraq.exceptions` | Malicious / malformed input |
+| `SuspiciousFileOperation` | `buraq.exceptions` | File name escapes storage root |
 | `Http404` | `buraq.http` | Resource not found → 404 |

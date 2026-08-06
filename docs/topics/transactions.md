@@ -53,8 +53,9 @@ async with transaction.atomic():
 
 `on_commit` accepts both sync and async callables.
 
-!!! note
-    In the current implementation, `on_commit` runs immediately inside the atomic block rather than deferring to after the commit. For deferred side effects, call it after the `async with` block closes.
+Callbacks registered with `on_commit` are **deferred** — they are collected
+inside the `async with` block and executed only after the transaction commits
+successfully.  If the transaction rolls back, the callbacks are discarded.
 
 ## non_atomic()
 

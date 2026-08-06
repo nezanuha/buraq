@@ -9,17 +9,22 @@ from .schemas import LoginRequest, TokenResponse, UserCreate, UserRead
 
 
 async def register(payload: UserCreate) -> UserRead:
-    if await User.objects.filter(email=payload.email).exists():
-        raise HTTPException(status_code=400, detail="Email already registered")
-    if await User.objects.filter(username=payload.username).exists():
-        raise HTTPException(status_code=400, detail="Username already taken")
-    return await User.objects.create(
-        email=payload.email,
-        username=payload.username,
-        first_name=payload.first_name,
-        last_name=payload.last_name,
-        hashed_password=hash_password(payload.password),
-    )
+    from sqlalchemy.exc import IntegrityError
+    try:
+        return await User.objects.create(
+            email=payload.email,
+            username=payload.username,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            hashed_password=hash_password(payload.password),
+        )
+    except IntegrityError as exc:
+        msg = str(exc).lower()
+        if "email" in msg:
+            raise HTTPException(status_code=400, detail="Email already registered") from exc
+        if "username" in msg:
+            raise HTTPException(status_code=400, detail="Username already taken") from exc
+        raise HTTPException(status_code=400, detail="Registration failed due to a conflict.") from exc
 
 
 async def login(payload: LoginRequest) -> TokenResponse:

@@ -154,8 +154,6 @@ class Model(Base):
                 col = attr.to_sa_column(name=attr_name)
                 if col is not None:
                     setattr(cls, attr_name, col)
-                else:
-                    delattr(cls, attr_name)  # remove None columns
 
         # ── 5. Let SQLAlchemy register the mapper ─────────────────────────
         super().__init_subclass__(**kwargs)
@@ -185,26 +183,46 @@ class Model(Base):
 
     # ── Instance methods ──────────────────────────────────────────────────────
 
-    async def save(self, update_fields: list = None) -> None:
-        """Insert or update this instance."""
-        from buraq.core.db import SessionLocal
+    async def save(self, update_fields: list | None = None) -> None:
+        """Insert or update this instance. Participates in the current atomic() session if active."""
+        from buraq.core.db import SessionLocal, _current_session
         from buraq.signals import post_save, pre_save
         created = self.id is None
         await pre_save.send(sender=self.__class__, instance=self, created=created)
-        async with SessionLocal() as db:
+
+        active_session = _current_session.get()
+        if active_session is not None:
+            # Use the session from the enclosing atomic() block
+            db = active_session
             if self.id is None:
                 db.add(self)
-                await db.commit()
+                await db.flush()
                 await db.refresh(self)
             else:
                 merged = await db.merge(self)
                 if update_fields:
                     for field in update_fields:
                         setattr(merged, field, getattr(self, field))
-                await db.commit()
+                await db.flush()
                 await db.refresh(merged)
-                # Sync id back
-                self.id = merged.id
+                for col in self.__class__.__table__.columns:
+                    setattr(self, col.name, getattr(merged, col.name))
+        else:
+            async with SessionLocal() as db:
+                if self.id is None:
+                    db.add(self)
+                    await db.commit()
+                    await db.refresh(self)
+                else:
+                    merged = await db.merge(self)
+                    if update_fields:
+                        for field in update_fields:
+                            setattr(merged, field, getattr(self, field))
+                    await db.commit()
+                    await db.refresh(merged)
+                    for col in self.__class__.__table__.columns:
+                        setattr(self, col.name, getattr(merged, col.name))
+
         await post_save.send(sender=self.__class__, instance=self, created=created)
 
     async def delete(self) -> None:
@@ -219,7 +237,7 @@ class Model(Base):
                 await db.commit()
         await post_delete.send(sender=self.__class__, instance=self)
 
-    async def refresh_from_db(self, fields: list = None) -> None:
+    async def refresh_from_db(self, fields: list | None = None) -> None:
         """Reload this instance's fields from the database."""
         from buraq.core.db import SessionLocal
         async with SessionLocal() as db:
@@ -228,8 +246,72 @@ class Model(Base):
                 raise self.DoesNotExist(
                     f"{self.__class__.__name__} with id={self.id} does not exist."
                 )
-            for col in self.__class__.__table__.columns:
+            columns = (
+                [c for c in self.__class__.__table__.columns if c.name in fields]
+                if fields
+                else self.__class__.__table__.columns
+            )
+            for col in columns:
                 setattr(self, col.name, getattr(fresh, col.name))
+
+    async def full_clean(self) -> None:
+        """Run all field-level validators and model-level clean(). Raises ValidationError on failure."""
+        from buraq.exceptions import ValidationError
+        errors: dict[str, list] = {}
+
+        await self.clean_fields(errors)
+
+        try:
+            await self.clean()
+        except ValidationError as e:
+            errors.setdefault("__all__", []).append(str(e))
+
+        try:
+            await self.validate_unique()
+        except ValidationError as e:
+            errors.setdefault("__all__", []).append(str(e))
+
+        if errors:
+            raise ValidationError(errors)
+
+    async def clean_fields(self, errors: dict | None = None) -> None:
+        """Validate each field's validators. Populates errors dict or raises ValidationError."""
+        from buraq.exceptions import ValidationError
+        _errors = errors if errors is not None else {}
+        for col in self.__class__.__table__.columns:
+            val = getattr(self, col.name, None)
+            if val is None and not col.nullable and col.default is None and not col.primary_key:
+                _errors.setdefault(col.name, []).append("This field cannot be null.")
+        if errors is None and _errors:
+            raise ValidationError(_errors)
+
+    async def clean(self) -> None:
+        """Override to add cross-field model validation. Raise ValidationError on failure."""
+
+    async def validate_unique(self) -> None:
+        """Check that unique constraints are not violated. Raises ValidationError if they are."""
+        from buraq.exceptions import ValidationError
+        from buraq.core.db import SessionLocal
+        from sqlalchemy import select
+
+        errors = []
+        table = self.__class__.__table__
+        unique_cols = [c for c in table.columns if c.unique and not c.primary_key]
+        async with SessionLocal() as db:
+            for col in unique_cols:
+                val = getattr(self, col.name, None)
+                if val is None:
+                    continue
+                q = select(self.__class__).where(
+                    getattr(self.__class__, col.name) == val
+                )
+                if self.id is not None:
+                    q = q.where(self.__class__.id != self.id)
+                result = await db.execute(q.limit(1))
+                if result.scalar_one_or_none() is not None:
+                    errors.append(f"{col.name}: Value '{val}' must be unique.")
+        if errors:
+            raise ValidationError("; ".join(errors))
 
     def __repr__(self) -> str:
         pk = getattr(self, "id", None)

@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING
 
 import aiosmtplib
@@ -7,6 +8,8 @@ from buraq.contrib.email.backends.base import BaseEmailBackend
 
 if TYPE_CHECKING:
     from buraq.contrib.email.message import EmailMessage
+
+_log = logging.getLogger(__name__)
 
 
 class SMTPEmailBackend(BaseEmailBackend):
@@ -34,7 +37,9 @@ class SMTPEmailBackend(BaseEmailBackend):
                 recipients=all_recipients,
             )
             return True
-        except Exception as e:
-            if settings.DEBUG:
-                print(f"[Email] SMTP error: {e}")
+        except Exception:
+            _log.exception(
+                "SMTP error sending to %s via %s:%s",
+                all_recipients, self.host, self.port,
+            )
             return False
