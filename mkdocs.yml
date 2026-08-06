@@ -164,3 +164,4 @@ nav:
     - buraq.views: reference/views.md
     - buraq.shortcuts: reference/shortcuts.md
     - buraq.urls: reference/urls.md
+    - Exceptions: reference/exceptions.md

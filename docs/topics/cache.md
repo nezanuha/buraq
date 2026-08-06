@@ -112,6 +112,31 @@ async def user_dashboard(request):
     ...
 ```
 
+## `@cache_result` decorator
+
+Cache the return value of **any async function** — not just views. Useful for expensive database queries or external API calls called from non-view code:
+
+```python
+from buraq.contrib.cache.decorators import cache_result
+
+@cache_result(timeout=120)
+async def get_top_posts(limit: int = 10):
+    return await Post.objects.filter(is_published=True).order_by("-views").limit(limit).all()
+
+# Second call within 120 s returns cached value — no DB query
+posts = await get_top_posts(limit=5)
+```
+
+Provide an explicit key to share the cache entry across callers:
+
+```python
+@cache_result(key="global:stats", timeout=300)
+async def site_stats():
+    return await compute_expensive_stats()
+```
+
+When no key is given, one is auto-generated from the module + function name + argument hash.
+
 ## Batch operations
 
 ```python
