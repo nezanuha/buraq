@@ -88,6 +88,73 @@ EMAIL_BACKEND   = "buraq.contrib.email.backends.file.FileEmailBackend"
 EMAIL_FILE_PATH = "./sent_emails"
 ```
 
+## Multiple Mailers
+
+```python
+# Named email backends — select with send_mail(..., using="transactional")
+MAILERS = {
+    "transactional": {
+        "BACKEND":       "buraq.contrib.email.backends.smtp.SMTPEmailBackend",
+        "HOST":          "smtp.sendgrid.net",
+        "PORT":          587,
+        "HOST_USER":     "apikey",
+        "HOST_PASSWORD": "SG.xxx",
+        "USE_TLS":       True,
+    },
+    "bulk": {
+        "BACKEND":       "buraq.contrib.email.backends.smtp.SMTPEmailBackend",
+        "HOST":          "bulk.mailrelay.com",
+        "PORT":          587,
+        "HOST_USER":     "bulk@example.com",
+        "HOST_PASSWORD": "secret",
+        "USE_TLS":       True,
+    },
+}
+```
+
+## Security headers
+
+Configured via `buraq.middleware.SecurityMiddleware`:
+
+```python
+# HTTPS redirect
+SECURE_SSL_REDIRECT = True   # redirect all HTTP → HTTPS (default: False)
+
+# HSTS
+SECURE_HSTS_SECONDS            = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD            = True
+
+# Other headers (all True/set by default)
+SECURE_CONTENT_TYPE_NOSNIFF          = True           # X-Content-Type-Options: nosniff
+SECURE_REFERRER_POLICY               = "same-origin"  # Referrer-Policy
+SECURE_CROSS_ORIGIN_OPENER_POLICY    = "same-origin"  # COOP
+X_FRAME_OPTIONS                      = "SAMEORIGIN"   # X-Frame-Options
+
+# Permissions-Policy (empty by default — add what you need)
+SECURE_PERMISSIONS_POLICY = {
+    "geolocation": "()",
+    "microphone":  "()",
+    "camera":      "()",
+}
+```
+
+See [Security Middleware](../topics/security-middleware.md) for setup instructions.
+
+## Template context processors
+
+```python
+TEMPLATE_CONTEXT_PROCESSORS = [
+    "buraq.template.context_processors.request",   # injects request
+    "buraq.template.context_processors.auth",      # injects user
+    "buraq.template.context_processors.debug",     # injects DEBUG flag
+    "buraq.template.context_processors.i18n",      # injects LANGUAGE_CODE
+    "myapp.context_processors.site_settings",      # custom processor
+]
+```
+
+See [Context Processors](../topics/context-processors.md) for writing custom processors.
+
 ## Authentication
 
 ```python

@@ -85,8 +85,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **ORM — QuerySet**
 - `QuerySet.select_for_update(nowait, skip_locked)` — `SELECT … FOR UPDATE` row-level locking
 - `QuerySet.earliest(*fields)` / `.latest(*fields)` — first/last object by field
+- `QuerySet.last()` — return last object by primary key
 - `QuerySet.dates(field, kind)` / `.datetimes(field, kind)` — distinct date/datetime values
 - `QuerySet.raw(sql, params)` — raw SQL with named parameters, returns list of dicts
+- `QuerySet.distinct()` — remove duplicate rows from results
+- `QuerySet.select_related(*fields)` — JOIN-load FK/OneToOne relations in a single query
+- `QuerySet.prefetch_related(*fields)` — subquery-load M2M/reverse FK relations
+- `QuerySet.get_or_create(defaults, **kwargs)` — fetch or insert; returns `(instance, created)`
+- `QuerySet.update_or_create(defaults, **kwargs)` — fetch-and-update or insert; returns `(instance, created)`
+- `QuerySet.bulk_update(objs, fields)` — update specific fields on a list of instances in bulk
 
 **ORM — Fields**
 - `PositiveBigIntegerField` — big integer with `>= 0` constraint
@@ -224,6 +231,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `buraq.contrib.auth.login(request, user)` — writes `_auth_user_id` to session, cycles session key (session fixation protection), updates `last_login`
 - `buraq.contrib.auth.logout(request)` — flushes session, resets `request.user` to `AnonymousUser`
 - `@login_required`, `@staff_required`, `@superuser_required` now check `request.user.is_authenticated` / `.is_staff` / `.is_superuser` (session-based) instead of `Authorization: Bearer` tokens
+- `@cache_control(**kwargs)` — set `Cache-Control` response headers declaratively (e.g. `max_age`, `public`, `no_store`)
+- `@never_cache` — set headers to prevent any caching of a view's response
+- `@vary_on_headers(*headers)` — add `Vary` header so caches key on specified request headers
+- `@vary_on_cookie` — shortcut for `@vary_on_headers("Cookie")`
+- `@cache_page(timeout)` — cache a full view response for N seconds; strips sensitive headers before storing
+- `@require_http_methods(*methods)` — return 405 if request method is not in the allowed list
+- `require_GET`, `require_POST`, `require_safe` — pre-built single-method restrictor decorators
 - `TranslatableModel` and `TranslatedFields` (`buraq.contrib.i18n.models`) — per-language field translations stored in an auto-created `{table}_translation` companion table; Alembic detects the table automatically
 - `await model.get_translation(lang_code)` — fetch translation row; raises `DoesNotExist` if missing
 - `await model.safe_translation_getter(field, language_code, fallback_language, default)` — fetch a translated field value, never raises
