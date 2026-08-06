@@ -63,6 +63,11 @@ async def home(request):
     return render(request, "home.html")
 ```
 
+!!! note "Secure flag in production"
+    When `DEBUG=False`, `ensure_csrf_cookie` automatically sets the `Secure`
+    flag on the CSRF cookie so it is only transmitted over HTTPS.  No extra
+    configuration is required.
+
 ## @csrf_exempt
 
 Skip CSRF validation for a specific view — typically used for webhooks from third parties.

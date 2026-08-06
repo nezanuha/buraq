@@ -49,6 +49,16 @@ has_blog_access = await user.has_module_perms("blog")
 
 Superusers (`is_superuser=True`) always return `True` from all `has_perm*` methods.
 
+Permission results are **cached** on the user instance after the first call.
+Repeated `has_perm()` calls within the same request do not re-query the
+database.  If you assign or revoke permissions at runtime and need the user
+object to reflect the change immediately, call `_invalidate_perm_cache()`:
+
+```python
+await UserPermission.objects.create(user_id=user.id, permission_id=perm.id)
+user._invalidate_perm_cache()   # clear cached set so next has_perm() re-fetches
+```
+
 ### In a view
 
 ```python

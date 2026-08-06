@@ -57,6 +57,21 @@ Callbacks registered with `on_commit` are **deferred** — they are collected
 inside the `async with` block and executed only after the transaction commits
 successfully.  If the transaction rolls back, the callbacks are discarded.
 
+## save() inside atomic()
+
+`Model.save()` called inside an `atomic()` block automatically participates in
+the **outer** transaction rather than opening its own session:
+
+```python
+async with transaction.atomic():
+    order = await Order.objects.create(user_id=user.id, total=99)
+    order.status = "confirmed"
+    await order.save()   # uses the same session — rolls back with the block
+```
+
+Without `atomic()`, `save()` opens and closes its own session per call.  With
+`atomic()`, all saves share one session and either commit or roll back together.
+
 ## non_atomic()
 
 Mark a function as explicitly not requiring a transaction — useful for read-only views or functions that manage their own sessions:

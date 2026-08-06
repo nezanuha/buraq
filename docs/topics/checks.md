@@ -23,6 +23,20 @@ for msg in messages:
     print(f"[{msg.__class__.__name__}] {msg.id}: {msg}")
 ```
 
+## Startup behaviour
+
+On application startup, Buraq calls `registry.run_checks_or_raise()`. If any
+check emits an **Error**-level (or higher) message **and** `DEBUG=False`, an
+`ImproperlyConfigured` exception is raised immediately, preventing the app from
+serving requests in a broken state:
+
+```
+buraq.exceptions.ImproperlyConfigured: System check found 1 error(s): ...
+```
+
+In `DEBUG=True` mode, errors are printed as warnings but do not abort startup,
+so development servers remain usable even with misconfigured optional features.
+
 ## Writing custom checks
 
 ```python

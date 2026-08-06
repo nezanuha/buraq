@@ -54,3 +54,11 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()
 
 !!! note
     `SECURE_SSL_REDIRECT` issues a permanent 301 redirect. Do not enable it until your HTTPS certificate is fully working — it will lock HTTP users out.
+
+!!! warning "Host header validation"
+    When `SECURE_SSL_REDIRECT` is enabled, Buraq validates the `Host` request
+    header against `ALLOWED_HOSTS` before issuing the redirect.  Requests with
+    an unrecognised `Host` value receive a **400 Bad Request** instead of a
+    redirect.  This prevents host-header injection attacks that could be used to
+    redirect users to an attacker-controlled domain.  Make sure every hostname
+    your site accepts is listed in `ALLOWED_HOSTS`.

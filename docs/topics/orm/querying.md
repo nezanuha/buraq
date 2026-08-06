@@ -283,6 +283,20 @@ posts = await Post.objects.select_related("author").prefetch_related("tags").all
 
 For custom filtering on prefetched relations, use a `Prefetch` object (see [Prefetch objects](#prefetch-objects) below).
 
+## refresh_from_db()
+
+Reload an instance's fields from the database — useful after an out-of-band
+update (e.g. a `bulk_update` that bypassed the object):
+
+```python
+post = await Post.objects.get(id=1)
+# … some other code updates the row in the DB …
+await post.refresh_from_db()           # reload all fields
+
+# Reload only specific fields (avoids fetching heavy columns)
+await post.refresh_from_db(fields=["status", "views"])
+```
+
 ## last()
 
 Return the last object by primary key, or `None`:

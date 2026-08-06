@@ -46,3 +46,21 @@ redirects = [
 ]
 await Redirect.objects.bulk_create(redirects, ignore_conflicts=True)
 ```
+
+## Security — open-redirect protection
+
+`RedirectFallbackMiddleware` validates every `new_path` value before issuing a
+redirect.  A path is accepted only if it is **relative** (no scheme, no
+netloc).  Absolute URLs such as `https://evil.com` stored in the database are
+silently ignored and the original 404 is forwarded instead:
+
+```
+# Safe — relative path
+new_path = "/posts/post-1"      → 301 redirect ✓
+
+# Rejected — absolute URL
+new_path = "https://evil.com"   → original 404 forwarded ✗
+```
+
+This means you can safely store redirect targets that come from user input
+without risk of turning the middleware into an open redirector.
