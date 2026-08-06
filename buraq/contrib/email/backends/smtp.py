@@ -12,12 +12,12 @@ if TYPE_CHECKING:
 class SMTPEmailBackend(BaseEmailBackend):
     """Async SMTP email backend — production ready."""
 
-    def __init__(self):
-        self.host = settings.EMAIL_HOST or "localhost"
-        self.port = settings.EMAIL_PORT
-        self.username = settings.EMAIL_HOST_USER
-        self.password = settings.EMAIL_HOST_PASSWORD
-        self.use_tls = settings.EMAIL_USE_TLS
+    def __init__(self, **kwargs):
+        self.host = kwargs.get("HOST") or settings.EMAIL_HOST or "localhost"
+        self.port = int(kwargs.get("PORT", settings.EMAIL_PORT))
+        self.username = kwargs.get("HOST_USER") or settings.EMAIL_HOST_USER
+        self.password = kwargs.get("HOST_PASSWORD") or settings.EMAIL_HOST_PASSWORD
+        self.use_tls = kwargs.get("USE_TLS", settings.EMAIL_USE_TLS)
 
     async def send(self, message: "EmailMessage") -> bool:
         mime = message.build_mime()

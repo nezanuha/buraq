@@ -664,6 +664,83 @@ def startproject(
         subprocess.run([uv, "sync"], cwd=project_dir)
 
 
+# ─── URL Listing ─────────────────────────────────────────────────────────────
+
+@app.command()
+def listurls(
+    app_path: str = typer.Option(
+        "main:app",
+        "--app",
+        help="ASGI app to inspect, e.g. 'main:app' or 'config.urls:app'",
+    ),
+    no_color: bool = typer.Option(False, "--no-color", help="Disable coloured output"),
+):
+    """
+    List all registered URL routes and their HTTP methods.
+
+    Named routes (registered with name=) also show their name.
+
+    Example:
+        python manage.py listurls
+        python manage.py listurls --app config.urls:app
+    """
+    import importlib
+
+    try:
+        module_path, obj_name = app_path.rsplit(":", 1)
+        module = importlib.import_module(module_path)
+        asgi_app = getattr(module, obj_name)
+    except Exception as exc:
+        typer.echo(f"Error loading app {app_path!r}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+    # Build a reverse map: path → name for named routes
+    try:
+        from buraq.urls import _route_registry
+        path_to_name: dict[str, str] = {v: k for k, v in _route_registry.items()}
+    except ImportError:
+        path_to_name = {}
+
+    # Unwrap Starlette/FastAPI middleware stack to reach the router
+    router = getattr(asgi_app, "router", asgi_app)
+    routes = getattr(router, "routes", [])
+
+    if not routes:
+        typer.echo("No routes found. Make sure the app is fully initialised.")
+        raise typer.Exit(0)
+
+    # Collect rows
+    rows: list[tuple[str, str, str]] = []
+    for route in routes:
+        path_str = getattr(route, "path", "")
+        methods = getattr(route, "methods", None) or {"*"}
+        method_str = ",".join(sorted(methods))
+        name = path_to_name.get(path_str, getattr(route, "name", "") or "")
+        rows.append((path_str, method_str, name))
+
+    rows.sort(key=lambda r: r[0])
+
+    # Calculate column widths
+    w_path = max(len("Path"), *(len(r[0]) for r in rows))
+    w_meth = max(len("Methods"), *(len(r[1]) for r in rows))
+    w_name = max(len("Name"), *(len(r[2]) for r in rows))
+
+    def _fmt(path: str, methods: str, name: str) -> str:
+        return f"{path:<{w_path}}  {methods:<{w_meth}}  {name}"
+
+    header = _fmt("Path", "Methods", "Name")
+    sep = "-" * len(header)
+    typer.echo(header)
+    typer.echo(sep)
+    for path_str, method_str, name in rows:
+        line = _fmt(path_str, method_str, name)
+        if not no_color and name:
+            line = f"\033[36m{line}\033[0m"
+        typer.echo(line)
+
+    typer.echo(f"\n{len(rows)} route(s) total.")
+
+
 # ─── Custom Management Commands ──────────────────────────────────────────────
 
 @app.command("manage")

@@ -53,6 +53,11 @@ class BuraqSettings(BaseSettings):
     EMAIL_HOST_PASSWORD: str | None = None
     EMAIL_USE_TLS: bool = True
 
+    # Multiple mailers — dict of named backend configurations.
+    # Each entry: {"BACKEND": "...", "HOST": "...", "PORT": 587, ...}
+    # Use send_mail(..., using="name") to select a specific mailer.
+    MAILERS: dict = {}
+
     # Cache
     CACHE_BACKEND: str = "buraq.contrib.cache.backends.memory.MemoryCache"
     CACHE_REDIS_URL: str | None = None

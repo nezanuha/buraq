@@ -11,6 +11,12 @@ DO_NOTHING = "DO_NOTHING"
 SET_DEFAULT = "SET_DEFAULT"
 RESTRICT = "RESTRICT"
 
+# DB-level variants — identical SQL behaviour to their Python counterparts but signal
+# intent: deletions are handled by the database engine, not Python callbacks.
+DB_CASCADE = "DB_CASCADE"
+DB_SET_NULL = "DB_SET_NULL"
+DB_SET_DEFAULT = "DB_SET_DEFAULT"
+
 
 class Field:
     """Base field — all Buraq fields inherit from this."""
@@ -284,11 +290,14 @@ class ForeignKey(Field):
 
         _ondelete_map = {
             "CASCADE": "CASCADE",
+            "DB_CASCADE": "CASCADE",
             "SET_NULL": "SET NULL",
+            "DB_SET_NULL": "SET NULL",
             "PROTECT": "RESTRICT",
             "RESTRICT": "RESTRICT",
             "DO_NOTHING": "NO ACTION",
             "SET_DEFAULT": "SET DEFAULT",
+            "DB_SET_DEFAULT": "SET DEFAULT",
         }
         self._ondelete = _ondelete_map.get(on_delete.upper(), "CASCADE")
 

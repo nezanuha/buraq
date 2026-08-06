@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+**ORM — ForeignKey delete modes**
+- `DB_CASCADE`, `DB_SET_NULL`, `DB_SET_DEFAULT` constants — database-engine-level `ON DELETE` clauses; semantically identical to `CASCADE` / `SET_NULL` / `SET_DEFAULT` in SQL but communicate that no Python callbacks are involved; exported from `buraq.models` and `buraq.orm.fields`
+
+**Multiple Mailers**
+- `MAILERS` setting — dict of named email backend configurations; each entry provides `BACKEND` plus optional `HOST`, `PORT`, `HOST_USER`, `HOST_PASSWORD`, `USE_TLS`
+- `get_connection(using=None)` — returns the named backend from `MAILERS`, or falls back to the legacy `EMAIL_BACKEND` setting when `using` is `None`; backends are cached after first instantiation
+- `send_mail()`, `send_mass_mail()`, `mail_admins()`, `mail_managers()`, `send_template_mail()` all accept a `using=` keyword to select a specific mailer
+
+**Management commands**
+- `listurls` — prints a table of all registered routes with path, HTTP methods, and route name; accepts `--app module:obj` to load a non-default ASGI application
+
 **ORM — QuerySet**
 - `Q.__xor__` — XOR set operation on Q objects (emulated as `(A OR B) AND NOT (A AND B)` for full database compatibility)
 
