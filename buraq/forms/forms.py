@@ -152,6 +152,91 @@ class BaseForm:
     def __repr__(self):
         return f"<{self.__class__.__name__} bound={bool(self.data)}>"
 
+    # ── HTML rendering ──────────────────────────────────────────────────────
+
+    def _html_errors(self, field_name: str) -> str:
+        errs = self.errors.get(field_name, [])
+        if not errs:
+            return ""
+        items = "".join(f"<li>{e}</li>" for e in errs)
+        return f'<ul class="errorlist">{items}</ul>'
+
+    def _render_field(self, bf: "BoundField") -> str:
+        value = bf.value
+        name = bf.html_name
+        ftype = getattr(bf.field, "widget", None) or "text"
+        if ftype == "textarea":
+            widget = f'<textarea name="{name}" id="id_{name}">{value or ""}</textarea>'
+        elif ftype == "password":
+            widget = f'<input type="password" name="{name}" id="id_{name}">'
+        elif ftype == "hidden":
+            widget = f'<input type="hidden" name="{name}" value="{value or ""}">'
+        elif hasattr(bf.field, "choices") and bf.field.choices:
+            opts = "".join(
+                f'<option value="{k}"{"  selected" if str(k) == str(value) else ""}>{label}</option>'
+                for k, label in bf.field.choices
+            )
+            widget = f'<select name="{name}" id="id_{name}">{opts}</select>'
+        else:
+            widget = f'<input type="text" name="{name}" value="{value or ""}" id="id_{name}">'
+        return widget
+
+    def as_p(self) -> str:
+        """Render form as <p> tags."""
+        from markupsafe import Markup
+        rows = []
+        nfe = self.non_field_errors()
+        if nfe:
+            rows.append('<ul class="errorlist nonfield">' +
+                        "".join(f"<li>{e}</li>" for e in nfe) + "</ul>")
+        for bf in self:
+            errs = self._html_errors(bf.name)
+            rows.append(
+                f"{errs}<p>"
+                f'<label for="id_{bf.html_name}">{bf.label}:</label> '
+                f"{self._render_field(bf)}"
+                f"</p>"
+            )
+        return Markup("\n".join(rows))
+
+    def as_table(self) -> str:
+        """Render form as <tr> rows (caller must wrap in <table>)."""
+        from markupsafe import Markup
+        rows = []
+        nfe = self.non_field_errors()
+        if nfe:
+            rows.append(
+                '<tr><td colspan="2"><ul class="errorlist nonfield">' +
+                "".join(f"<li>{e}</li>" for e in nfe) + "</ul></td></tr>"
+            )
+        for bf in self:
+            errs = self._html_errors(bf.name)
+            rows.append(
+                f"<tr>"
+                f'<th><label for="id_{bf.html_name}">{bf.label}:</label></th>'
+                f"<td>{errs}{self._render_field(bf)}</td>"
+                f"</tr>"
+            )
+        return Markup("\n".join(rows))
+
+    def as_div(self) -> str:
+        """Render form as <div> blocks."""
+        from markupsafe import Markup
+        rows = []
+        nfe = self.non_field_errors()
+        if nfe:
+            rows.append('<div class="errorlist nonfield">' +
+                        "".join(f"<p>{e}</p>" for e in nfe) + "</div>")
+        for bf in self:
+            errs = self._html_errors(bf.name)
+            rows.append(
+                f'<div class="form-group">'
+                f'<label for="id_{bf.html_name}">{bf.label}</label>'
+                f"{errs}{self._render_field(bf)}"
+                f"</div>"
+            )
+        return Markup("\n".join(rows))
+
 
 class Form(BaseForm, metaclass=DeclarativeFieldsMetaclass):
     """
@@ -261,7 +346,12 @@ class ModelForm(BaseForm, metaclass=ModelFormMetaclass):
         super().__init__(data=data, **kwargs)
 
     async def save(self, commit: bool = True):
-        """Create or update the model instance from cleaned_data."""
+        """
+        Create or update the model instance from cleaned_data.
+
+        When commit=False, the instance is built but NOT written to the database.
+        Call await instance.save() manually when ready.
+        """
         if not self._cleaned_data:
             await self.is_valid()
         if self._errors:
@@ -281,9 +371,15 @@ class ModelForm(BaseForm, metaclass=ModelFormMetaclass):
                 await self._instance.save()
             return self._instance
         else:
-            obj = await model.objects.create(**data)
-            self._instance = obj
-            return obj
+            if commit:
+                obj = await model.objects.create(**data)
+                self._instance = obj
+                return obj
+            else:
+                # Build unsaved instance — caller is responsible for saving
+                obj = model(**data)
+                self._instance = obj
+                return obj
 
 
 class BoundField:
@@ -314,3 +410,164 @@ class BoundField:
 
     def __repr__(self):
         return f"<BoundField {self.name}={self.value!r}>"
+
+
+# ── Formsets ──────────────────────────────────────────────────────────────────
+
+class BaseFormSet:
+    """
+    A collection of forms of the same type, bound to the same model.
+
+    Usage:
+        PostFormSet = modelformset_factory(Post, form=PostForm, extra=2)
+
+        # In a view:
+        if request.method == "POST":
+            formset = PostFormSet(data=dict(await request.form()))
+            if await formset.is_valid():
+                await formset.save()
+        else:
+            formset = PostFormSet(queryset=await Post.objects.all())
+    """
+
+    def __init__(self, data=None, queryset=None, initial=None, prefix="form"):
+        self.data = data or {}
+        self.initial = initial or []
+        self.prefix = prefix
+        self._instances = list(queryset) if queryset is not None else []
+        self.forms = []
+        self._build_forms()
+
+    def _build_forms(self):
+        total = self._total_form_count()
+        form_class = self._form_class
+        for i in range(total):
+            instance = self._instances[i] if i < len(self._instances) else None
+            pref = f"{self.prefix}-{i}"
+            form_data = self._extract_form_data(pref) if self.data else None
+            self.forms.append(form_class(data=form_data, instance=instance, prefix=pref))
+
+    def _extract_form_data(self, prefix: str) -> dict:
+        return {
+            k[len(prefix) + 1:]: v
+            for k, v in self.data.items()
+            if k.startswith(prefix + "-")
+        }
+
+    def _total_form_count(self) -> int:
+        if self.data:
+            try:
+                return int(self.data.get(f"{self.prefix}-TOTAL_FORMS", len(self._instances) + self._extra))
+            except (ValueError, TypeError):
+                pass
+        return len(self._instances) + self._extra
+
+    async def is_valid(self) -> bool:
+        results = [await f.is_valid() for f in self.forms]
+        return all(results)
+
+    async def save(self, commit: bool = True) -> list:
+        saved = []
+        for form in self.forms:
+            if hasattr(form, "save") and form.cleaned_data:
+                obj = await form.save(commit=commit)
+                saved.append(obj)
+        return saved
+
+    @property
+    def errors(self) -> list:
+        return [f.errors for f in self.forms]
+
+    def management_form_html(self) -> str:
+        from markupsafe import Markup
+        total = len(self.forms)
+        return Markup(
+            f'<input type="hidden" name="{self.prefix}-TOTAL_FORMS" value="{total}">'
+            f'<input type="hidden" name="{self.prefix}-INITIAL_FORMS" value="{len(self._instances)}">'
+        )
+
+    def __iter__(self):
+        return iter(self.forms)
+
+    def __len__(self):
+        return len(self.forms)
+
+
+def modelformset_factory(model, form=None, extra: int = 1, max_num: int = None):
+    """
+    Return a FormSet class for the given model.
+
+    Usage:
+        PostFormSet = modelformset_factory(Post, form=PostForm, extra=2)
+        formset = PostFormSet(queryset=await Post.objects.all())
+    """
+    from buraq.forms.forms import ModelForm
+
+    form_class = form
+    if form_class is None:
+        # Auto-generate a ModelForm
+        class _AutoForm(ModelForm):
+            class Meta:
+                pass
+        _AutoForm.Meta.model = model
+        _AutoForm.Meta.fields = "__all__"
+        form_class = _AutoForm
+
+    class _FormSet(BaseFormSet):
+        _form_class = form_class
+        _extra = extra
+        _max_num = max_num
+
+    _FormSet.__name__ = f"{model.__name__}FormSet"
+    return _FormSet
+
+
+def inlineformset_factory(
+    parent_model,
+    model,
+    form=None,
+    fk_name: str = None,
+    extra: int = 3,
+    max_num: int = None,
+):
+    """
+    Return a FormSet class for inline editing of related objects.
+
+    Usage:
+        CommentFormSet = inlineformset_factory(Post, Comment, form=CommentForm, extra=3)
+
+        # In a view (GET):
+        post = await get_object_or_404(Post, id=pk)
+        comments = await Comment.objects.filter(post_id=post.id).all()
+        formset = CommentFormSet(queryset=comments)
+
+        # In a view (POST):
+        formset = CommentFormSet(data=..., queryset=comments)
+        if await formset.is_valid():
+            instances = await formset.save(commit=False)
+            for obj in instances:
+                obj.post_id = post.id
+                await obj.save()
+    """
+    from buraq.forms.forms import ModelForm
+
+    form_class = form
+    if form_class is None:
+        class _AutoForm(ModelForm):
+            class Meta:
+                pass
+        _AutoForm.Meta.model = model
+        _AutoForm.Meta.fields = "__all__"
+        form_class = _AutoForm
+
+    parent_name = parent_model.__name__.lower()
+    fk = fk_name or f"{parent_name}_id"
+
+    class _InlineFormSet(BaseFormSet):
+        _form_class = form_class
+        _extra = extra
+        _max_num = max_num
+        _fk_name = fk
+
+    _InlineFormSet.__name__ = f"{model.__name__}InlineFormSet"
+    return _InlineFormSet

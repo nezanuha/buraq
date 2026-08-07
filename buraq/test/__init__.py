@@ -21,7 +21,7 @@ Usage::
 """
 
 from buraq.test.client import AsyncClient, RequestFactory
-from buraq.test.testcase import SimpleTestCase, TestCase, TransactionTestCase
+from buraq.test.testcase import SimpleTestCase, TestCase, TransactionTestCase, override_settings
 
 __all__ = [
     "AsyncClient",
@@ -29,4 +29,5 @@ __all__ = [
     "TestCase",
     "SimpleTestCase",
     "TransactionTestCase",
+    "override_settings",
 ]

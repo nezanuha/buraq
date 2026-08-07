@@ -463,8 +463,15 @@ class _M2MManager:
             return
         from buraq.conf import settings
         from buraq.core.db import SessionLocal
+        from buraq.signals import m2m_changed
         assoc = self._field._assoc_table
         rows = [{"source_id": self._instance.id, "target_id": obj.id} for obj in objs]
+        pk_set = {obj.id for obj in objs}
+        target_model = self._field._to if not isinstance(self._field._to, str) else None
+        await m2m_changed.send(
+            sender=assoc, action="pre_add", instance=self._instance,
+            reverse=False, model=target_model, pk_set=pk_set,
+        )
         url = settings.DATABASE_URL
         async with SessionLocal() as db:
             try:
@@ -481,12 +488,22 @@ class _M2MManager:
             stmt = _insert(assoc).values(rows).on_conflict_do_nothing()
             await db.execute(stmt)
             await db.commit()
+        await m2m_changed.send(
+            sender=assoc, action="post_add", instance=self._instance,
+            reverse=False, model=target_model, pk_set=pk_set,
+        )
 
     async def remove(self, *objs) -> None:
-
         from buraq.core.db import SessionLocal
+        from buraq.signals import m2m_changed
         assoc = self._field._assoc_table
         ids = [obj.id for obj in objs]
+        pk_set = set(ids)
+        target_model = self._field._to if not isinstance(self._field._to, str) else None
+        await m2m_changed.send(
+            sender=assoc, action="pre_remove", instance=self._instance,
+            reverse=False, model=target_model, pk_set=pk_set,
+        )
         async with SessionLocal() as db:
             await db.execute(
                 assoc.delete().where(
@@ -495,13 +512,24 @@ class _M2MManager:
                 )
             )
             await db.commit()
+        await m2m_changed.send(
+            sender=assoc, action="post_remove", instance=self._instance,
+            reverse=False, model=target_model, pk_set=pk_set,
+        )
 
     async def set(self, objs) -> None:
         """Replace all related objects atomically (clear + add in one session)."""
         from buraq.conf import settings
         from buraq.core.db import SessionLocal
+        from buraq.signals import m2m_changed
         assoc = self._field._assoc_table
+        target_model = self._field._to if not isinstance(self._field._to, str) else None
         rows = [{"source_id": self._instance.id, "target_id": obj.id} for obj in objs]
+        pk_set = {obj.id for obj in objs}
+        await m2m_changed.send(
+            sender=assoc, action="pre_clear", instance=self._instance,
+            reverse=False, model=target_model, pk_set=None,
+        )
         async with SessionLocal() as db:
             await db.execute(
                 assoc.delete().where(assoc.c.source_id == self._instance.id)
@@ -520,15 +548,29 @@ class _M2MManager:
                     from sqlalchemy.dialects.postgresql import insert as _insert  # type: ignore[no-redef]
                 await db.execute(_insert(assoc).values(rows).on_conflict_do_nothing())
             await db.commit()
+        await m2m_changed.send(
+            sender=assoc, action="post_add", instance=self._instance,
+            reverse=False, model=target_model, pk_set=pk_set,
+        )
 
     async def clear(self) -> None:
         from buraq.core.db import SessionLocal
+        from buraq.signals import m2m_changed
         assoc = self._field._assoc_table
+        target_model = self._field._to if not isinstance(self._field._to, str) else None
+        await m2m_changed.send(
+            sender=assoc, action="pre_clear", instance=self._instance,
+            reverse=False, model=target_model, pk_set=None,
+        )
         async with SessionLocal() as db:
             await db.execute(
                 assoc.delete().where(assoc.c.source_id == self._instance.id)
             )
             await db.commit()
+        await m2m_changed.send(
+            sender=assoc, action="post_clear", instance=self._instance,
+            reverse=False, model=target_model, pk_set=None,
+        )
 
     async def count(self) -> int:
         from sqlalchemy import func, select

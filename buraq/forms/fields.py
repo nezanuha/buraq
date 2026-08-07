@@ -483,6 +483,37 @@ class ModelMultipleChoiceField(ModelChoiceField):
         return await self.queryset.filter(id__in=pks).all()
 
 
+class SplitDateTimeField(Field):
+    """
+    A field that accepts separate date and time inputs.
+
+    Expects data keys ``<name>_date`` and ``<name>_time`` in the form data.
+    Returns a datetime.datetime object combining both.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.date_field = DateField(required=self.required)
+        self.time_field = TimeField(required=self.required)
+
+    def compress(self, data_list):
+        if not data_list:
+            return None
+        d, t = data_list[0], data_list[1]
+        if d and t:
+            return _datetime.combine(d, t)
+        if d and not t:
+            return _datetime.combine(d, _datetime.min.time())
+        return None
+
+    def clean(self, value):
+        if isinstance(value, (list, tuple)) and len(value) == 2:
+            date_val = self.date_field.clean(value[0])
+            time_val = self.time_field.clean(value[1])
+            return self.compress([date_val, time_val])
+        return self.compress([None, None])
+
+
 class TypedMultipleChoiceField(MultipleChoiceField):
     """MultipleChoiceField that coerces values to a given type."""
 

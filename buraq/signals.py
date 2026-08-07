@@ -152,6 +152,32 @@ request_started  = Signal(providing_args=["environ"])
 request_finished = Signal()
 got_request_exception = Signal(providing_args=["request"])
 
+# ── M2M signals ─────────────────────────────────────────────────────────────
+
+m2m_changed = Signal(providing_args=["action", "instance", "reverse", "model", "pk_set"])
+"""
+Fired when a ManyToManyField is modified via .add(), .remove(), .set(), or .clear().
+
+Kwargs sent:
+  sender   — the intermediate (through) table class
+  action   — one of: "pre_add", "post_add", "pre_remove", "post_remove",
+                      "pre_clear", "post_clear"
+  instance — the model instance whose M2M is being modified (source side)
+  reverse  — always False (Buraq does not support reverse M2M managers yet)
+  model    — the target model class
+  pk_set   — set of primary keys being added/removed, or None for clear
+"""
+
+# ── Migration signals ────────────────────────────────────────────────────────
+
+pre_migrate  = Signal(providing_args=["app_config", "verbosity", "interactive", "using"])
+post_migrate = Signal(providing_args=["app_config", "verbosity", "interactive", "using"])
+
+# ── Model class lifecycle ────────────────────────────────────────────────────
+
+class_prepared = Signal(providing_args=["class"])
+"""Fired when a model class body has been fully prepared (after __init_subclass__)."""
+
 # ── Management signals ──────────────────────────────────────────────────────
 
 setting_changed = Signal(providing_args=["setting", "value", "enter"])

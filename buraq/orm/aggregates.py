@@ -19,16 +19,19 @@ class Aggregate:
 
     sa_func = None
 
-    def __init__(self, field: str, distinct: bool = False, filter=None):
+    def __init__(self, field: str, distinct: bool = False, filter=None, default=None):
         self.field = field
         self.distinct = distinct
         self.filter = filter
+        self.default = default
 
     def resolve(self, model) -> sa.sql.ColumnElement:
         col = getattr(model, self.field) if self.field != "*" else sa.literal_column("1")
         agg = self.sa_func(col.distinct() if self.distinct else col)
         if self.filter is not None:
             agg = agg.filter(self.filter.resolve(model))
+        if self.default is not None:
+            agg = func.coalesce(agg, sa.literal(self.default))
         return agg
 
 

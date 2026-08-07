@@ -1,7 +1,5 @@
 """
-Shortcuts for Buraq views — render, redirect, get_object_or_404, render_to_string.
-
-from buraq.shortcuts import render, redirect, get_object_or_404, render_to_string
+Shortcuts for Buraq views — render, redirect, get_object_or_404, get_list_or_404, render_to_string.
 """
 from typing import Any
 
@@ -14,17 +12,31 @@ def render(request: Request, template_name: str, context: dict | None = None) ->
     """
     Render a Jinja2 template and return an HTMLResponse.
 
+    Context processors defined in TEMPLATE_CONTEXT_PROCESSORS are automatically
+    applied and merged into the context before rendering.
+
     Usage:
         async def post_list(request):
             posts = await Post.objects.all()
             return render(request, 'posts/post_list.html', {'posts': posts})
     """
     from buraq.core.templating import get_templates
-    return get_templates().TemplateResponse(
-        request,
-        template_name,
-        context or {},
-    )
+    from buraq.template.context_processors import run_context_processors
+
+    ctx: dict = {}
+
+    # Auto-apply configured context processors
+    try:
+        processor_ctx = run_context_processors(request)
+        ctx.update(processor_ctx)
+    except Exception:
+        pass  # never break rendering due to a context processor error
+
+    # Caller-supplied context wins over processors
+    if context:
+        ctx.update(context)
+
+    return get_templates().TemplateResponse(request, template_name, ctx)
 
 
 def redirect(to: str, permanent: bool = False) -> RedirectResponse:
@@ -68,3 +80,17 @@ async def get_object_or_404(model: Any, **kwargs) -> Any:
     if obj is None:
         raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
     return obj
+
+
+async def get_list_or_404(model: Any, **kwargs) -> list:
+    """
+    Fetch a list of objects or raise 404 if the list is empty.
+
+    Usage:
+        posts = await get_list_or_404(Post, is_published=True)
+    """
+    qs = model.objects.filter(**kwargs) if kwargs else model.objects.all()
+    result = await qs
+    if not result:
+        raise HTTPException(status_code=404, detail=f"No {model.__name__} matches the given query.")
+    return result

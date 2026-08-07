@@ -62,39 +62,103 @@ class Now(_DBFunc):
         return func.now()
 
 
+def _dialect_name() -> str:
+    try:
+        from buraq.conf import settings
+        from sqlalchemy.engine import make_url as _make_url
+        return _make_url(settings.DATABASE_URL).get_dialect().name
+    except Exception:
+        return "postgresql"
+
+
 class TruncDate(_DBFunc):
     def _apply(self, col):
         return sa.cast(col, sa.Date)
 
 
-class TruncHour(_DBFunc):
+class _TruncPart(_DBFunc):
+    """Base for all date-part truncation functions — cross-DB aware."""
+
+    _part: str = ""
+    _sqlite_fmt: str = "%Y-%m-%d %H:00:00"
+
     def _apply(self, col):
-        return func.date_trunc("hour", col)
+        dialect = _dialect_name()
+        if dialect == "sqlite":
+            return sa.cast(func.strftime(self._sqlite_fmt, col), sa.DateTime)
+        elif dialect in ("mysql", "mariadb"):
+            return sa.cast(func.date_format(col, self._mysql_fmt), sa.DateTime)
+        else:
+            return func.date_trunc(self._part, col)
+
+    @property
+    def _mysql_fmt(self) -> str:
+        _map = {
+            "hour":    "%Y-%m-%d %H:00:00",
+            "day":     "%Y-%m-%d 00:00:00",
+            "week":    "%Y-%m-%d 00:00:00",
+            "month":   "%Y-%m-01 00:00:00",
+            "quarter": "%Y-%m-01 00:00:00",
+            "year":    "%Y-01-01 00:00:00",
+        }
+        return _map.get(self._part, "%Y-%m-%d %H:00:00")
 
 
-class TruncDay(_DBFunc):
+class TruncHour(_TruncPart):
+    _part = "hour"
+    _sqlite_fmt = "%Y-%m-%d %H:00:00"
+
+
+class TruncDay(_TruncPart):
+    _part = "day"
+    _sqlite_fmt = "%Y-%m-%d 00:00:00"
+
+
+class TruncWeek(_TruncPart):
+    _part = "week"
+
     def _apply(self, col):
-        return func.date_trunc("day", col)
+        dialect = _dialect_name()
+        if dialect == "sqlite":
+            # SQLite: subtract weekday offset (0=Mon) to get Monday of the week
+            dow = sa.cast(func.strftime("%w", col), sa.Integer)  # 0=Sun
+            adjusted = sa.case((dow == 0, 6), else_=dow - 1)     # shift: Mon=0
+            return sa.func.date(col, sa.literal("-") + sa.cast(adjusted, sa.Text) + sa.literal(" days"))
+        elif dialect in ("mysql", "mariadb"):
+            return sa.cast(func.date_format(col, "%Y-%m-%d 00:00:00"), sa.DateTime)
+        else:
+            return func.date_trunc("week", col)
 
 
-class TruncWeek(_DBFunc):
+class TruncMonth(_TruncPart):
+    _part = "month"
+    _sqlite_fmt = "%Y-%m-01 00:00:00"
+
+
+class TruncQuarter(_TruncPart):
+    _part = "quarter"
+
     def _apply(self, col):
-        return func.date_trunc("week", col)
+        dialect = _dialect_name()
+        if dialect == "sqlite":
+            month = sa.cast(func.strftime("%m", col), sa.Integer)
+            quarter_start_month = ((month - 1) / 3) * 3 + 1
+            return sa.func.date(
+                func.strftime("%Y", col) + "-" +
+                sa.cast(quarter_start_month, sa.Text) + "-01"
+            )
+        elif dialect in ("mysql", "mariadb"):
+            return func.makedate(
+                func.year(col),
+                (func.quarter(col) - 1) * 3 * 30 + 1,
+            )
+        else:
+            return func.date_trunc("quarter", col)
 
 
-class TruncMonth(_DBFunc):
-    def _apply(self, col):
-        return func.date_trunc("month", col)
-
-
-class TruncQuarter(_DBFunc):
-    def _apply(self, col):
-        return func.date_trunc("quarter", col)
-
-
-class TruncYear(_DBFunc):
-    def _apply(self, col):
-        return func.date_trunc("year", col)
+class TruncYear(_TruncPart):
+    _part = "year"
+    _sqlite_fmt = "%Y-01-01 00:00:00"
 
 
 class ExtractYear(_DBFunc):

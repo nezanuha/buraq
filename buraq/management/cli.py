@@ -794,6 +794,433 @@ def run_command(
     raise typer.Exit(1)
 
 
+# ─── Shell ───────────────────────────────────────────────────────────────────
+
+@app.command()
+def shell(
+    command: str | None = typer.Option(None, "--command", "-c", help="Python code to execute"),
+    no_startup: bool = typer.Option(False, "--no-startup", help="Skip PYTHONSTARTUP script"),
+):
+    """
+    Start an interactive Python shell with the Buraq environment pre-loaded.
+
+    All models from INSTALLED_APPS and the Buraq db session are imported automatically.
+
+    Example:
+        python manage.py shell
+        python manage.py shell -c "print(await Post.objects.count())"
+    """
+    import code
+    import importlib
+
+    from buraq.conf import settings
+
+    local_ns: dict = {"settings": settings}
+
+    # Auto-import all model modules from INSTALLED_APPS
+    for app_name in settings.INSTALLED_APPS:
+        for mod_name in ("models",):
+            try:
+                mod = importlib.import_module(f"{app_name}.{mod_name}")
+                for attr in dir(mod):
+                    obj = getattr(mod, attr)
+                    if isinstance(obj, type) and hasattr(obj, "__tablename__"):
+                        local_ns[attr] = obj
+            except ModuleNotFoundError:
+                pass
+
+    # Import buraq built-ins
+    try:
+        from buraq.core.db import SessionLocal
+        local_ns["SessionLocal"] = SessionLocal
+    except ImportError:
+        pass
+
+    if command:
+        import asyncio
+        exec(compile(command, "<string>", "exec"), local_ns)  # noqa: S102
+        return
+
+    banner = (
+        f"Buraq interactive shell\n"
+        f"Models available: {', '.join(k for k, v in local_ns.items() if isinstance(v, type) and hasattr(v, '__tablename__'))}\n"
+        f"Type 'quit()' or Ctrl-D to exit."
+    )
+    code.interact(banner=banner, local=local_ns)
+
+
+# ─── System Check ─────────────────────────────────────────────────────────────
+
+@app.command("check")
+def run_checks(
+    deploy: bool = typer.Option(False, "--deploy", help="Run additional deployment checks"),
+):
+    """
+    Run all system checks and print results.
+
+    Example:
+        python manage.py check
+        python manage.py check --deploy
+    """
+    from buraq.checks.registry import registry
+
+    messages = registry.run_checks()
+    if not messages:
+        typer.echo("System check identified no issues (0 silenced).")
+        return
+
+    errors = warnings = infos = 0
+    for msg in messages:
+        level = getattr(msg, "level", 0)
+        if level >= 40:
+            errors += 1
+            label = typer.style("ERROR", fg=typer.colors.RED)
+        elif level >= 30:
+            warnings += 1
+            label = typer.style("WARNING", fg=typer.colors.YELLOW)
+        else:
+            infos += 1
+            label = typer.style("INFO", fg=typer.colors.BLUE)
+        typer.echo(f"[{label}] {getattr(msg, 'id', '?')}: {getattr(msg, 'msg', msg)}")
+
+    summary = f"System check identified {errors} error(s), {warnings} warning(s)."
+    if errors:
+        typer.echo(typer.style(summary, fg=typer.colors.RED), err=True)
+        raise typer.Exit(1)
+    typer.echo(summary)
+
+
+# ─── DB Shell ─────────────────────────────────────────────────────────────────
+
+@app.command()
+def dbshell():
+    """
+    Open the database CLI for the configured DATABASE_URL.
+
+    Supports SQLite (sqlite3), PostgreSQL (psql), and MySQL/MariaDB (mysql).
+
+    Example:
+        python manage.py dbshell
+    """
+    from buraq.conf import settings
+    from sqlalchemy.engine import make_url as _make_url
+
+    url = _make_url(settings.DATABASE_URL)
+    dialect = url.get_dialect().name
+
+    if dialect == "sqlite":
+        db_path = url.database or ":memory:"
+        cmd = ["sqlite3", db_path]
+    elif dialect == "postgresql":
+        host = url.host or "localhost"
+        port = url.port or 5432
+        user = url.username or ""
+        db = url.database or ""
+        cmd = ["psql", "-h", host, "-p", str(port), "-U", user, db]
+    elif dialect in ("mysql", "mariadb"):
+        host = url.host or "localhost"
+        port = url.port or 3306
+        user = url.username or ""
+        db = url.database or ""
+        cmd = ["mysql", "-h", host, f"--port={port}", f"-u{user}", db]
+    else:
+        typer.echo(f"Unsupported dialect: {dialect}", err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"Connecting: {' '.join(cmd)}")
+    subprocess.run(cmd)
+
+
+# ─── Data Import/Export ───────────────────────────────────────────────────────
+
+@app.command()
+def dumpdata(
+    output: str | None = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
+    indent: int = typer.Option(2, "--indent", help="JSON indent level"),
+    exclude: list[str] | None = typer.Option(None, "--exclude", "-e", help="Table names to exclude"),
+):
+    """
+    Dump all database data as JSON.
+
+    Example:
+        python manage.py dumpdata
+        python manage.py dumpdata --output=fixtures/initial.json
+        python manage.py dumpdata --exclude=buraq_users --exclude=buraq_sessions
+    """
+    import asyncio
+    import json as _json
+
+    from buraq.core.db import Base, SessionLocal
+
+    exclude_set = set(exclude or [])
+
+    async def _dump():
+        tables = {
+            name: table
+            for name, table in Base.metadata.tables.items()
+            if name not in exclude_set
+        }
+        result = {}
+        async with SessionLocal() as db:
+            import sqlalchemy as sa
+            for name, table in tables.items():
+                rows = (await db.execute(sa.select(table))).mappings().all()
+                result[name] = [dict(row) for row in rows]
+        return result
+
+    data = asyncio.run(_dump())
+    json_str = _json.dumps(data, indent=indent, default=str)
+
+    if output:
+        Path(output).write_text(json_str)
+        typer.echo(f"Data written to {output}")
+    else:
+        typer.echo(json_str)
+
+
+@app.command()
+def loaddata(
+    fixture: str = typer.Argument(..., help="Path to JSON fixture file"),
+    table: list[str] | None = typer.Option(None, "--table", "-t", help="Load only these tables"),
+):
+    """
+    Load data from a JSON fixture file into the database.
+
+    Example:
+        python manage.py loaddata fixtures/initial.json
+        python manage.py loaddata fixtures/initial.json --table=buraq_users
+    """
+    import asyncio
+    import json as _json
+
+    from buraq.core.db import Base, SessionLocal
+
+    fixture_data = _json.loads(Path(fixture).read_text())
+    table_filter = set(table) if table else None
+
+    async def _load():
+        async with SessionLocal() as db:
+            import sqlalchemy as sa
+            for table_name, rows in fixture_data.items():
+                if table_filter and table_name not in table_filter:
+                    continue
+                sa_table = Base.metadata.tables.get(table_name)
+                if sa_table is None:
+                    typer.echo(f"  Skipping unknown table: {table_name}", err=True)
+                    continue
+                if not rows:
+                    continue
+                await db.execute(sa_table.insert(), rows)
+                typer.echo(f"  Loaded {len(rows)} row(s) into '{table_name}'")
+            await db.commit()
+
+    asyncio.run(_load())
+    typer.echo("Fixture loaded.")
+
+
+# ─── Flush ────────────────────────────────────────────────────────────────────
+
+@app.command()
+def flush(
+    no_input: bool = typer.Option(False, "--no-input", help="Do not prompt for confirmation"),
+):
+    """
+    Delete all rows from all database tables without dropping the schema.
+
+    Example:
+        python manage.py flush
+        python manage.py flush --no-input
+    """
+    import asyncio
+
+    from buraq.core.db import Base, SessionLocal
+
+    if not no_input:
+        confirmed = typer.confirm(
+            "This will DELETE ALL DATA from the database. Are you sure?", default=False
+        )
+        if not confirmed:
+            typer.echo("Aborted.")
+            raise typer.Exit(0)
+
+    async def _flush():
+        async with SessionLocal() as db:
+            import sqlalchemy as sa
+            for table in reversed(Base.metadata.sorted_tables):
+                await db.execute(sa.delete(table))
+            await db.commit()
+
+    asyncio.run(_flush())
+    typer.echo("All tables flushed.")
+
+
+# ─── Change Password ──────────────────────────────────────────────────────────
+
+@app.command()
+def changepassword(
+    username: str = typer.Argument(..., help="Username whose password to change"),
+):
+    """
+    Change a user's password from the command line.
+
+    Example:
+        python manage.py changepassword admin
+    """
+    import asyncio
+    import getpass
+
+    from buraq.contrib.auth.models import User
+    from buraq.core.auth import hash_password
+
+    pw1 = getpass.getpass(f"New password for '{username}': ")
+    pw2 = getpass.getpass("Confirm password: ")
+    if pw1 != pw2:
+        typer.echo("Passwords do not match.", err=True)
+        raise typer.Exit(1)
+    if not pw1:
+        typer.echo("Password cannot be empty.", err=True)
+        raise typer.Exit(1)
+
+    async def _change():
+        user = await User.objects.get_or_none(username=username)
+        if not user:
+            typer.echo(f"User '{username}' not found.", err=True)
+            raise typer.Exit(1)
+        await User.objects.update(user.id, hashed_password=hash_password(pw1))
+        typer.echo(f"Password for '{username}' changed successfully.")
+
+    asyncio.run(_change())
+
+
+# ─── Inspect DB ───────────────────────────────────────────────────────────────
+
+@app.command()
+def inspectdb(
+    table: list[str] | None = typer.Option(None, "--table", "-t", help="Inspect only these tables"),
+):
+    """
+    Generate model definitions by inspecting the existing database schema.
+
+    Output is printed to stdout and can be redirected to a models.py file.
+
+    Example:
+        python manage.py inspectdb
+        python manage.py inspectdb --table=posts --table=comments > models.py
+    """
+    import asyncio
+
+    import sqlalchemy as sa
+
+    from buraq.conf import settings
+
+    _TYPE_MAP = {
+        "INTEGER": "models.IntegerField()",
+        "VARCHAR": "models.CharField(max_length=255)",
+        "TEXT": "models.TextField()",
+        "BOOLEAN": "models.BooleanField()",
+        "FLOAT": "models.FloatField()",
+        "NUMERIC": "models.DecimalField(max_digits=10, decimal_places=2)",
+        "DATE": "models.DateField()",
+        "DATETIME": "models.DateTimeField()",
+        "TIMESTAMP": "models.DateTimeField()",
+        "BLOB": "models.BinaryField()",
+        "JSON": "models.JSONField()",
+    }
+
+    async def _inspect():
+        from sqlalchemy.ext.asyncio import create_async_engine
+        engine = create_async_engine(settings.DATABASE_URL)
+        async with engine.connect() as conn:
+            inspector = await conn.run_sync(
+                lambda sync_conn: sa.inspect(sync_conn)
+            )
+            table_names = inspector.get_table_names()
+            if table:
+                table_names = [t for t in table_names if t in table]
+
+            lines = ["from buraq import models", ""]
+            for tname in table_names:
+                cols = inspector.get_columns(tname)
+                class_name = "".join(p.title() for p in tname.split("_"))
+                lines.append(f"\nclass {class_name}(models.Model):")
+                lines.append(f"    class Meta:")
+                lines.append(f"        table_name = {tname!r}")
+                for col in cols:
+                    if col["name"] == "id":
+                        continue
+                    col_type = str(col["type"]).upper().split("(")[0]
+                    field_type = _TYPE_MAP.get(col_type, "models.CharField(max_length=255)")
+                    nullable = col.get("nullable", True)
+                    if not nullable:
+                        field_type = field_type.rstrip(")") + ", null=False)"
+                    lines.append(f"    {col['name']} = {field_type}")
+            return "\n".join(lines)
+
+    result = asyncio.run(_inspect())
+    typer.echo(result)
+
+
+# ─── Diff Settings ────────────────────────────────────────────────────────────
+
+@app.command()
+def diffsettings(
+    all_: bool = typer.Option(False, "--all", help="Show all settings, not just changed ones"),
+):
+    """
+    Display settings that differ from Buraq's defaults.
+
+    Example:
+        python manage.py diffsettings
+        python manage.py diffsettings --all
+    """
+    from buraq.conf import settings
+    from buraq.conf.defaults import BuraqSettings
+
+    defaults = BuraqSettings()
+    current = settings
+
+    for field_name in defaults.model_fields:
+        default_val = getattr(defaults, field_name, None)
+        current_val = getattr(current, field_name, None)
+        changed = current_val != default_val
+        if changed or all_:
+            marker = "###" if changed else "   "
+            typer.echo(f"{marker} {field_name} = {current_val!r}")
+            if changed and all_:
+                typer.echo(f"      (default: {default_val!r})")
+
+
+# ─── Send Test Email ──────────────────────────────────────────────────────────
+
+@app.command()
+def sendtestemail(
+    email: str = typer.Argument(..., help="Recipient email address"),
+):
+    """
+    Send a test email to verify the email backend is configured correctly.
+
+    Example:
+        python manage.py sendtestemail admin@example.com
+    """
+    import asyncio
+
+    from buraq.contrib.email.send import send_mail
+
+    async def _send():
+        await send_mail(
+            subject="Buraq test email",
+            message=(
+                "If you received this email, your Buraq email configuration is working correctly.\n\n"
+                "This is an automated test sent by the 'sendtestemail' management command."
+            ),
+            from_email=None,  # uses DEFAULT_FROM_EMAIL
+            recipient_list=[email],
+        )
+        typer.echo(f"Test email sent to {email}.")
+
+    asyncio.run(_send())
+
+
 def execute_from_command_line(argv=None):
     """Entry point for manage.py."""
     import sys

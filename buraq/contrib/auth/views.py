@@ -48,3 +48,366 @@ async def get_me(user_id: int = Depends(get_current_user_id)) -> UserRead:
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+# ── Class-based auth views ───────────────────────────────────────────────────
+
+class LoginView:
+    """
+    Template-based login view — renders a login form on GET, authenticates on POST.
+
+    Usage:
+        from buraq.urls import get, post
+        from buraq.contrib.auth.views import LoginView
+
+        urlpatterns = [
+            get("/login",  LoginView.as_view(), name="login"),
+            post("/login", LoginView.as_view()),
+        ]
+
+    Requires a template at ``registration/login.html`` with a form that POSTs
+    ``username`` and ``password`` fields.
+    """
+
+    template_name: str = "registration/login.html"
+    redirect_field_name: str = "next"
+    success_url: str = "/"
+    redirect_authenticated_user: bool = False
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = cls(**initkwargs)
+
+        async def _view(request, **kwargs):
+            return await view.dispatch(request, **kwargs)
+
+        _view.view_class = cls
+        _view.view_initkwargs = initkwargs
+        return _view
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    async def dispatch(self, request, **kwargs):
+        if request.method == "GET":
+            return await self.get(request, **kwargs)
+        return await self.post(request, **kwargs)
+
+    def get_success_url(self, request) -> str:
+        return request.query_params.get(self.redirect_field_name, self.success_url)
+
+    async def get(self, request, **kwargs):
+        from buraq.shortcuts import render
+        return render(request, self.template_name, {
+            "next": request.query_params.get(self.redirect_field_name, ""),
+        })
+
+    async def post(self, request, **kwargs):
+        from buraq.shortcuts import redirect, render
+        form_data = dict(await request.form())
+        username = form_data.get("username", "")
+        password = form_data.get("password", "")
+
+        user = await User.objects.get_or_none(username=username)
+        if user and verify_password(password, user.hashed_password) and user.is_active:
+            await User.objects.update(user.id, last_login=datetime.now(UTC))
+            token = create_access_token({"sub": str(user.id)})
+            response = redirect(self.get_success_url(request))
+            response.set_cookie("access_token", token, httponly=True)
+            return response
+
+        return render(request, self.template_name, {
+            "error": "Invalid username or password.",
+            "next": form_data.get(self.redirect_field_name, ""),
+        })
+
+
+class LogoutView:
+    """
+    Logs out the current user by clearing the session/cookie.
+
+    Usage:
+        post("/logout", LogoutView.as_view(), name="logout")
+    """
+
+    next_page: str = "/"
+    template_name: str = "registration/logged_out.html"
+    http_method_names = ["get", "post"]
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = cls(**initkwargs)
+
+        async def _view(request, **kwargs):
+            return await view.dispatch(request, **kwargs)
+
+        _view.view_class = cls
+        return _view
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    async def dispatch(self, request, **kwargs):
+        return await self.get(request, **kwargs)
+
+    async def get(self, request, **kwargs):
+        from buraq.shortcuts import redirect
+        response = redirect(self.next_page)
+        response.delete_cookie("access_token")
+        return response
+
+
+class PasswordChangeView:
+    """
+    Allows an authenticated user to change their password.
+
+    Template: ``registration/password_change_form.html``
+    Expects POST fields: ``old_password``, ``new_password1``, ``new_password2``
+    """
+
+    template_name: str = "registration/password_change_form.html"
+    success_url: str = "/auth/password-change/done/"
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = cls(**initkwargs)
+
+        async def _view(request, **kwargs):
+            return await view.dispatch(request, **kwargs)
+
+        _view.view_class = cls
+        return _view
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    async def dispatch(self, request, **kwargs):
+        if request.method == "GET":
+            return await self.get(request, **kwargs)
+        return await self.post(request, **kwargs)
+
+    async def get(self, request, **kwargs):
+        from buraq.shortcuts import render
+        return render(request, self.template_name, {})
+
+    async def post(self, request, **kwargs):
+        from buraq.shortcuts import redirect, render
+        form_data = dict(await request.form())
+        old_pw = form_data.get("old_password", "")
+        new_pw1 = form_data.get("new_password1", "")
+        new_pw2 = form_data.get("new_password2", "")
+
+        errors = []
+        user_id = getattr(getattr(request, "user", None), "id", None)
+        if not user_id:
+            errors.append("You must be logged in to change your password.")
+        else:
+            user = await User.objects.get_or_none(id=user_id)
+            if not user or not verify_password(old_pw, user.hashed_password):
+                errors.append("Your old password was entered incorrectly.")
+            elif new_pw1 != new_pw2:
+                errors.append("The two password fields didn't match.")
+            elif not new_pw1:
+                errors.append("New password cannot be empty.")
+            else:
+                await User.objects.update(user.id, hashed_password=hash_password(new_pw1))
+                return redirect(self.success_url)
+
+        return render(request, self.template_name, {"errors": errors})
+
+
+class PasswordResetView:
+    """
+    Sends a password-reset email with a signed token link.
+
+    Template: ``registration/password_reset_form.html``
+    Email template: ``registration/password_reset_email.html``
+    """
+
+    template_name: str = "registration/password_reset_form.html"
+    email_template_name: str = "registration/password_reset_email.html"
+    success_url: str = "/auth/password-reset/done/"
+    from_email: str | None = None
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = cls(**initkwargs)
+
+        async def _view(request, **kwargs):
+            return await view.dispatch(request, **kwargs)
+
+        _view.view_class = cls
+        return _view
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    async def dispatch(self, request, **kwargs):
+        if request.method == "GET":
+            return await self.get(request, **kwargs)
+        return await self.post(request, **kwargs)
+
+    async def get(self, request, **kwargs):
+        from buraq.shortcuts import render
+        return render(request, self.template_name, {})
+
+    async def post(self, request, **kwargs):
+        import hashlib
+        import hmac
+        import time
+        from buraq.conf import settings
+        from buraq.contrib.email.send import send_mail
+        from buraq.shortcuts import redirect, render
+
+        form_data = dict(await request.form())
+        email = form_data.get("email", "").strip().lower()
+        user = await User.objects.get_or_none(email=email)
+
+        if user:
+            # Build a signed token: uid:timestamp:signature
+            timestamp = str(int(time.time()))
+            raw = f"{user.id}:{user.email}:{timestamp}"
+            sig = hmac.new(
+                settings.SECRET_KEY.encode(),
+                raw.encode(),
+                hashlib.sha256,
+            ).hexdigest()[:24]
+            token = f"{user.id}-{timestamp}-{sig}"
+
+            scheme = request.url.scheme
+            host = request.headers.get("host", "localhost")
+            reset_url = f"{scheme}://{host}/auth/password-reset/confirm/{token}/"
+
+            try:
+                body = render_to_string_safe(
+                    self.email_template_name,
+                    {"user": user, "reset_url": reset_url},
+                    request,
+                )
+            except Exception:
+                body = f"Click the link to reset your password: {reset_url}"
+
+            await send_mail(
+                subject="Password reset",
+                message=body,
+                from_email=self.from_email,
+                recipient_list=[user.email],
+            )
+
+        return redirect(self.success_url)
+
+
+class PasswordResetConfirmView:
+    """
+    Validates the reset token and sets a new password.
+
+    Template: ``registration/password_reset_confirm.html``
+    """
+
+    template_name: str = "registration/password_reset_confirm.html"
+    success_url: str = "/auth/password-reset/complete/"
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = cls(**initkwargs)
+
+        async def _view(request, **kwargs):
+            return await view.dispatch(request, **kwargs)
+
+        _view.view_class = cls
+        return _view
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    async def dispatch(self, request, **kwargs):
+        if request.method == "GET":
+            return await self.get(request, **kwargs)
+        return await self.post(request, **kwargs)
+
+    def _verify_token(self, token: str):
+        import hashlib
+        import hmac
+        import time
+        from buraq.conf import settings
+
+        try:
+            parts = token.split("-")
+            if len(parts) < 3:
+                return None
+            uid = parts[0]
+            timestamp = parts[1]
+            sig = "-".join(parts[2:])
+            # Token expires after 24 hours
+            if int(time.time()) - int(timestamp) > 86400:
+                return None
+            return uid, timestamp, sig
+        except (ValueError, IndexError):
+            return None
+
+    async def get(self, request, **kwargs):
+        from buraq.shortcuts import render
+        token = kwargs.get("token", "")
+        valid = self._verify_token(token) is not None
+        return render(request, self.template_name, {"valid": valid, "token": token})
+
+    async def post(self, request, **kwargs):
+        import hashlib
+        import hmac
+        from buraq.conf import settings
+        from buraq.shortcuts import redirect, render
+
+        form_data = dict(await request.form())
+        token = kwargs.get("token", form_data.get("token", ""))
+        parsed = self._verify_token(token)
+
+        if not parsed:
+            return render(request, self.template_name, {
+                "valid": False, "error": "The reset link is invalid or has expired."
+            })
+
+        uid, timestamp, sig = parsed
+        user = await User.objects.get_or_none(id=int(uid))
+        if not user:
+            return render(request, self.template_name, {"valid": False})
+
+        # Verify signature
+        raw = f"{user.id}:{user.email}:{timestamp}"
+        expected = hmac.new(
+            settings.SECRET_KEY.encode(),
+            raw.encode(),
+            hashlib.sha256,
+        ).hexdigest()[:24]
+        if not hmac.compare_digest(sig, expected):
+            return render(request, self.template_name, {
+                "valid": False, "error": "Invalid reset token."
+            })
+
+        pw1 = form_data.get("new_password1", "")
+        pw2 = form_data.get("new_password2", "")
+        if pw1 != pw2:
+            return render(request, self.template_name, {
+                "valid": True, "token": token,
+                "error": "The two passwords didn't match.",
+            })
+        if not pw1:
+            return render(request, self.template_name, {
+                "valid": True, "token": token,
+                "error": "Password cannot be empty.",
+            })
+
+        await User.objects.update(user.id, hashed_password=hash_password(pw1))
+        return redirect(self.success_url)
+
+
+def render_to_string_safe(template_name, context=None, request=None) -> str:
+    try:
+        from buraq.template.loader import render_to_string
+        return render_to_string(template_name, context, request)
+    except Exception:
+        return ""

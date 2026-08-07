@@ -182,6 +182,20 @@ def i18n_patterns(*patterns: Any, prefix_default_language: bool = True) -> I18nU
     return I18nURLGroup(list(patterns), prefix_default_language=prefix_default_language)
 
 
+def reverse_lazy(name: str, **path_params: Any):
+    """
+    Lazy version of reverse() — the URL is not computed until the result is used as a string.
+
+    Useful as a class attribute default where the URL registry isn't yet populated::
+
+        class MyView(View):
+            success_url = reverse_lazy("post_list")
+    """
+    from buraq.utils.functional import lazy
+    _lazy_reverse = lazy(reverse, str)
+    return _lazy_reverse(name, **path_params)
+
+
 def reverse(name: str, **path_params: Any) -> str:
     """
     Return the URL path for a named route.

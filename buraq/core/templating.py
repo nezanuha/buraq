@@ -19,9 +19,40 @@ def get_templates() -> Jinja2Templates:
         _templates = Jinja2Templates(directory=templates_dir)
         _templates.env.auto_reload = settings.DEBUG
 
-        # Built-in globals
+        # ── Built-in globals ───────────────────────────────────────────────
+
+        # Messages
         from buraq.contrib.messages import get_messages
         _templates.env.globals["get_messages"] = get_messages
+
+        # URL reversal
+        from buraq.urls import reverse
+        _templates.env.globals["url"] = reverse
+
+        # Static files
+        def _static(path: str) -> str:
+            base = settings.STATIC_URL.rstrip("/")
+            return f"{base}/{path.lstrip('/')}"
+
+        _templates.env.globals["static"] = _static
+        _templates.env.globals["STATIC_URL"] = settings.STATIC_URL
+        _templates.env.globals["MEDIA_URL"] = settings.MEDIA_URL
+
+        # CSRF
+        from buraq.contrib.csrf import get_token as _get_csrf_token
+
+        def _csrf_token_func(request=None):
+            """Return the raw CSRF token string."""
+            return _get_csrf_token(request) if request else ""
+
+        def _csrf_input(request=None):
+            """Return a hidden <input> field with the CSRF token."""
+            from markupsafe import Markup
+            token = _get_csrf_token(request) if request else ""
+            return Markup(f'<input type="hidden" name="csrfmiddlewaretoken" value="{token}">')
+
+        _templates.env.globals["csrf_token"] = _csrf_token_func
+        _templates.env.globals["csrf_input"] = _csrf_input
 
         # i18n globals
         if settings.USE_I18N:
@@ -39,8 +70,11 @@ def get_templates() -> Jinja2Templates:
             _templates.env.globals["get_language"]    = get_language
             _templates.env.globals["get_language_bidi"] = get_language_bidi
 
-        # Apply all @register.global / @register.filter / @register.test
-        # collected from INSTALLED_APPS templatetags.py files
+        # ── Built-in filters (Django-compatible) ───────────────────────────
+        from buraq.template.builtins import register_builtins
+        register_builtins(_templates.env)
+
+        # ── App templatetags ───────────────────────────────────────────────
         from buraq.template.registry import _registry
         _registry.apply(_templates.env)
 
