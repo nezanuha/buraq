@@ -382,8 +382,6 @@ def _patch_cbv_signature(view: Callable, full_path: str, param_types: dict = Non
         return view
 
     path_params = _PATH_PARAM_RE.findall(full_path)
-    if not path_params:
-        return view
 
     from starlette.requests import Request
 
