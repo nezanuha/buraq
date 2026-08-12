@@ -55,8 +55,8 @@ class EmailMessage:
         return msg
 
     async def send(self) -> bool:
-        from buraq.contrib.email.send import get_backend
-        backend = get_backend()
+        from buraq.contrib.email.send import get_connection
+        backend = get_connection()
         return await backend.send(self)
 
 
@@ -66,6 +66,30 @@ class EmailMultiAlternatives(EmailMessage):
     html_body: str = ""
 
     def build_mime(self) -> MIMEMultipart:
+        if self.attachments:
+            # mixed outer wrapping alternative inner — so attachments work alongside HTML
+            outer = MIMEMultipart("mixed")
+            outer["Subject"] = self.subject
+            outer["From"] = self._get_from()
+            outer["To"] = ", ".join(self.to)
+            if self.cc:
+                outer["Cc"] = ", ".join(self.cc)
+            if self.reply_to:
+                outer["Reply-To"] = ", ".join(self.reply_to)
+            alt = MIMEMultipart("alternative")
+            alt.attach(MIMEText(self.body, "plain"))
+            if self.html_body:
+                alt.attach(MIMEText(self.html_body, "html"))
+            outer.attach(alt)
+            for filename, content, mimetype in self.attachments:
+                main, sub = mimetype.split("/", 1)
+                part = MIMEBase(main, sub)
+                part.set_payload(content)
+                encoders.encode_base64(part)
+                part.add_header("Content-Disposition", "attachment", filename=filename)
+                outer.attach(part)
+            return outer
+
         msg = MIMEMultipart("alternative")
         msg["Subject"] = self.subject
         msg["From"] = self._get_from()
@@ -74,9 +98,7 @@ class EmailMultiAlternatives(EmailMessage):
             msg["Cc"] = ", ".join(self.cc)
         if self.reply_to:
             msg["Reply-To"] = ", ".join(self.reply_to)
-
         msg.attach(MIMEText(self.body, "plain"))
         if self.html_body:
             msg.attach(MIMEText(self.html_body, "html"))
-
         return msg

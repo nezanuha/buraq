@@ -24,10 +24,10 @@ RUN uv run buraq collectstatic --no-input
 
 EXPOSE 8000
 
-CMD ["uv", "run", "gunicorn", "config.urls:app", \
-     "--worker-class", "uvicorn.workers.UvicornWorker", \
+CMD ["uv", "run", "granian", "--interface", "asgi", "config.urls:app", \
      "--workers", "4", \
-     "--bind", "0.0.0.0:8000"]
+     "--host", "0.0.0.0", \
+     "--port", "8000"]
 ```
 
 ## docker-compose.yml
@@ -50,9 +50,8 @@ services:
         condition: service_started
     command: >
       sh -c "uv run buraq migrate &&
-             uv run gunicorn config.urls:app
-               --worker-class uvicorn.workers.UvicornWorker
-               --workers 4 --bind 0.0.0.0:8000"
+             uv run granian --interface asgi config.urls:app
+               --workers 4 --host 0.0.0.0 --port 8000"
 
   db:
     image: postgres:16-alpine

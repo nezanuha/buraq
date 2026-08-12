@@ -154,6 +154,24 @@ def _resolve_lookup(model, key: str, value) -> sa.sql.ClauseElement:
         "year":       lambda c, v: sa.extract("year", c) == v,
         "month":      lambda c, v: sa.extract("month", c) == v,
         "day":        lambda c, v: sa.extract("day", c) == v,
+        "hour":       lambda c, v: sa.extract("hour", c) == v,
+        "minute":     lambda c, v: sa.extract("minute", c) == v,
+        "second":     lambda c, v: sa.extract("second", c) == v,
+        "week":       lambda c, v: sa.extract("week", c) == v,
+        "week_day":   lambda c, v: sa.extract("dow", c) == v,
+        "iso_week_day": lambda c, v: sa.extract("isodow", c) == v,
+        "quarter":    lambda c, v: sa.extract("quarter", c) == v,
+        "iso_year":   lambda c, v: sa.extract("isoyear", c) == v,
+        "date":       lambda c, v: sa.cast(c, sa.Date) == v,
+        "time":       lambda c, v: sa.cast(c, sa.Time) == v,
+        "regex":      lambda c, v: c.regexp_match(v),
+        "iregex":     lambda c, v: c.regexp_match(v, flags="i"),
+        # JSON / array operators (PostgreSQL)
+        "contained_by": lambda c, v: c.op("<@")(sa.cast(v, sa.JSON)),
+        "has_key":    lambda c, v: c.op("?")(v),
+        "has_keys":   lambda c, v: c.op("?&")(sa.cast(v, sa.ARRAY(sa.Text))),
+        "has_any_keys": lambda c, v: c.op("?|")(sa.cast(v, sa.ARRAY(sa.Text))),
+        "overlap":    lambda c, v: c.op("&&")(v),
     }
 
     def _resolve_value(v, col_model):

@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from buraq.conf import settings
@@ -12,11 +11,41 @@ _log = logging.getLogger(__name__)
 _templates: Jinja2Templates | None = None
 
 
+def _collect_template_dirs() -> list[str]:
+    """
+    Return all template directories in priority order:
+    1. Project-level TEMPLATES_DIR (if set)
+    2. APP_DIRS — each installed app's ``templates/`` subfolder
+    """
+    dirs: list[str] = []
+
+    project_dir = settings.TEMPLATES_DIR or str(Path.cwd() / "templates")
+    if Path(project_dir).is_dir():
+        dirs.append(project_dir)
+
+    if getattr(settings, "APP_DIRS", True):
+        for app_name in getattr(settings, "INSTALLED_APPS", []):
+            try:
+                mod = importlib.import_module(app_name)
+                app_path = Path(mod.__file__).parent if mod.__file__ else None
+                if app_path:
+                    tmpl_path = app_path / "templates"
+                    if tmpl_path.is_dir():
+                        dirs.append(str(tmpl_path))
+            except (ImportError, AttributeError):
+                pass
+
+    if not dirs:
+        dirs.append(project_dir)
+
+    return dirs
+
+
 def get_templates() -> Jinja2Templates:
     global _templates
     if _templates is None:
-        templates_dir = settings.TEMPLATES_DIR or str(Path.cwd() / "templates")
-        _templates = Jinja2Templates(directory=templates_dir)
+        template_dirs = _collect_template_dirs()
+        _templates = Jinja2Templates(directory=template_dirs)
         _templates.env.auto_reload = settings.DEBUG
 
         # ── Built-in globals ───────────────────────────────────────────────
@@ -29,14 +58,29 @@ def get_templates() -> Jinja2Templates:
         from buraq.urls import reverse
         _templates.env.globals["url"] = reverse
 
-        # Static files
+        # Static files — route through storage so ManifestStorage returns hashed URLs
         def _static(path: str) -> str:
-            base = settings.STATIC_URL.rstrip("/")
-            return f"{base}/{path.lstrip('/')}"
+            try:
+                from buraq.contrib.staticfiles.storage import get_storage
+                return get_storage().url(path)
+            except Exception:
+                return settings.STATIC_URL.rstrip("/") + "/" + path.lstrip("/")
+
+        def _media(path: str) -> str:
+            return settings.MEDIA_URL.rstrip("/") + "/" + path.lstrip("/")
 
         _templates.env.globals["static"] = _static
+        _templates.env.globals["media"] = _media
         _templates.env.globals["STATIC_URL"] = settings.STATIC_URL
         _templates.env.globals["MEDIA_URL"] = settings.MEDIA_URL
+
+        # Django-style {% static %} / {% media %} block tags
+        from buraq.contrib.staticfiles.templatetags import StaticExtension
+        _templates.env.add_extension(StaticExtension)
+
+        # Template fragment caching — {% cache 300 "key" %}...{% endcache %}
+        from buraq.template.cache import CacheExtension
+        _templates.env.add_extension(CacheExtension)
 
         # CSRF
         from buraq.contrib.csrf import get_token as _get_csrf_token
@@ -101,14 +145,3 @@ def discover_templatetags() -> None:
             _log.exception("Error loading templatetags from %s", module_path)
 
 
-def register_static(app: FastAPI) -> None:
-    static_dir = settings.STATIC_DIR or str(Path.cwd() / "static")
-    if Path(static_dir).exists():
-        app.mount(settings.STATIC_URL.rstrip("/"), StaticFiles(directory=static_dir), name="static")
-
-    if settings.MEDIA_DIR and Path(settings.MEDIA_DIR).exists():
-        app.mount(
-            settings.MEDIA_URL.rstrip("/"),
-            StaticFiles(directory=settings.MEDIA_DIR),
-            name="media",
-        )

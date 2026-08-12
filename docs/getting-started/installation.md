@@ -21,26 +21,22 @@
 
 ## Install a Database Driver
 
-Buraq uses SQLAlchemy's async engine. Install the driver that matches your database:
+Buraq uses SQLAlchemy's async engine. SQLite support (`aiosqlite`) is bundled — no extra install needed for development.
 
-=== "SQLite (development)"
-
-    ```bash
-    uv add aiosqlite
-    ```
+For other databases install the matching driver:
 
 === "PostgreSQL (production)"
 
     ```bash
-    uv add asyncpg
+    uv add "buraq[postgres]"
+    # or directly: uv add asyncpg
     ```
 
 === "MySQL / MariaDB"
 
     ```bash
-    uv add aiomysql
-    # or
     uv add "buraq[mysql]"
+    # or directly: uv add aiomysql
     ```
 
 ## Optional Extras
@@ -51,9 +47,6 @@ uv add aiomcache
 
 # Redis cache backend
 uv add "redis[hiredis]"
-
-# Production server
-uv add "buraq[production]"   # installs gunicorn + whitenoise
 ```
 
 ## Verify Installation

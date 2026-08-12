@@ -35,6 +35,46 @@ async def on_post_saved(sender, instance, created, **kwargs):
     await notify_subscribers(instance)
 ```
 
+## Model init signals — pre_init / post_init
+
+`pre_init` and `post_init` fire synchronously around `Model.__init__` so you can inspect or mutate the kwargs before the instance is built.
+
+```python
+from buraq.signals import pre_init, post_init
+from myapp.models import Post
+
+@pre_init.connect
+def on_pre_init(sender, args, kwargs, **extra):
+    # kwargs is the dict passed to Post(...)
+    if sender is Post:
+        kwargs.setdefault("status", "draft")
+
+@post_init.connect
+def on_post_init(sender, instance, **extra):
+    # instance is fully constructed
+    print(f"Post created: {instance.title!r}")
+```
+
+!!! note
+    Because `Model.__init__` is synchronous, only **non-async** handlers are called for `pre_init` / `post_init`. Async handlers registered for these signals are silently skipped. Use `post_save` for async work that must run after construction and database save.
+
+## send_sync() — synchronous dispatch
+
+`Signal.send_sync()` fires all registered **non-coroutine** handlers synchronously. It is used internally for `pre_init` / `post_init` and is available for your own signals when called from a context without an event loop:
+
+```python
+from buraq.signals import Signal
+
+my_signal = Signal()
+
+@my_signal.connect
+def sync_handler(sender, value, **kwargs):
+    print(f"Got: {value}")
+
+# Call from sync code (no running loop required)
+my_signal.send_sync(sender=None, value=42)
+```
+
 ## Sync handlers
 
 Sync handlers are automatically run in a thread pool so they don't block the event loop:
@@ -135,6 +175,47 @@ for handler, result in responses:
 | `post_delete` | After a model instance is deleted | `instance` |
 | `pre_init` | Before a model `__init__` runs | `args`, `kwargs` |
 | `post_init` | After a model `__init__` completes | `instance` |
+| `class_prepared` | After a model class body is fully prepared | — |
+
+### Many-to-many signal
+
+`m2m_changed` fires around every `_M2MManager` mutation (`add`, `remove`, `set`, `clear`).
+
+```python
+from buraq.signals import m2m_changed
+from posts.models import Post
+
+@m2m_changed.connect
+async def on_tags_changed(sender, action, instance, model, pk_set, **kwargs):
+    if action == "post_add":
+        print(f"Tags {pk_set} added to post {instance.id}")
+```
+
+| `action` value | When |
+|---|---|
+| `"pre_add"` | Before new M2M rows are inserted |
+| `"post_add"` | After new M2M rows are inserted |
+| `"pre_remove"` | Before M2M rows are deleted |
+| `"post_remove"` | After M2M rows are deleted |
+| `"pre_clear"` | Before all M2M rows for this instance are deleted |
+| `"post_clear"` | After all M2M rows are deleted |
+
+Extra kwargs: `sender` (through-table class), `action`, `instance` (source model instance), `reverse=False`, `model` (target model class), `pk_set` (set of affected PKs, or `None` for `clear`).
+
+### Migration signals
+
+| Signal | When fired | Extra kwargs |
+|---|---|---|
+| `pre_migrate` | Before migration runs begin | `app_config`, `verbosity`, `interactive`, `using` |
+| `post_migrate` | After all migrations complete | `app_config`, `verbosity`, `interactive`, `using` |
+
+```python
+from buraq.signals import post_migrate
+
+@post_migrate.connect
+async def seed_data(sender, **kwargs):
+    await Permission.objects.get_or_create(codename="view_dashboard")
+```
 
 ### Request lifecycle signals
 

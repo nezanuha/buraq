@@ -129,6 +129,82 @@ get("/posts/", views.post_list,
 )
 ```
 
+## Reversing URLs
+
+### reverse
+
+```python
+from buraq.urls import reverse
+
+url = reverse("post_detail", pk=1)   # → "/posts/1"
+url = reverse("auth:login")          # namespaced route
+```
+
+Raises `NoReverseMatch` if the name is not registered or a required path parameter is missing.
+
+### reverse_lazy
+
+```python
+from buraq.urls import reverse_lazy
+
+# Safe to use at class body level — URL not resolved until first use
+class PostCreateView(CreateView):
+    success_url = reverse_lazy("post_list")
+```
+
+Evaluates to the same string as `reverse()` but deferred until the value is coerced to `str`. Use it anywhere the URL registry may not be fully populated at import time: CBV class attributes, module-level constants, default argument values.
+
+## re_path — regex URL patterns
+
+When `path()` converters aren't expressive enough, use `re_path()` with a raw regular expression:
+
+```python
+from buraq.urls import re_path
+
+urlpatterns = [
+    re_path(r"^articles/(?P<year>[0-9]{4})/$", views.year_archive, name="article-year"),
+    re_path(r"^articles/(?P<year>[0-9]{4})/(?P<month>[0-9]{2})/$", views.month_archive),
+]
+```
+
+Named capture groups (`?P<name>`) are passed as keyword arguments to the view.
+
+## resolve() — reverse path lookup
+
+Resolve a URL path back to the view function that handles it:
+
+```python
+from buraq.urls import resolve, Resolver404
+
+try:
+    match = resolve("/posts/hello-world/")   # → ResolverMatch
+    # match.func      → the view callable
+    # match.args      → positional arguments
+    # match.kwargs    → keyword arguments {"slug": "hello-world"}
+    # match.url_name  → "post_detail" (if named)
+    # match.app_name  → namespace (if any)
+except Resolver404:
+    print("No URL pattern matched this path")
+```
+
+`resolve()` raises `Resolver404` if no pattern matches.
+
+## Exceptions
+
+| Exception | When raised |
+|---|---|
+| `NoReverseMatch` | `reverse()` / `reverse_lazy()` cannot build a URL from the given name and arguments |
+| `Resolver404` | `resolve()` cannot find a matching URL pattern |
+
+```python
+from buraq.urls import reverse, NoReverseMatch
+
+try:
+    url = reverse("nonexistent-view", pk=99)
+except NoReverseMatch as e:
+    return HttpResponseNotFound(str(e))
+```
+
 ## HTTP method helpers
 
 | Function | HTTP methods | Notes |

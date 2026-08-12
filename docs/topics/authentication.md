@@ -284,6 +284,20 @@ AUTHENTICATION_BACKENDS = [
 ]
 ```
 
+### Built-in backends
+
+| Backend | Behaviour |
+|---|---|
+| `buraq.contrib.auth.backends.ModelBackend` | Default. Checks `username` + `password` against the `User` table; rejects inactive users (`is_active=False`). |
+| `buraq.contrib.auth.backends.AllowAllUsersModelBackend` | Like `ModelBackend` but **authenticates inactive users too**. Useful when you want to show a "your account is disabled" page after login rather than a generic invalid-credentials error. |
+| `buraq.contrib.auth.backends.AllowAllUsersRemoteUserBackend` | Remote-user backend that authenticates inactive users. Pair with upstream authentication (e.g. nginx `auth_request`) when the proxy asserts the identity and Buraq should accept it regardless of `is_active`. |
+
+```python title="config/settings.py"
+AUTHENTICATION_BACKENDS = [
+    "buraq.contrib.auth.backends.AllowAllUsersModelBackend",
+]
+```
+
 ### Writing a custom backend
 
 A backend is any class with an async `authenticate` method.  `get_user` is optional but required for session restoration.
@@ -332,10 +346,154 @@ urlpatterns = [
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/auth/register` | Create a new user |
-| `POST` | `/auth/login` | Login, returns `access_token` |
+| `POST` | `/auth/login` | Exchange credentials for a token (`obtain_auth_token`) |
 | `GET` | `/auth/me` | Current user profile (Bearer required) |
 
 ---
+
+---
+
+## Class-based auth views
+
+Buraq ships ready-to-use class-based views for the full login/logout/password flow. Mount them with `path()` and supply the matching templates.
+
+```python title="config/urls.py"
+from buraq.contrib.auth.views import (
+    LoginView, LogoutView,
+    PasswordChangeView,
+    PasswordResetView, PasswordResetConfirmView,
+)
+
+urlpatterns = [
+    path("/auth/login",    LoginView.as_view(),   name="login"),
+    path("/auth/logout",   LogoutView.as_view(),  name="logout"),
+    path("/auth/password/change", PasswordChangeView.as_view(), name="password_change"),
+    path("/auth/password/reset",  PasswordResetView.as_view(),  name="password_reset"),
+    path("/auth/password/reset/{token}", PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
+]
+```
+
+### LoginView
+
+| Attribute | Default | Description |
+|---|---|---|
+| `template_name` | `registration/login.html` | GET template |
+| `redirect_field_name` | `"next"` | Query param for post-login redirect |
+| `success_url` | `"/"` | Fallback redirect |
+| `redirect_authenticated_user` | `False` | Skip login for already-authenticated users |
+
+On POST, validates `username` + `password`, sets an `access_token` HttpOnly cookie, and redirects.
+
+### LogoutView
+
+| Attribute | Default |
+|---|---|
+| `next_page` | `"/"` |
+| `template_name` | `registration/logged_out.html` |
+
+Deletes the `access_token` cookie and redirects to `next_page`.
+
+### PasswordChangeView
+
+Accepts `old_password`, `new_password1`, `new_password2`. Validates the old password with Argon2 and updates `hashed_password` on success.
+
+Template: `registration/password_change_form.html`
+
+### PasswordResetView
+
+Accepts an email address, looks up the user, generates a HMAC-SHA256–signed token (`uid-timestamp-sig`), and sends a reset link by email. Silently succeeds even for unknown addresses (prevents user enumeration). Token expires after 24 hours.
+
+Template: `registration/password_reset_form.html`  
+Email template: `registration/password_reset_email.html`
+
+### PasswordResetConfirmView
+
+Validates the signed token from the URL, verifies the HMAC, and sets the new password. Rejects expired (> 24 h) or tampered tokens with a clear error message.
+
+Template: `registration/password_reset_confirm.html`
+
+### PasswordResetDoneView / PasswordChangeDoneView / PasswordResetCompleteView
+
+These three confirmation views display success pages after each step of the password flow. They render a template and accept no form input:
+
+| View | Default template | Shown after |
+|---|---|---|
+| `PasswordResetDoneView` | `registration/password_reset_done.html` | Reset email sent |
+| `PasswordChangeDoneView` | `registration/password_change_done.html` | Password changed |
+| `PasswordResetCompleteView` | `registration/password_reset_complete.html` | Reset confirmed |
+
+Mount them alongside the other auth views:
+
+```python
+from buraq.contrib.auth.views import (
+    PasswordResetDoneView,
+    PasswordChangeDoneView,
+    PasswordResetCompleteView,
+)
+
+urlpatterns = [
+    ...
+    path("/auth/password/reset/done",     PasswordResetDoneView.as_view(),     name="password_reset_done"),
+    path("/auth/password/change/done",    PasswordChangeDoneView.as_view(),    name="password_change_done"),
+    path("/auth/password/reset/complete", PasswordResetCompleteView.as_view(), name="password_reset_complete"),
+]
+```
+
+### PasswordResetTokenGenerator
+
+The underlying token generator is available directly if you need to create or validate reset links from your own code:
+
+```python
+from buraq.contrib.auth import PasswordResetTokenGenerator
+
+generator = PasswordResetTokenGenerator()
+
+# Generate a token for a user
+token = generator.make_token(user)   # e.g. "6b4t2c-abc12345..."
+
+# Validate a token from a reset URL
+is_valid = generator.check_token(user, token)   # → True / False
+```
+
+Tokens are HMAC-SHA256–signed and time-limited. The expiry window is controlled by `PASSWORD_RESET_TIMEOUT` in settings (default: 86 400 seconds / 24 hours):
+
+```python title="config/settings.py"
+PASSWORD_RESET_TIMEOUT = 3600  # 1 hour
+```
+
+---
+
+## Custom user model
+
+Buraq ships `AbstractBaseUser` and `AbstractUser` for building custom user models, and `PermissionsMixin` for adding group/permission support.
+
+```python
+from buraq.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+
+class StaffUser(AbstractBaseUser, PermissionsMixin):
+    email    = models.EmailField(unique=True)
+    is_staff = models.BooleanField(default=False)
+
+    USERNAME_FIELD = "email"
+```
+
+Use `get_user_model()` anywhere you need a reference to the active user model — it respects `AUTH_USER_MODEL`:
+
+```python
+from buraq.contrib.auth.models import get_user_model
+
+User = get_user_model()
+user = await User.objects.get(email="alice@example.com")
+```
+
+`AbstractUser` is the concrete default user class (with `username`, `email`, `is_staff`, etc.) that you can subclass without reimplementing everything:
+
+```python
+from buraq.contrib.auth.models import AbstractUser
+
+class Profile(AbstractUser):
+    bio = models.TextField(blank=True)
+```
 
 ## Creating users
 

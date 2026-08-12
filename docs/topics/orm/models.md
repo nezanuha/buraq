@@ -256,6 +256,107 @@ models.CheckConstraint(check="price > 0", name="positive_price")
 models.CheckConstraint(check="end_date >= start_date", name="valid_date_range")
 ```
 
+## Model._state
+
+Every model instance carries a `_state` object that reflects its persistence status.
+
+```python
+post = Post(title="Draft")
+post._state.adding   # → True  (not yet saved)
+
+await post.save()
+post._state.adding   # → False (row exists in the database)
+```
+
+| Attribute | Type | Meaning |
+|---|---|---|
+| `adding` | `bool` | `True` if the instance has never been `save()`d; `False` after the first successful insert |
+
+## pk alias
+
+The `pk` attribute is a read-only alias for whatever field is the model's primary key (usually `id`). Use it in generic code that shouldn't assume the PK column name:
+
+```python
+post = await Post.objects.get(id=1)
+post.pk        # → 1  (same as post.id)
+Post.objects.filter(pk=1)  # equivalent to filter(id=1)
+```
+
+## get_absolute_url()
+
+Override to return the canonical URL for a model instance. Used by the admin and generic views:
+
+```python
+class Post(models.Model):
+    slug = models.SlugField(unique=True)
+
+    def get_absolute_url(self) -> str:
+        from buraq.urls import reverse
+        return reverse("post-detail", kwargs={"slug": self.slug})
+```
+
+Calling the base implementation raises `NotImplementedError`.
+
+## natural_key()
+
+Override to return a tuple that uniquely identifies the instance without the surrogate PK. Used by serializers when `use_natural_primary_keys=True`:
+
+```python
+class User(models.Model):
+    username = models.CharField(max_length=150, unique=True)
+
+    def natural_key(self) -> tuple:
+        return (self.username,)
+```
+
+Calling the base implementation raises `NotImplementedError`.
+
+## RelatedManager — reverse FK accessor
+
+Every ForeignKey field automatically creates a reverse accessor on the parent model. By default the accessor name is `{child_model_name_lower}_set`:
+
+```python
+class Comment(models.Model):
+    post = models.ForeignKey("Post", on_delete=models.CASCADE)
+
+# Access comments for a post
+post = await Post.objects.get(id=1)
+comments = await post.comment_set.all()
+recent = await post.comment_set.filter(is_approved=True).order_by("-created_at").all()
+
+# Create through the relation
+new_comment = await post.comment_set.create(body="Great post!")
+
+# Add / remove existing instances
+await post.comment_set.add(comment)
+await post.comment_set.remove(comment)
+await post.comment_set.clear()         # remove all
+await post.comment_set.set([c1, c2])   # replace all
+```
+
+Customise the accessor name with `related_name=`:
+
+```python
+class Comment(models.Model):
+    post = models.ForeignKey("Post", on_delete=models.CASCADE, related_name="comments")
+
+comments = await post.comments.all()
+```
+
+## AutoField variants
+
+| Field | SQL type | When to use |
+|---|---|---|
+| `AutoField()` | `INTEGER AUTOINCREMENT` | Default PK for most tables |
+| `SmallAutoField()` | `SMALLINT` / `SMALLSERIAL` | Tables guaranteed to have < 32 768 rows |
+| `BigAutoField()` | `BIGINT` / `BIGSERIAL` | Tables that may exceed 2 billion rows |
+
+Set the default PK type project-wide in settings:
+
+```python
+DEFAULT_AUTO_FIELD = "buraq.orm.fields.BigAutoField"
+```
+
 ## Model validation
 
 Buraq models support the same pre-save validation chain as Django.
@@ -310,4 +411,55 @@ is found:
 ```python
 await event.validate_unique()
 await event.validate_unique(exclude=["slug"])  # skip specific fields
+```
+
+---
+
+## GeneratedField
+
+A read-only field whose value is computed by the database engine on every INSERT or UPDATE.
+
+```python
+from buraq import models
+
+class Product(models.Model):
+    price      = models.DecimalField(max_digits=10, decimal_places=2)
+    tax_rate   = models.FloatField(default=0.2)
+    price_incl = models.GeneratedField(
+        expression="price * (1 + tax_rate)",
+        output_field=models.DecimalField(max_digits=10, decimal_places=2),
+        db_persist=True,
+    )
+```
+
+| Parameter | Description |
+|---|---|
+| `expression` | SQL expression string evaluated by the database |
+| `output_field` | A field instance describing the column type |
+| `db_persist` | `True` (default) = STORED column (computed on write); `False` = VIRTUAL (computed on read, not supported by all databases) |
+
+Generated columns are database-managed and cannot be assigned in Python. Database support: PostgreSQL 12+, MySQL 5.7+, SQLite 3.31+.
+
+---
+
+## CompositePrimaryKey
+
+Declares a multi-column primary key. Set `primary_key` on the model's `Meta` class instead of relying on the implicit auto-increment `id` column.
+
+```python
+from buraq import models
+
+class OrderItem(models.Model):
+    order_id   = models.ForeignKey("orders", on_delete=models.CASCADE)
+    product_id = models.ForeignKey("products", on_delete=models.CASCADE)
+    quantity   = models.IntegerField(default=1)
+
+    class Meta:
+        primary_key = models.CompositePrimaryKey("order_id", "product_id")
+```
+
+Models with a composite primary key have no `id` attribute. Use the individual key columns to look up rows:
+
+```python
+item = await OrderItem.objects.get(order_id=1, product_id=5)
 ```

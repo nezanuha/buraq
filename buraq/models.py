@@ -20,10 +20,12 @@ from buraq.orm.prefetch import Prefetch
 from buraq.utils.choices import IntegerChoices, TextChoices
 from buraq.orm.fields import (
     CASCADE,
+    CompositePrimaryKey,
     DB_CASCADE,
     DB_SET_DEFAULT,
     DB_SET_NULL,
     DO_NOTHING,
+    GeneratedField,
     PROTECT,
     RESTRICT,
     SET_DEFAULT,
@@ -80,5 +82,6 @@ __all__ = [
     "FileField", "ImageField",
     "GenericIPAddressField",
     "ForeignKey", "OneToOneField", "ManyToManyField",
+    "GeneratedField", "CompositePrimaryKey",
     "Prefetch",
 ]

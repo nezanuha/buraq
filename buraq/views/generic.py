@@ -50,11 +50,13 @@ class RedirectView(View):
 
     Usage:
         get("/old/", RedirectView.as_view(url="/new/", permanent=True))
+        get("/old/", RedirectView.as_view(url="/new/", preserve_request=True))
     """
 
     url: str = None
     permanent: bool = False
     query_string: bool = False
+    preserve_request: bool = False
 
     def get_redirect_url(self, **kwargs) -> str:
         url = self.url
@@ -68,12 +70,32 @@ class RedirectView(View):
                 url = f"{url}?{qs}"
         return url
 
+    def _status_code(self, method: str) -> int:
+        """Return the appropriate HTTP status code for the redirect."""
+        if self.preserve_request:
+            return 308 if self.permanent else 307
+        return 301 if self.permanent else 302
+
     async def get(self, request, **kwargs):
         self.request = request
-        return redirect(self.get_redirect_url(**kwargs), permanent=self.permanent)
+        url = self.get_redirect_url(**kwargs)
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url=url, status_code=self._status_code(request.method))
 
     async def post(self, request, **kwargs):
-        return await self.get(request, **kwargs)
+        self.request = request
+        url = self.get_redirect_url(**kwargs)
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url=url, status_code=self._status_code(request.method))
+
+    async def put(self, request, **kwargs):
+        return await self.post(request, **kwargs)
+
+    async def patch(self, request, **kwargs):
+        return await self.post(request, **kwargs)
+
+    async def delete(self, request, **kwargs):
+        return await self.post(request, **kwargs)
 
 
 class SingleObjectMixin:
@@ -179,11 +201,18 @@ class ListView(MultipleObjectMixin, ContextMixin, TemplateMixin, View):
     _template_suffix = "_list.html"
 
     async def get(self, request, **kwargs):
+        from starlette.responses import Response
         self.kwargs = kwargs
         self.request = request
         object_list = await self.get_queryset()
-        context_name = self.get_context_object_name()
 
+        if not self.allow_empty and not object_list:
+            from buraq.exceptions import Http404
+            raise Http404(
+                f"Empty list and '{type(self).__name__}.allow_empty' is False."
+            )
+
+        context_name = self.get_context_object_name()
         ctx = {"object_list": object_list, context_name: object_list}
 
         if self.paginate_by:

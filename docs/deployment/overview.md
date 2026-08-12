@@ -28,15 +28,21 @@ CACHE_REDIS_URL = os.environ["REDIS_URL"]
 CORS_ALLOW_ORIGINS = [f"https://{os.environ.get('DOMAIN', 'myapp.com')}"]
 ```
 
-## Running with Gunicorn + Uvicorn workers
+## Running with Granian
+
+Granian is bundled with Buraq — no extra install needed.
 
 ```bash
-uv add "buraq[production]"   # installs gunicorn
-
-gunicorn config.urls:app \
-  --worker-class uvicorn.workers.UvicornWorker \
+granian --interface asgi config.urls:app \
   --workers 4 \
-  --bind 0.0.0.0:8000
+  --host 0.0.0.0 \
+  --port 8000
+```
+
+Or via the Buraq CLI:
+
+```bash
+buraq runserver --workers 4 0.0.0.0:8000
 ```
 
 ## Nginx configuration

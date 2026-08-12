@@ -68,6 +68,39 @@ async def home(request):
     flag on the CSRF cookie so it is only transmitted over HTTPS.  No extra
     configuration is required.
 
+## CsrfViewMiddleware — stack-level CSRF protection
+
+Add `CsrfViewMiddleware` to your `MIDDLEWARE` list to protect all non-exempt views globally, without decorating each one:
+
+```python title="config/settings.py"
+MIDDLEWARE = [
+    "buraq.middleware.SecurityMiddleware",
+    "buraq.contrib.sessions.middleware.SessionMiddleware",
+    "buraq.contrib.csrf.CsrfViewMiddleware",   # ← add here
+    ...
+]
+```
+
+**How it works:**
+
+- Safe methods (`GET`, `HEAD`, `OPTIONS`, `TRACE`) pass through unchecked.
+- Unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`) must supply the CSRF token via:
+  - `X-CSRFToken` request header, **or**
+  - `csrfmiddlewaretoken` field in the POST body.
+- The middleware injects a `Set-Cookie: csrftoken=...` header on every response so JavaScript clients can read the token from the cookie.
+- When reading the POST body to find the token, the middleware buffers and replays the body so the view still receives it intact.
+
+```javascript
+// Read from cookie, send in header
+fetch("/api/submit", {
+  method: "POST",
+  headers: { "X-CSRFToken": getCookie("csrftoken") },
+  body: JSON.stringify(data),
+});
+```
+
+Use `@csrf_protect` for per-view protection when you prefer not to use the middleware globally.
+
 ## @csrf_exempt
 
 Skip CSRF validation for a specific view — typically used for webhooks from third parties.

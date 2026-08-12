@@ -14,5 +14,6 @@ Usage:
     request.session.flush()   # clear session
 """
 from buraq.contrib.sessions.middleware import SessionMiddleware
+from buraq.contrib.sessions.server import ServerSessionMiddleware, revoke_session
 
-__all__ = ["SessionMiddleware"]
+__all__ = ["SessionMiddleware", "ServerSessionMiddleware", "revoke_session"]

@@ -47,15 +47,14 @@ class BaseCacheBackend(ABC):
         return await self.incr(key, -delta)
 
     async def get_many(self, keys: list[str]) -> dict[str, Any]:
-        return {k: await self.get(k) for k in keys}
+        values = await asyncio.gather(*(self.get(k) for k in keys))
+        return dict(zip(keys, values))
 
     async def set_many(self, mapping: dict[str, Any], timeout: int | None = None) -> None:
-        for key, value in mapping.items():
-            await self.set(key, value, timeout)
+        await asyncio.gather(*(self.set(k, v, timeout) for k, v in mapping.items()))
 
     async def delete_many(self, keys: list[str]) -> None:
-        for key in keys:
-            await self.delete(key)
+        await asyncio.gather(*(self.delete(k) for k in keys))
 
     # ── Sync wrappers ──────────────────────────────────────────────────────────
     # These run the coroutine in a dedicated background thread with its own

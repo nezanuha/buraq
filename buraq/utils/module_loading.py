@@ -17,23 +17,43 @@ _log = logging.getLogger(__name__)
 
 def import_string(dotted_path: str):
     """
-    Import a class or function by its dotted Python path.
+    Import a module, class, or function by its dotted Python path.
+
+    Works for top-level modules (e.g. ``"json"``), submodules
+    (``"os.path"``), and attributes (``"myapp.backends.MyBackend"``).
 
     Usage:
         cls = import_string("myapp.backends.MyBackend")
+        mod = import_string("os.path")
         obj = cls()
     """
     try:
-        module_path, class_name = dotted_path.rsplit(".", 1)
+        return importlib.import_module(dotted_path)
+    except ImportError:
+        pass
+
+    try:
+        module_path, attr_name = dotted_path.rsplit(".", 1)
     except ValueError as exc:
         raise ImportError(f"{dotted_path!r} is not a valid dotted path") from exc
-    module = importlib.import_module(module_path)
+
     try:
-        return getattr(module, class_name)
-    except AttributeError as exc:
+        module = importlib.import_module(module_path)
+    except ImportError as exc:
         raise ImportError(
-            f"Module {module_path!r} does not define {class_name!r}"
+            f"Could not import module {module_path!r}: {exc}"
         ) from exc
+
+    try:
+        return getattr(module, attr_name)
+    except AttributeError:
+        # attr_name might itself be a submodule
+        try:
+            return importlib.import_module(dotted_path)
+        except ImportError as exc:
+            raise ImportError(
+                f"Module {module_path!r} does not define {attr_name!r}"
+            ) from exc
 
 
 def autodiscover_modules(*module_names: str, register_to=None) -> None:

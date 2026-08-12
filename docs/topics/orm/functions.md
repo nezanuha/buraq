@@ -8,6 +8,36 @@ from buraq.orm import functions as Fn
 
 ---
 
+## UUID generation
+
+Generate UUIDs at the database level — useful as default values or in bulk INSERT operations.
+
+```python
+from buraq.orm.functions import UUID4, UUID7
+```
+
+### UUID4
+
+Generates a random version-4 UUID using `gen_random_uuid()` (PostgreSQL) or the database equivalent.
+
+```python
+# Annotate rows with a random UUID
+rows = await Post.objects.annotate(token=UUID4())
+```
+
+### UUID7
+
+Generates a time-ordered version-7 UUID. UUID7 values sort lexicographically in creation order, making them B-tree friendly as primary keys.
+
+```python
+rows = await Post.objects.annotate(token=UUID7())
+```
+
+!!! note "Database support"
+    `UUID7` uses `uuid_generate_v7()` on PostgreSQL (requires the `pg_uuidv7` extension). On other databases it falls back to `gen_random_uuid()` (version 4).
+
+---
+
 ## Date / Time
 
 ### Truncation
@@ -23,15 +53,18 @@ posts = await Post.objects.values("author_id").annotate(
 )
 ```
 
-| Function | SQL equivalent |
-|---|---|
-| `TruncDate(field)` | `CAST(col AS DATE)` |
-| `TruncHour(field)` | `DATE_TRUNC('hour', col)` |
-| `TruncDay(field)` | `DATE_TRUNC('day', col)` |
-| `TruncWeek(field)` | `DATE_TRUNC('week', col)` |
-| `TruncMonth(field)` | `DATE_TRUNC('month', col)` |
-| `TruncQuarter(field)` | `DATE_TRUNC('quarter', col)` |
-| `TruncYear(field)` | `DATE_TRUNC('year', col)` |
+All truncation functions are **cross-database** — they detect the configured dialect automatically and emit the correct SQL for each backend.
+
+| Function | SQLite | MySQL/MariaDB | PostgreSQL |
+|---|---|---|---|
+| `TruncDate(field)` | `CAST(col AS DATE)` | `CAST(col AS DATE)` | `CAST(col AS DATE)` |
+| `TruncTime(field)` | `CAST(col AS TIME)` | `CAST(col AS TIME)` | `CAST(col AS TIME)` |
+| `TruncHour(field)` | `strftime('%Y-%m-%d %H:00:00', col)` | `date_format(col, '%Y-%m-%d %H:00:00')` | `date_trunc('hour', col)` |
+| `TruncDay(field)` | `strftime('%Y-%m-%d', col)` | `date_format(col, '%Y-%m-%d')` | `date_trunc('day', col)` |
+| `TruncWeek(field)` | weekday arithmetic | `date_format(…)` | `date_trunc('week', col)` |
+| `TruncMonth(field)` | `strftime('%Y-%m-01', col)` | `date_format(col, '%Y-%m-01')` | `date_trunc('month', col)` |
+| `TruncQuarter(field)` | quarter arithmetic | quarter arithmetic | `date_trunc('quarter', col)` |
+| `TruncYear(field)` | `strftime('%Y-01-01', col)` | `date_format(col, '%Y-01-01')` | `date_trunc('year', col)` |
 
 ### Extraction
 
@@ -99,6 +132,7 @@ posts = await Post.objects.annotate(title_len=Fn.Length("title"))
 | `RPad(field, length, fill)` | Right-pad |
 | `Chr(field)` | Character from ASCII code |
 | `Ord(field)` | ASCII code of first character |
+| `Collate(field, collation)` | Apply a named collation for sorting |
 
 ---
 
@@ -122,9 +156,11 @@ posts = await Post.objects.annotate(abs_val=Fn.Abs("balance"))
 | `Mod(field, divisor)` | Modulo |
 | `Power(field, exponent)` | Power |
 | `Random()` | Random float 0–1 |
+| `Exp(field)` | e raised to the power |
+| `Pi()` | π constant |
 | `ACos`, `ASin`, `ATan` | Inverse trig |
 | `ATan2(y, x)` | Two-argument arctangent |
-| `Cos`, `Sin`, `Tan` | Trig |
+| `Cos`, `Cot`, `Sin`, `Tan` | Trig |
 | `Degrees`, `Radians` | Angle conversion |
 
 ---

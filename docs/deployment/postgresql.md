@@ -3,7 +3,8 @@
 ## Install the driver
 
 ```bash
-uv add asyncpg
+uv add "buraq[postgres]"
+# or directly: uv add asyncpg
 ```
 
 ## Configure

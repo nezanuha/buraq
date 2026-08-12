@@ -4,21 +4,74 @@ from typing import Any
 from buraq.contrib.cache.backends.base import BaseCacheBackend
 
 _backend: BaseCacheBackend | None = None
+_named_backends: dict[str, BaseCacheBackend] = {}
+
+
+def _load_backend_cls(backend_path: str, **options) -> BaseCacheBackend:
+    module_path, class_name = backend_path.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    cls = getattr(module, class_name)
+    return cls(**options) if options else cls()
 
 
 def _get_backend() -> BaseCacheBackend:
     global _backend
     if _backend is None:
         from buraq.conf import settings
-        backend_path = getattr(
-            settings,
-            "CACHE_BACKEND",  # type: ignore[attr-defined]
-            "buraq.contrib.cache.backends.memory.MemoryCacheBackend",
-        )
-        module_path, class_name = backend_path.rsplit(".", 1)
-        module = importlib.import_module(module_path)
-        _backend = getattr(module, class_name)()
+        caches_conf = getattr(settings, "CACHES", None)
+        if caches_conf and "default" in caches_conf:
+            conf = dict(caches_conf["default"])
+            backend_path = conf.pop("BACKEND")
+            location = conf.pop("LOCATION", None)
+            opts = dict(conf.pop("OPTIONS", {}))
+            if location:
+                opts["location"] = location
+            _backend = _load_backend_cls(backend_path, **opts)
+        else:
+            backend_path = getattr(
+                settings,
+                "CACHE_BACKEND",
+                "buraq.contrib.cache.backends.memory.MemoryCacheBackend",
+            )
+            _backend = _load_backend_cls(backend_path)
     return _backend
+
+
+def _get_named_backend(alias: str) -> BaseCacheBackend:
+    if alias not in _named_backends:
+        from buraq.conf import settings
+        caches_conf = getattr(settings, "CACHES", {})
+        if alias not in caches_conf:
+            raise ValueError(f"No cache with alias {alias!r} in CACHES setting.")
+        conf = dict(caches_conf[alias])
+        backend_path = conf.pop("BACKEND")
+        location = conf.pop("LOCATION", None)
+        opts = dict(conf.pop("OPTIONS", {}))
+        if location:
+            opts["location"] = location
+        _named_backends[alias] = _load_backend_cls(backend_path, **opts)
+    return _named_backends[alias]
+
+
+class _CachesHandler:
+    """
+    Mirrors Django's ``caches`` object — access any configured cache by alias.
+
+    Usage::
+
+        from buraq.contrib.cache.core import caches
+
+        await caches["sessions"].set("key", value)
+        await caches["default"].get("key")
+    """
+
+    def __getitem__(self, alias: str) -> BaseCacheBackend:
+        if alias == "default":
+            return _get_backend()
+        return _get_named_backend(alias)
+
+
+caches = _CachesHandler()
 
 
 class Cache:
@@ -59,6 +112,15 @@ class Cache:
 
     async def delete_many(self, keys: list[str]) -> None:
         await _get_backend().delete_many(keys)
+
+    async def add(self, key: str, value: Any, timeout: int | None = None) -> bool:
+        return await _get_backend().add(key, value, timeout)
+
+    async def incr(self, key: str, delta: int = 1) -> int:
+        return await _get_backend().incr(key, delta)
+
+    async def decr(self, key: str, delta: int = 1) -> int:
+        return await _get_backend().decr(key, delta)
 
 
 cache = Cache()

@@ -30,7 +30,7 @@ async def make_password(password: str) -> str:
     """Hash a plain-text password using Argon2 (runs in a thread — does not block the loop)."""
     import asyncio
 
-    from buraq.core.auth import hash_password
+    from buraq.contrib.auth._passwords import hash_password
     return await asyncio.to_thread(hash_password, password)
 
 
@@ -38,29 +38,11 @@ async def check_password(password: str, hashed: str) -> bool:
     """Verify a plain-text password against an Argon2 hash (runs in a thread)."""
     import asyncio
 
-    from buraq.core.auth import verify_password
+    from buraq.contrib.auth._passwords import verify_password
     return await asyncio.to_thread(verify_password, password, hashed)
 
 
-def validate_password(password: str, min_length: int = 8) -> None:
-    """
-    Raise ValidationError if the password does not meet minimum requirements.
-
-    Rules:
-    - At least ``min_length`` characters (default 8)
-    - Not entirely numeric
-    """
-    from buraq.exceptions import ValidationError
-    if not password or len(password) < min_length:
-        raise ValidationError(
-            f"This password is too short. It must contain at least {min_length} characters.",
-            code="password_too_short",
-        )
-    if password.isdigit():
-        raise ValidationError(
-            "This password is entirely numeric.",
-            code="password_entirely_numeric",
-        )
+from buraq.contrib.auth.password_validation import validate_password  # noqa: E402
 
 
 async def update_session_auth_hash(request, user) -> None:
@@ -120,7 +102,10 @@ async def login(request, user) -> None:
         except Exception:
             _log.debug("login(): could not update last_login for user %r", user.id)
 
-    asyncio.create_task(_update_last_login())
+    task = asyncio.create_task(_update_last_login())
+    task.add_done_callback(
+        lambda t: t.exception() and _log.debug("login(): _update_last_login failed: %r", t.exception())
+    )
 
 
 async def logout(request) -> None:
@@ -133,3 +118,74 @@ async def logout(request) -> None:
     from buraq.contrib.auth.models import AnonymousUser
     request.session.flush()
     request.scope["user"] = AnonymousUser()
+
+
+async def get_user(request):
+    """
+    Return the User instance associated with the current session, or AnonymousUser.
+
+    Called by AuthenticationMiddleware on each request.
+    """
+    from buraq.contrib.auth.models import AnonymousUser, get_user_model
+    user_id = request.session.get(_AUTH_USER_SESSION_KEY)
+    if not user_id:
+        return AnonymousUser()
+    try:
+        User = get_user_model()
+        user = await User.objects.get_or_none(id=int(user_id))
+        return user or AnonymousUser()
+    except Exception:
+        return AnonymousUser()
+
+
+class PasswordResetTokenGenerator:
+    """
+    Generate and verify HMAC-SHA256 tokens for password reset links.
+
+    Usage::
+
+        generator = PasswordResetTokenGenerator()
+        token = generator.make_token(user)
+        valid = generator.check_token(user, token)
+    """
+
+    key_salt = "buraq.contrib.auth.PasswordResetTokenGenerator"
+    algorithm = "sha256"
+
+    def _hash_value(self, value: str) -> str:
+        import hashlib
+        import hmac
+        from buraq.conf import settings
+        key = f"{self.key_salt}{settings.SECRET_KEY}".encode()
+        return hmac.new(key, value.encode(), self.algorithm).hexdigest()
+
+    def _make_hash_value(self, user, timestamp: int) -> str:
+        return f"{user.pk}{user.hashed_password}{timestamp}"
+
+    def make_token(self, user) -> str:
+        import time
+        ts = int(time.time())
+        hash_val = self._hash_value(self._make_hash_value(user, ts))
+        return f"{ts:x}-{hash_val[:20]}"
+
+    def check_token(self, user, token: str) -> bool:
+        import time
+        try:
+            ts_b36, given_hash = token.split("-", 1)
+            ts = int(ts_b36, 16)
+        except (ValueError, TypeError):
+            return False
+        expected = self._hash_value(self._make_hash_value(user, ts))[:20]
+        import hmac as _hmac
+        if not _hmac.compare_digest(expected, given_hash):
+            return False
+        # Token valid for PASSWORD_RESET_TIMEOUT seconds (default 3 days)
+        try:
+            from buraq.conf import settings
+            timeout = getattr(settings, "PASSWORD_RESET_TIMEOUT", 259200)
+        except Exception:
+            timeout = 259200
+        return (int(time.time()) - ts) < timeout
+
+
+default_token_generator = PasswordResetTokenGenerator()

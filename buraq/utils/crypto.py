@@ -27,7 +27,7 @@ def constant_time_compare(val1: str, val2: str) -> bool:
 def pbkdf2(
     password: str,
     salt: str,
-    iterations: int = 260000,
+    iterations: int = 1_800_000,
     dklen: int = 32,
     digest=None,
 ) -> bytes:

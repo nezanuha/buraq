@@ -1,0 +1,218 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ ma.get_verbose_name_plural() | title }}{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs">
+  <a href="/admin/">Home</a>
+  <span class="sep text-neutral">/</span>
+  <span class="text-neutral">{{ ma.get_app_label() | replace("_", " ") | title }}</span>
+  <span class="sep text-neutral">/</span>
+  <span>{{ ma.get_verbose_name_plural() | title }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-hd">
+  <div>
+    <h1 class="page-title">{{ ma.get_verbose_name_plural() | title }}</h1>
+    <p class="page-meta text-neutral">{{ pagination.total }} total</p>
+  </div>
+  {% if ma.can_create %}
+  <a href="/admin/{{ app_label }}/{{ model_name }}/add/" class="btn btn-primary btn-sm">
+    + Add {{ ma.get_verbose_name() | title }}
+  </a>
+  {% endif %}
+</div>
+
+{% if success == "created" %}
+<div class="alert alert-soft alert-success flash">Object created successfully.</div>
+{% elif success == "saved" %}
+<div class="alert alert-soft alert-success flash">Changes saved successfully.</div>
+{% elif success == "deleted" %}
+<div class="alert alert-soft alert-success flash">Deleted successfully.</div>
+{% endif %}
+
+<div class="list-wrap">
+
+  <div class="list-main">
+
+    {% if ma.search_fields %}
+    <form method="get" class="flex gap-1.5 mb-3 items-center">
+      <input name="q" type="search" value="{{ search }}"
+             placeholder="Search {{ ma.search_fields | join(', ') }}…"
+             class="input input-outline input-sm flex-1 max-w-[22rem]" />
+      {% for field, val in filter_params.items() %}
+      <input type="hidden" name="{{ field }}" value="{{ val }}" />
+      {% endfor %}
+      <button type="submit" class="btn btn-ghost btn-sm">Search</button>
+      {% if search %}
+      <a href="/admin/{{ app_label }}/{{ model_name }}/" class="btn btn-ghost btn-sm">✕ Clear</a>
+      {% endif %}
+    </form>
+    {% endif %}
+
+    <form method="post" action="/admin/{{ app_label }}/{{ model_name }}/" id="changelist-form">
+      {{ csrf_input(request) }}
+
+      {% if ma.can_delete %}
+      <div class="list-toolbar">
+        <select name="action" class="input input-outline input-sm w-auto min-w-40">
+          <option value="">— Action —</option>
+          <option value="delete_selected">Delete selected</option>
+        </select>
+        <button type="submit" class="btn btn-ghost btn-sm"
+                onclick="return confirm('Delete the selected items?')">Go</button>
+        <span class="select-count text-neutral text-sm" id="select-count">0 selected</span>
+      </div>
+      {% endif %}
+
+      <div class="card card-outline overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="table table-sm table-hover table-zebra w-full">
+            <thead>
+              <tr>
+                {% if ma.can_delete %}
+                <th class="col-check">
+                  <input type="checkbox" id="select-all" class="checkbox checkbox-primary checkbox-sm" />
+                </th>
+                {% endif %}
+
+                {% for col in list_display %}
+                <th>
+                  {% if ordering_param == col %}
+                    <a href="?o=-{{ col }}{% if search %}&q={{ search }}{% endif %}{% for f,v in filter_params.items() %}&{{ f }}={{ v }}{% endfor %}" class="th-sort">
+                      {{ col | replace("_", " ") | title }} <span>↑</span>
+                    </a>
+                  {% elif ordering_param == "-" + col %}
+                    <a href="?o={{ col }}{% if search %}&q={{ search }}{% endif %}{% for f,v in filter_params.items() %}&{{ f }}={{ v }}{% endfor %}" class="th-sort">
+                      {{ col | replace("_", " ") | title }} <span>↓</span>
+                    </a>
+                  {% else %}
+                    <a href="?o={{ col }}{% if search %}&q={{ search }}{% endif %}{% for f,v in filter_params.items() %}&{{ f }}={{ v }}{% endfor %}" class="th-sort">
+                      {{ col | replace("_", " ") | title }}
+                    </a>
+                  {% endif %}
+                </th>
+                {% endfor %}
+
+                {% if ma.can_edit or ma.can_delete %}
+                <th class="col-actions">Actions</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+              <tr>
+                {% if ma.can_delete %}
+                <td class="col-check">
+                  <input type="checkbox" name="select" value="{{ row.obj_id }}"
+                         class="row-check checkbox checkbox-primary checkbox-sm" />
+                </td>
+                {% endif %}
+
+                {% for cell in row.cells %}
+                <td>
+                  {% if cell == "True" %}
+                    <span class="badge badge-soft badge-success badge-sm">Yes</span>
+                  {% elif cell == "False" %}
+                    <span class="badge badge-soft badge-error badge-sm">No</span>
+                  {% elif cell == "None" or cell == "" %}
+                    <span class="text-neutral">—</span>
+                  {% else %}
+                    <span class="truncate">{{ cell }}</span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+
+                {% if ma.can_edit or ma.can_delete %}
+                <td class="col-actions">
+                  <div class="row-actions">
+                    {% if ma.can_edit %}
+                    <a href="/admin/{{ app_label }}/{{ model_name }}/{{ row.obj_id }}/change/"
+                       class="btn btn-ghost btn-sm">Edit</a>
+                    {% endif %}
+                    {% if ma.can_delete %}
+                    <a href="/admin/{{ app_label }}/{{ model_name }}/{{ row.obj_id }}/delete/"
+                       class="btn btn-error btn-sm btn-ghost">Del</a>
+                    {% endif %}
+                  </div>
+                </td>
+                {% endif %}
+              </tr>
+              {% else %}
+              <tr>
+                <td class="text-center py-12 px-4"
+                    colspan="{{ list_display | length + (1 if ma.can_delete else 0) + (1 if ma.can_edit or ma.can_delete else 0) }}">
+                  <span class="text-neutral">
+                    {% if search %}No results for "{{ search }}".
+                    {% elif filter_params %}No results match the current filters.
+                    {% else %}No {{ ma.get_verbose_name_plural() }} yet.{% endif %}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </form>
+
+    {% if pagination.total_pages > 1 %}
+    <div class="flex justify-center mt-4">
+      <div class="join">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_page }}{% if search %}&q={{ search }}{% endif %}{% for f,v in filter_params.items() %}&{{ f }}={{ v }}{% endfor %}{% if ordering_param %}&o={{ ordering_param }}{% endif %}"
+           class="join-item btn btn-sm btn-outline">«</a>
+        {% else %}
+        <button disabled class="join-item btn btn-sm btn-outline pointer-events-none">«</button>
+        {% endif %}
+
+        {% for p in pagination.page_range %}
+        <a href="?page={{ p }}{% if search %}&q={{ search }}{% endif %}{% for f,v in filter_params.items() %}&{{ f }}={{ v }}{% endfor %}{% if ordering_param %}&o={{ ordering_param }}{% endif %}"
+           class="join-item btn btn-sm btn-outline {% if p == pagination.page %}btn-primary{% endif %}">{{ p }}</a>
+        {% endfor %}
+
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_page }}{% if search %}&q={{ search }}{% endif %}{% for f,v in filter_params.items() %}&{{ f }}={{ v }}{% endfor %}{% if ordering_param %}&o={{ ordering_param }}{% endif %}"
+           class="join-item btn btn-sm btn-outline">»</a>
+        {% else %}
+        <button disabled class="join-item btn btn-sm btn-outline pointer-events-none">»</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {% if filter_groups %}
+  <aside class="filter-sidebar">
+    <div class="card card-outline card-sm">
+      <ul class="menu menu-xs w-full">
+        <li class="menu-title">Filter by</li>
+        {% for group in filter_groups %}
+        <li class="menu-title">{{ group.label }}</li>
+        <li>
+          <a href="?{% if search %}q={{ search }}&{% endif %}{% for f,v in filter_params.items() %}{% if f != group.field %}{{ f }}={{ v }}&{% endif %}{% endfor %}"
+             class="menu-item {% if not group.active %}menu-active{% endif %}">
+            All
+          </a>
+        </li>
+        {% for val in group.values %}
+        <li>
+          <a href="?{% if search %}q={{ search }}&{% endif %}{% for f,v in filter_params.items() %}{% if f != group.field %}{{ f }}={{ v }}&{% endif %}{% endfor %}{{ group.field }}={{ val }}"
+             class="menu-item {% if group.active == val %}menu-active{% endif %}">
+            {% if val == "True" %}Yes
+            {% elif val == "False" %}No
+            {% else %}{{ val }}{% endif %}
+          </a>
+        </li>
+        {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+  </aside>
+  {% endif %}
+
+</div>
+{% endblock %}

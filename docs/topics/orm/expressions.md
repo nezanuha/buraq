@@ -90,6 +90,32 @@ orders = await Order.objects.annotate(revenue=revenue)
 
 ---
 
+## JSONNull
+
+Use `JSONNull` to store an explicit JSON `null` value in a JSON column. SQL `NULL` and JSON `null` are distinct concepts — `JSONNull` renders as `CAST(NULL AS JSON)` so the database stores the JSON scalar rather than a missing value.
+
+```python
+from buraq.orm.expressions import JSONNull
+
+await Post.objects.filter(id=1).update(metadata=JSONNull())
+# SQL: UPDATE post SET metadata = CAST(NULL AS JSON) WHERE id = 1
+```
+
+Use it in annotations to distinguish "no value" from "the value is JSON null":
+
+```python
+from buraq.orm.expressions import Case, When, JSONNull, Value
+
+posts = await Post.objects.annotate(
+    payload=Case(
+        When(archived=True, then=JSONNull()),
+        default=Value({"active": True}),
+    )
+)
+```
+
+---
+
 ## Window Functions
 
 Compute running totals, ranks, and moving averages without a GROUP BY.

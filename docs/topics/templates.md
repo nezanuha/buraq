@@ -8,7 +8,17 @@ Buraq uses Jinja2 as its sole template engine.
 
 ```python title="config/settings.py"
 TEMPLATES_DIR = str(BASE_DIR / "templates")
+
+# APP_DIRS (default True) — also search <app>/templates/ in every INSTALLED_APP
+APP_DIRS = True
 ```
+
+Buraq searches template directories in priority order:
+
+1. `TEMPLATES_DIR` (your project-level templates)
+2. Each installed app's `templates/` subfolder (when `APP_DIRS = True`)
+
+This means an app can ship its own templates that are automatically available without any extra configuration.
 
 ---
 
@@ -137,6 +147,61 @@ Buraq auto-discovers `templatetags.py` in every `INSTALLED_APPS` app at startup 
 
 **Scalability** — auto-discovery scales better. As the app grows, new `templatetags.py` files in new apps are picked up automatically — no central registration, no config changes. `{% load %}` becomes a maintenance burden across hundreds of templates when tag libraries are reorganized.
 
+---
+
+## Built-in template globals
+
+In addition to `url`, `static`, `csrf_input`, and `now`, Buraq registers several utility globals:
+
+### `regroup(iterable, grouper)`
+
+Group a sequence by a common attribute. Returns a list of `{"grouper": value, "list": [items]}` dicts:
+
+```html+jinja
+{% set grouped = regroup(people, "city") %}
+{% for group in grouped %}
+  <h3>{{ group.grouper }}</h3>
+  {% for person in group.list %}
+    <p>{{ person.name }}</p>
+  {% endfor %}
+{% endfor %}
+```
+
+### `cycle(*values)`
+
+Returns a callable that cycles through values on each call:
+
+```html+jinja
+{% set row_class = cycle("odd", "even") %}
+{% for item in items %}
+  <tr class="{{ row_class() }}">
+    <td>{{ item.name }}</td>
+  </tr>
+{% endfor %}
+```
+
+### `ifchanged()`
+
+Returns a callable that outputs `True` only when its argument changes between calls:
+
+```html+jinja
+{% set ic = ifchanged() %}
+{% for item in items %}
+  {% if ic(item.category) %}
+    <h3>{{ item.category }}</h3>
+  {% endif %}
+  <p>{{ item.name }}</p>
+{% endfor %}
+```
+
+### `spaceless(html)`
+
+Remove whitespace between HTML tags:
+
+```html+jinja
+{{ spaceless(content) }}
+```
+
 See [Template Tags](template-tags.md) for the full API.
 
 ---
@@ -182,7 +247,78 @@ Available in every template automatically — no import or passing from views ne
 | `pgettext()` | Context-disambiguated translation |
 | `get_language()` | Active language code |
 | `get_language_bidi()` | `True` for RTL languages |
-| `csrf_input` | Hidden CSRF input field (HTML) |
+| `csrf_input` | Hidden CSRF `<input>` field (HTML) |
+| `csrf_token` | Raw CSRF token string |
+| `url(name, **kwargs)` | Reverse a named URL — equivalent to `reverse()` |
+| `static(path)` | Prepend `STATIC_URL` to a path |
+| `STATIC_URL` | Value of the `STATIC_URL` setting |
+| `MEDIA_URL` | Value of the `MEDIA_URL` setting |
+| `{% cache timeout "key" %}` | Cache a template block — see [Cache](cache.md#cache-template-tag) |
+
+---
+
+## Context processors
+
+`render()` automatically calls every processor listed in `TEMPLATE_CONTEXT_PROCESSORS` and merges the results into the template context before rendering. Caller-supplied keys override processor values.
+
+```python title="config/settings.py"
+TEMPLATE_CONTEXT_PROCESSORS = [
+    "buraq.template.context_processors.request",
+    "buraq.template.context_processors.auth",
+    # add your own
+]
+```
+
+You can still pass extra context explicitly — it takes priority:
+
+```python
+return render(request, "posts/list.html", {"user": override_user})
+```
+
+---
+
+## Built-in filters
+
+Buraq ships 21 built-in Jinja2 filters, registered automatically into every environment. No `{% load %}` required.
+
+### Date & time
+
+| Filter | Example | Output |
+|---|---|---|
+| `date` | `{{ post.created_at\|date("d M Y") }}` | `"05 Aug 2026"` |
+| `time` | `{{ post.created_at\|time("H:i") }}` | `"14:30"` |
+| `timesince` | `{{ post.created_at\|timesince }}` | `"2 hours ago"` |
+| `timeuntil` | `{{ event.starts_at\|timeuntil }}` | `"3 days"` |
+
+`date` supports the full format code set: `d`, `j`, `D`, `l`, `S`, `m`, `n`, `M`, `N`, `F`, `Y`, `y`, `H`, `G`, `h`, `g`, `i`, `s`, `A`, `a`, `U`, `W`, `z`, `t`.
+
+### Text
+
+| Filter | Example | Output |
+|---|---|---|
+| `truncatechars` | `{{ text\|truncatechars(30) }}` | truncate to 30 chars, append `…` |
+| `truncatewords` | `{{ text\|truncatewords(10) }}` | truncate to 10 words |
+| `wordcount` | `{{ body\|wordcount }}` | number of words |
+| `capfirst` | `{{ name\|capfirst }}` | first character uppercased |
+| `addslashes` | `{{ value\|addslashes }}` | escape `'`, `"`, `\` |
+| `slugify` | `{{ title\|slugify }}` | `"hello-world"` |
+| `linenumbers` | `{{ code\|linenumbers }}` | prepend line numbers |
+| `pluralize` | `{{ count\|pluralize }}` | `""` / `"s"` |
+| `yesno` | `{{ flag\|yesno("yes,no") }}` | `"yes"` or `"no"` |
+| `default_if_none` | `{{ val\|default_if_none("—") }}` | fallback when `None` |
+| `phone2numeric` | `{{ "1-800-COLLECT"\|phone2numeric }}` | `"1-800-2655328"` |
+| `floatformat` | `{{ 3.14159\|floatformat(2) }}` | `"3.14"` |
+
+### HTML output
+
+| Filter | Description |
+|---|---|
+| `linebreaks` | Wrap paragraphs in `<p>`, line breaks in `<br>` |
+| `linebreaksbr` | Replace `\n` with `<br>` |
+| `urlize` | Convert plain URLs to `<a href="…">` links |
+| `escapejs` | Escape for safe embedding in JS string literals |
+| `json_script(id)` | Wrap JSON in `<script type="application/json" id="…">` |
+| `filesizeformat` | Human-readable file size (`1.2 MB`) |
 
 ---
 

@@ -4,11 +4,67 @@ from pathlib import Path
 
 import typer
 
+
+def _fire_signal(name: str, **kwargs) -> None:
+    """Send a buraq signal by name, silently ignoring import/send errors."""
+    try:
+        from buraq import signals as _signals
+        sig = getattr(_signals, name, None)
+        if sig is not None:
+            sig.send(sender=None, **kwargs)
+    except Exception:
+        pass
+
 app = typer.Typer(
     name="buraq",
     help="Buraq management CLI — run servers, migrations, and project commands.",
     add_completion=False,
 )
+
+
+# ─── Global options ───────────────────────────────────────────────────────────
+
+@app.callback(invoke_without_command=True)
+def _cli(
+    ctx: typer.Context,
+    settings_module: str = typer.Option(
+        None,
+        "--settings",
+        help=(
+            "Dotted Python path to the settings module "
+            "(e.g. config.prod_settings). "
+            "Also read from the BURAQ_SETTINGS_MODULE environment variable."
+        ),
+        envvar="BURAQ_SETTINGS_MODULE",
+    ),
+):
+    """Buraq management CLI — run servers, migrations, and project commands."""
+    if settings_module:
+        import sys
+
+        cwd = str(Path.cwd())
+        if cwd not in sys.path:
+            sys.path.insert(0, cwd)
+
+        import importlib
+        try:
+            module = importlib.import_module(settings_module)
+        except ImportError as exc:
+            typer.echo(
+                f"Error: cannot import settings module {settings_module!r}: {exc}",
+                err=True,
+            )
+            raise typer.Exit(1) from exc
+
+        from buraq.conf import settings as _settings
+        for key, val in vars(module).items():
+            if key.isupper() and not key.startswith("_"):
+                if hasattr(_settings, key):
+                    setattr(_settings, key, val)
+
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+
 
 # ─── Dev Server ──────────────────────────────────────────────────────────────
 
@@ -29,16 +85,17 @@ def runserver(
     """Start the development server."""
     app_path = "main:app"
 
-    # Supports: runserver 8001  OR  runserver 0.0.0.0:8001
+    # Supports: runserver 8001  OR  runserver 0.0.0.0:8001  OR  runserver main:app
     if bind.isdigit():
         port = int(bind)
-    elif ":" in bind and not bind.startswith("/") and "." not in bind.split(":")[0]:
-        # looks like host:port, not a Python module path (module paths use dots)
+    elif ":" in bind:
         _h, _p = bind.rsplit(":", 1)
         if _p.isdigit():
+            # host:port — e.g. 0.0.0.0:8001 or 127.0.0.1:8080
             host = _h or host
             port = int(_p)
         else:
+            # module:attr — e.g. main:app or config.urls:app
             app_path = bind
     else:
         app_path = bind
@@ -87,18 +144,22 @@ def makemigrations(message: str = typer.Argument("auto", help="Migration message
 def migrate(revision: str = typer.Argument("head", help="Target revision")):
     """Apply database migrations."""
     typer.echo(f"Applying migrations to: {revision}")
+    _fire_signal("pre_migrate", revision=revision)
     result = subprocess.run(["alembic", "upgrade", revision])
     if result.returncode != 0:
         raise typer.Exit(result.returncode)
+    _fire_signal("post_migrate", revision=revision)
 
 
 @app.command()
 def rollback(steps: int = typer.Argument(1, help="Number of migrations to roll back")):
     """Roll back N migrations."""
     typer.echo(f"Rolling back {steps} migration(s)")
+    _fire_signal("pre_migrate", revision=f"-{steps}")
     result = subprocess.run(["alembic", "downgrade", f"-{steps}"])
     if result.returncode != 0:
         raise typer.Exit(result.returncode)
+    _fire_signal("post_migrate", revision=f"-{steps}")
 
 
 @app.command()
@@ -113,30 +174,58 @@ def showmigrations():
 
 @app.command()
 def createsuperuser(
-    username: str = typer.Option(..., prompt=True),
-    email: str = typer.Option(..., prompt=True),
-    password: str = typer.Option(..., prompt=True, hide_input=True, confirmation_prompt=True),
+    username: str = typer.Option(None, help="Username for the new superuser"),
+    email: str = typer.Option(None, help="Email address"),
+    password: str = typer.Option(None, help="Password (prompted if omitted)", hide_input=True),
+    no_input: bool = typer.Option(False, "--no-input", help="Read all values from options, skip prompts"),
 ):
-    """Create a superuser account."""
+    """Create a superuser account for the admin panel."""
     import asyncio
+    import getpass
 
+    if not no_input:
+        if not username:
+            username = typer.prompt("Username")
+        if not email:
+            email = typer.prompt("Email address")
+        if not password:
+            while True:
+                pw1 = getpass.getpass("Password: ")
+                if not pw1:
+                    typer.echo("Password cannot be empty.", err=True)
+                    continue
+                pw2 = getpass.getpass("Password (again): ")
+                if pw1 != pw2:
+                    typer.echo("Passwords do not match. Please try again.", err=True)
+                    continue
+                password = pw1
+                break
+    else:
+        if not username or not email or not password:
+            typer.echo("--no-input requires --username, --email, and --password.", err=True)
+            raise typer.Exit(1)
+
+    from buraq.contrib.auth import make_password
     from buraq.contrib.auth.models import User
-    from buraq.core.auth import hash_password
-    from buraq.core.db import SessionLocal
 
     async def _create():
-        async with SessionLocal() as db:
-            user = User(
-                username=username,
-                email=email,
-                hashed_password=hash_password(password),
-                is_active=True,
-                is_staff=True,
-                is_superuser=True,
-            )
-            db.add(user)
-            await db.commit()
-            typer.echo(f"Superuser '{username}' created successfully.")
+        if await User.objects.get_or_none(username=username) is not None:
+            typer.echo(f"Error: a user with username '{username}' already exists.", err=True)
+            raise typer.Exit(1)
+
+        if await User.objects.get_or_none(email=email) is not None:
+            typer.echo(f"Error: a user with email '{email}' already exists.", err=True)
+            raise typer.Exit(1)
+
+        await User.objects.create(
+            username=username,
+            email=email,
+            hashed_password=await make_password(password),
+            is_active=True,
+            is_staff=True,
+            is_superuser=True,
+        )
+        typer.echo(typer.style(f"Superuser '{username}' created successfully.", fg=typer.colors.GREEN))
 
     asyncio.run(_create())
 
@@ -211,10 +300,11 @@ def startapp(name: str = typer.Argument(..., help="App name")):
             f"]\n"
         ),
         "admin.py": (
-            "from buraq.contrib.admin import ModelAdmin\n"
+            "from buraq.contrib.admin import ModelAdmin, site\n"
             f"from .models import {name.title()}\n\n\n"
-            f"class {name.title()}Admin(ModelAdmin, model={name.title()}):\n"
-            f"    column_list = [{name.title()}.id, {name.title()}.name]\n"
+            f"class {name.title()}Admin(ModelAdmin):\n"
+            f"    list_display = [\"id\", \"name\"]\n\n\n"
+            f"site.register({name.title()}, {name.title()}Admin)\n"
         ),
         "migrations/__init__.py": "",
     }
@@ -229,14 +319,21 @@ def startapp(name: str = typer.Argument(..., help="App name")):
 
 @app.command()
 def collectstatic(
-    dest: str | None = typer.Option(None, help="Destination directory"),
+    dest: str | None = typer.Option(None, help="Destination directory (overrides STATIC_ROOT)"),
     clear: bool = typer.Option(False, help="Clear destination before collecting"),
 ):
-    """Collect all static files into STATIC_ROOT."""
+    """Collect all static files into STATIC_ROOT using configured finders and storage."""
     from buraq.contrib.staticfiles import collect_static
-    typer.echo("Collecting static files...")
+    from buraq.contrib.staticfiles.storage import get_storage
+    storage = get_storage()
+    location = dest or storage.location
+    typer.echo(f"Collecting static files into {location} ...")
     result = collect_static(dest_dir=dest, clear=clear)
-    typer.echo(f"Done. Copied: {result['copied']}, Skipped: {result['skipped']}")
+    typer.echo(
+        f"Done. Copied: {result['copied']}, "
+        f"Skipped (unchanged): {result['skipped']}, "
+        f"Post-processed: {result['post_processed']}"
+    )
 
 
 # ─── Cache ───────────────────────────────────────────────────────────────────
@@ -631,6 +728,12 @@ def startproject(
         "@app.get('/')\n"
         "async def index():\n"
         f"    return {{\"message\": \"Welcome to {name}!\", \"docs\": \"/api/docs\"}}\n"
+    )
+
+    # main.py — entry point so `main:app` (the runserver default) resolves correctly
+    (project_dir / "main.py").write_text(
+        "# Entry point — exposes `app` at the module level so `buraq runserver` works.\n"
+        "from config.urls import app  # noqa: F401\n"
     )
 
     # manage.py — auto-detects .venv so `python manage.py` just works
@@ -1069,8 +1172,8 @@ def changepassword(
     import asyncio
     import getpass
 
+    from buraq.contrib.auth import make_password
     from buraq.contrib.auth.models import User
-    from buraq.core.auth import hash_password
 
     pw1 = getpass.getpass(f"New password for '{username}': ")
     pw2 = getpass.getpass("Confirm password: ")
@@ -1086,7 +1189,7 @@ def changepassword(
         if not user:
             typer.echo(f"User '{username}' not found.", err=True)
             raise typer.Exit(1)
-        await User.objects.update(user.id, hashed_password=hash_password(pw1))
+        await User.objects.update(user.id, hashed_password=await make_password(pw1))
         typer.echo(f"Password for '{username}' changed successfully.")
 
     asyncio.run(_change())
@@ -1219,6 +1322,626 @@ def sendtestemail(
         typer.echo(f"Test email sent to {email}.")
 
     asyncio.run(_send())
+
+
+@app.command()
+def sqlmigrate(
+    revision: str = typer.Argument(..., help="Alembic revision ID"),
+    backwards: bool = typer.Option(False, "--backwards", help="Show SQL for downgrade instead"),
+):
+    """
+    Print the SQL for a migration without executing it.
+
+    Example:
+        python manage.py sqlmigrate abc123
+        python manage.py sqlmigrate abc123 --backwards
+    """
+    direction = "downgrade" if backwards else "upgrade"
+    result = subprocess.run(
+        ["alembic", direction, "--sql", revision],
+        capture_output=True,
+        text=True,
+    )
+    typer.echo(result.stdout)
+    if result.returncode != 0:
+        typer.echo(result.stderr, err=True)
+        raise typer.Exit(result.returncode)
+
+
+@app.command()
+def squashmigrations(
+    start: str = typer.Argument(..., help="First revision to include in the squash"),
+    end: str = typer.Argument("head", help="Last revision to include (default: head)"),
+    name: str = typer.Option("squashed", "--name", "-n", help="Name for the squashed migration"),
+):
+    """
+    Squash a range of migrations into a single migration file.
+
+    This calls ``alembic merge`` to combine the given revisions into one,
+    then stamps the database at the merge revision.
+
+    Example:
+        python manage.py squashmigrations abc123 head --name squashed_v2
+    """
+    result = subprocess.run(
+        ["alembic", "merge", "--message", name, start, end],
+        capture_output=True,
+        text=True,
+    )
+    typer.echo(result.stdout)
+    if result.returncode != 0:
+        typer.echo(result.stderr, err=True)
+        raise typer.Exit(result.returncode)
+    typer.echo(f"Squashed migrations {start}..{end} into '{name}'.")
+
+
+@app.command()
+def createcachetable(
+    table: str = typer.Option(
+        "buraq_cache_table",
+        "--table",
+        help="Cache table name",
+    ),
+):
+    """
+    Create the database table used by DatabaseCache.
+
+    Run this once after adding DatabaseCache to your CACHE_BACKEND setting.
+
+    Example:
+        python manage.py createcachetable
+        python manage.py createcachetable --table=my_cache
+    """
+    import asyncio
+
+    from buraq.core.db import SessionLocal
+    import sqlalchemy as sa
+
+    DDL = f"""
+    CREATE TABLE IF NOT EXISTS {table} (
+        cache_key VARCHAR(255) NOT NULL PRIMARY KEY,
+        value     TEXT         NOT NULL,
+        expires   DOUBLE PRECISION NOT NULL
+    )
+    """
+
+    async def _create():
+        async with SessionLocal() as db:
+            await db.execute(sa.text(DDL))
+            await db.commit()
+        typer.echo(f"Cache table '{table}' created (or already exists).")
+
+    asyncio.run(_create())
+
+
+@app.command()
+def clearsessions():
+    """
+    Delete all expired sessions from the database session table.
+
+    Only relevant when using DatabaseSessionBackend. Cookie-based sessions
+    don't need cleanup.
+
+    Example:
+        python manage.py clearsessions
+    """
+    import asyncio
+
+    from buraq.core.db import SessionLocal
+    import sqlalchemy as sa
+    import time
+
+    async def _clear():
+        async with SessionLocal() as db:
+            try:
+                result = await db.execute(
+                    sa.text(
+                        "DELETE FROM buraq_sessions WHERE expire_date < :now"
+                    ),
+                    {"now": time.time()},
+                )
+                await db.commit()
+                typer.echo(f"Deleted {result.rowcount} expired session(s).")
+            except Exception as exc:
+                typer.echo(
+                    f"Could not clear sessions: {exc}\n"
+                    "Make sure you are using DatabaseSessionBackend and the "
+                    "buraq_sessions table exists.",
+                    err=True,
+                )
+                raise typer.Exit(1) from exc
+
+    asyncio.run(_clear())
+
+
+@app.command("test")
+def run_tests(
+    paths: list[str] = typer.Argument(None, help="Test paths / modules (pytest syntax)"),
+    verbosity: int = typer.Option(1, "--verbosity", "-v", help="Verbosity level (0-3)"),
+    failfast: bool = typer.Option(False, "--failfast", "-x", help="Stop on first failure"),
+    keepdb: bool = typer.Option(False, "--keepdb", help="Preserve test database between runs"),
+    pattern: str = typer.Option("test*.py", "--pattern", "-p", help="File pattern for test discovery"),
+    tag: list[str] = typer.Option([], "--tag", help="Run only tests with this tag"),
+    exclude_tag: list[str] = typer.Option([], "--exclude-tag", help="Exclude tests with this tag"),
+):
+    """
+    Discover and run the test suite using pytest.
+
+    Automatically sets BURAQ_ENV=test so settings can branch on it.
+    Supports all standard pytest options via -k, -x, -v etc.
+
+    Example:
+        python manage.py test
+        python manage.py test posts tests/
+        python manage.py test --failfast
+        python manage.py test --verbosity=2
+    """
+    import os
+
+    os.environ.setdefault("BURAQ_ENV", "test")
+
+    pytest_args: list[str] = list(paths or [])
+
+    v_flag = {0: "-q", 1: "", 2: "-v", 3: "-vv"}.get(verbosity, "-v")
+    if v_flag:
+        pytest_args.append(v_flag)
+    if failfast:
+        pytest_args.append("-x")
+    if pattern != "test*.py":
+        pytest_args += ["--ignore-glob", f"!{pattern}"]
+
+    for t in tag:
+        pytest_args += ["-m", t]
+
+    result = subprocess.run(["pytest"] + pytest_args)
+    raise typer.Exit(result.returncode)
+
+
+# ─── Version ──────────────────────────────────────────────────────────────────
+
+@app.command()
+def version():
+    """Print the installed Buraq version."""
+    from buraq import __version__
+    typer.echo(f"Buraq {__version__}")
+
+
+# ─── Find Static ──────────────────────────────────────────────────────────────
+
+@app.command()
+def findstatic(
+    path_: str = typer.Argument(..., help="Relative path of the static file to locate"),
+    first: bool = typer.Option(False, "--first", help="Stop after the first match"),
+):
+    """
+    Find and print the absolute path(s) of a static file as discovered by STATICFILES_FINDERS.
+
+    Example:
+        python manage.py findstatic css/style.css
+        python manage.py findstatic images/logo.png --first
+    """
+    from buraq.contrib.staticfiles.finders import get_finders
+
+    found: list[str] = []
+    for finder in get_finders():
+        result = finder.find(path_)
+        if result:
+            found.append(result)
+            if first:
+                break
+
+    if not found:
+        typer.echo(f"No static file found for {path_!r}", err=True)
+        raise typer.Exit(1)
+
+    for p in found:
+        typer.echo(p)
+
+
+# ─── Test Server ──────────────────────────────────────────────────────────────
+
+@app.command()
+def testserver(
+    fixtures: list[str] = typer.Argument(..., help="Fixture files to load before starting server"),
+    bind: str = typer.Option("main:app", "--app", help="ASGI app path (e.g. 'main:app')"),
+    port: int = typer.Option(8000, help="Bind port"),
+    host: str = typer.Option("127.0.0.1", help="Bind host"),
+    no_input: bool = typer.Option(False, "--no-input", help="Do not prompt for confirmation"),
+):
+    """
+    Load fixtures into a temporary test database, then start the development server.
+
+    Useful for manual QA with realistic data without touching the production database.
+
+    Example:
+        python manage.py testserver fixtures/posts.json fixtures/users.json
+        python manage.py testserver fixtures/initial.json --port 8001
+    """
+    import asyncio
+    import json as _json
+
+    from buraq.core.db import Base, SessionLocal
+
+    if not no_input:
+        if not typer.confirm(
+            f"This will CLEAR the database and load {len(fixtures)} fixture(s). Continue?",
+            default=False,
+        ):
+            typer.echo("Aborted.")
+            raise typer.Exit(0)
+
+    async def _load_fixtures():
+        async with SessionLocal() as db:
+            import sqlalchemy as sa
+
+            # Flush all tables first
+            for table in reversed(Base.metadata.sorted_tables):
+                await db.execute(sa.delete(table))
+
+            # Load each fixture
+            for fixture_path in fixtures:
+                fixture_data = _json.loads(Path(fixture_path).read_text())
+                for table_name, rows in fixture_data.items():
+                    sa_table = Base.metadata.tables.get(table_name)
+                    if sa_table is None:
+                        typer.echo(f"  Skipping unknown table: {table_name}", err=True)
+                        continue
+                    if rows:
+                        await db.execute(sa_table.insert(), rows)
+                        typer.echo(f"  Loaded {len(rows)} row(s) into '{table_name}'")
+            await db.commit()
+
+    typer.echo("Loading fixtures...")
+    asyncio.run(_load_fixtures())
+    typer.echo(f"Fixtures loaded. Starting server on http://{host}:{port} ...")
+
+    try:
+        from granian import Granian
+        Granian(
+            bind,
+            address=host,
+            port=port,
+            interface="asgi",
+            reload=False,
+            working_dir=Path.cwd(),
+        ).serve()
+    except ImportError:
+        import uvicorn
+        uvicorn.run(bind, host=host, port=port, reload=False, log_level="debug")
+
+
+# ─── SQL Flush ────────────────────────────────────────────────────────────────
+
+@app.command()
+def sqlflush():
+    """
+    Print the SQL statements that ``flush`` would execute, without running them.
+
+    Useful for auditing what flush would do or generating a script to run later.
+
+    Example:
+        python manage.py sqlflush
+        python manage.py sqlflush > flush.sql
+    """
+    from buraq.core.db import Base
+    from sqlalchemy.schema import DropTable
+
+    import sqlalchemy as sa
+    from sqlalchemy.dialects import sqlite as sqlite_dialect
+
+    dialect = sqlite_dialect.dialect()
+
+    for table in reversed(Base.metadata.sorted_tables):
+        stmt = sa.delete(table).compile(dialect=dialect)
+        typer.echo(f"{stmt};")
+
+
+# ─── SQL Sequence Reset ───────────────────────────────────────────────────────
+
+@app.command()
+def sqlsequencereset(
+    apps: list[str] | None = typer.Argument(
+        None, help="App names to reset sequences for (defaults to all apps)"
+    ),
+):
+    """
+    Print SQL to reset PostgreSQL sequences for tables belonging to the given apps.
+
+    Only relevant for PostgreSQL — SQLite and MySQL use autoincrement instead.
+    Run the output SQL via ``buraq dbshell`` after a bulk data import.
+
+    Example:
+        python manage.py sqlsequencereset
+        python manage.py sqlsequencereset posts auth
+    """
+    from buraq.conf import settings
+    from buraq.core.db import Base
+
+    try:
+        from sqlalchemy.engine import make_url as _make_url
+        dialect = _make_url(settings.DATABASE_URL).get_dialect().name
+    except Exception:
+        dialect = "unknown"
+
+    if dialect != "postgresql":
+        typer.echo(
+            f"Note: sequence reset is only needed for PostgreSQL (current dialect: {dialect}).",
+            err=True,
+        )
+        if dialect not in ("postgresql",):
+            raise typer.Exit(0)
+
+    for table in Base.metadata.sorted_tables:
+        # Match tables belonging to requested apps (based on table name prefix)
+        if apps:
+            matched = any(table.name.startswith(a) for a in apps)
+            if not matched:
+                continue
+
+        # Find integer primary key columns
+        for col in table.primary_key.columns:
+            if col.autoincrement and str(col.type).upper() in ("INTEGER", "BIGINTEGER", "BIGINT", "INT"):
+                seq = f"{table.name}_{col.name}_seq"
+                typer.echo(
+                    f"SELECT setval('{seq}', COALESCE((SELECT MAX({col.name}) FROM {table.name}), 1), true);"
+                )
+
+
+# ─── Optimize Migration ───────────────────────────────────────────────────────
+
+@app.command()
+def optimizemigration(
+    revisions: list[str] = typer.Argument(..., help="Two or more Alembic revision IDs to merge"),
+    name: str = typer.Option("optimized", "--name", "-n", help="Name for the merged migration"),
+):
+    """
+    Merge two or more Alembic branch heads into a single revision.
+
+    This calls ``alembic merge`` to combine divergent migration heads, resolving
+    branch splits after e.g. parallel feature development.
+
+    Requires at least two revision IDs.
+
+    Example:
+        python manage.py optimizemigration abc1234 def5678
+        python manage.py optimizemigration abc1234 def5678 --name merge_branches
+    """
+    if len(revisions) < 2:
+        typer.echo("Error: optimizemigration requires at least two revision IDs to merge.", err=True)
+        raise typer.Exit(1)
+
+    result = subprocess.run(
+        ["alembic", "merge", "--message", name] + list(revisions),
+        capture_output=True,
+        text=True,
+    )
+    typer.echo(result.stdout)
+    if result.returncode != 0:
+        typer.echo(result.stderr, err=True)
+        raise typer.Exit(result.returncode)
+    typer.echo(f"Merged {len(revisions)} revisions as '{name}'.")
+
+
+# ─── Remove Stale Content Types ───────────────────────────────────────────────
+
+@app.command()
+def remove_stale_contenttypes(
+    no_input: bool = typer.Option(False, "--no-input", help="Do not prompt — delete automatically"),
+    include_stale_apps: bool = typer.Option(
+        False, "--include-stale-apps",
+        help="Remove content types even for apps still in INSTALLED_APPS",
+    ),
+):
+    """
+    Remove ContentType records for models that no longer exist.
+
+    After removing an app or model from INSTALLED_APPS, run this to clean
+    up orphaned ContentType rows so the database stays consistent.
+
+    Example:
+        python manage.py remove_stale_contenttypes
+        python manage.py remove_stale_contenttypes --no-input
+    """
+    import asyncio
+    import importlib
+
+    from buraq.conf import settings
+    from buraq.contrib.contenttypes import ContentType
+
+    if not ContentType:
+        typer.echo(
+            "buraq.contrib.contenttypes is not installed or ContentType model is unavailable.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    async def _clean():
+        all_cts = await ContentType.objects.all()
+        if not all_cts:
+            typer.echo("No ContentType records found.")
+            return
+
+        stale = []
+        installed = set(settings.INSTALLED_APPS)
+
+        for ct in all_cts:
+            app_label = ct.app_label
+            model_name = ct.model
+
+            if not include_stale_apps and app_label not in installed:
+                stale.append(ct)
+                continue
+
+            # Try to import the model class
+            try:
+                for app_name in installed:
+                    try:
+                        mod = importlib.import_module(f"{app_name}.models")
+                        if hasattr(mod, model_name.title()):
+                            break
+                    except ModuleNotFoundError:
+                        pass
+                else:
+                    stale.append(ct)
+            except Exception:
+                stale.append(ct)
+
+        if not stale:
+            typer.echo("No stale content types found.")
+            return
+
+        typer.echo(f"Found {len(stale)} stale content type(s):")
+        for ct in stale:
+            typer.echo(f"  - {ct.app_label}.{ct.model}")
+
+        if not no_input:
+            if not typer.confirm("Delete these content types?", default=False):
+                typer.echo("Aborted.")
+                return
+
+        for ct in stale:
+            await ct.delete()
+        typer.echo(f"Deleted {len(stale)} stale content type(s).")
+
+    asyncio.run(_clean())
+
+
+@app.command()
+def worker(
+    queue: str = typer.Option("default", "--queue", "-q", help="Queue name to consume."),
+    concurrency: int = typer.Option(1, "--concurrency", "-c", help="Number of concurrent task coroutines."),
+    poll_interval: float = typer.Option(1.0, "--poll-interval", help="Seconds between database polls (DatabaseBackend only)."),
+    max_tasks: int = typer.Option(0, "--max-tasks", help="Stop after processing this many tasks (0 = run forever)."),
+):
+    """
+    Run the background task worker.
+
+    Polls the task backend for pending tasks and executes them.
+    Uses the backend configured in settings.TASKS['default'].
+
+    \b
+    Examples:
+        buraq worker
+        buraq worker --queue high-priority --concurrency 4
+        buraq worker --queue email --poll-interval 0.5
+    """
+    import asyncio
+    import signal
+
+    async def _run():
+        from buraq.conf import settings
+        from buraq.utils.module_loading import import_string
+
+        tasks_config: dict = getattr(settings, "TASKS", {})
+        backend_path = tasks_config.get("default", {}).get(
+            "BACKEND", "buraq.contrib.tasks.backends.db.DatabaseBackend"
+        )
+
+        try:
+            backend_cls = import_string(backend_path)
+        except ImportError as exc:
+            typer.echo(f"Error: cannot import task backend {backend_path!r}: {exc}", err=True)
+            raise typer.Exit(1)
+
+        backend = backend_cls()
+        typer.echo(f"Worker started — queue={queue!r} concurrency={concurrency} backend={backend_path}")
+
+        # DummyBackend has no pending tasks to poll — warn and exit.
+        if "dummy" in backend_path.lower():
+            typer.echo("DummyBackend executes tasks immediately in-process — no worker needed.", err=True)
+            return
+
+        processed = 0
+        stop = False
+
+        def _handle_signal(sig, frame):
+            nonlocal stop
+            typer.echo("\nShutting down worker…")
+            stop = True
+
+        signal.signal(signal.SIGINT, _handle_signal)
+        signal.signal(signal.SIGTERM, _handle_signal)
+
+        try:
+            import sqlalchemy as sa
+            from buraq.contrib.tasks.backends.db import buraq_task_table, _import_func
+            from buraq.contrib.tasks.result import TaskStatus
+            from buraq.core.db import SessionLocal
+            from datetime import UTC, datetime
+        except ImportError as exc:
+            typer.echo(f"DatabaseBackend requires buraq database setup: {exc}", err=True)
+            raise typer.Exit(1)
+
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def _execute_task(row):
+            nonlocal processed
+            async with semaphore:
+                import inspect, json
+                func = _import_func(row.func_path)
+                args = json.loads(row.args_json or "[]")
+                kwargs = json.loads(row.kwargs_json or "{}")
+
+                async with SessionLocal() as db:
+                    await db.execute(
+                        buraq_task_table.update()
+                        .where(buraq_task_table.c.id == row.id)
+                        .values(status=TaskStatus.RUNNING.value, started_at=datetime.now(UTC),
+                                attempts=row.attempts + 1)
+                    )
+                    await db.commit()
+
+                try:
+                    if inspect.iscoroutinefunction(func):
+                        result = await func(*args, **kwargs)
+                    else:
+                        result = await asyncio.to_thread(func, *args, **kwargs)
+                    return_json = json.dumps(result) if result is not None else None
+                    status = TaskStatus.SUCCEEDED.value
+                    error = None
+                except Exception as exc:
+                    return_json = None
+                    status = TaskStatus.FAILED.value
+                    error = repr(exc)
+
+                async with SessionLocal() as db:
+                    await db.execute(
+                        buraq_task_table.update()
+                        .where(buraq_task_table.c.id == row.id)
+                        .values(status=status, return_json=return_json, error=error,
+                                finished_at=datetime.now(UTC))
+                    )
+                    await db.commit()
+
+                icon = "✓" if status == TaskStatus.SUCCEEDED.value else "✗"
+                typer.echo(f"  {icon} {row.func_path} [{row.id[:8]}]")
+                processed += 1
+
+        while not stop:
+            async with SessionLocal() as db:
+                result = await db.execute(
+                    sa.select(buraq_task_table)
+                    .where(
+                        buraq_task_table.c.queue == queue,
+                        buraq_task_table.c.status == TaskStatus.PENDING.value,
+                    )
+                    .order_by(buraq_task_table.c.priority.asc(), buraq_task_table.c.created_at.asc())
+                    .limit(concurrency)
+                )
+                rows = result.fetchall()
+
+            if rows:
+                await asyncio.gather(*[_execute_task(row) for row in rows])
+            else:
+                await asyncio.sleep(poll_interval)
+
+            if max_tasks and processed >= max_tasks:
+                typer.echo(f"Reached max-tasks={max_tasks}. Stopping.")
+                break
+
+        typer.echo(f"Worker stopped. Processed {processed} task(s).")
+
+    asyncio.run(_run())
 
 
 def execute_from_command_line(argv=None):

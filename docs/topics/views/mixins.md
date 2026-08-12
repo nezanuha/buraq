@@ -97,6 +97,41 @@ class APILoginRequired(LoginRequiredMixin, View):
 
 ---
 
+## SuccessMessageMixin
+
+Display a flash success message after a form is successfully submitted. Mix with any `FormView`, `CreateView`, or `UpdateView`.
+
+```python
+from buraq.views.mixins import SuccessMessageMixin
+from buraq.views.generic import CreateView
+
+class CreatePostView(SuccessMessageMixin, CreateView):
+    model = Post
+    fields = ["title", "body"]
+    success_url = "/posts/"
+    success_message = "Post '%(title)s' was created successfully."
+```
+
+`success_message` supports `%(field)s` placeholders filled from `form.cleaned_data`.
+
+Override `get_success_message()` for dynamic messages:
+
+```python
+class CreatePostView(SuccessMessageMixin, CreateView):
+    model = Post
+    fields = ["title", "body"]
+    success_url = "/posts/"
+
+    def get_success_message(self, cleaned_data: dict) -> str:
+        if cleaned_data.get("is_published"):
+            return f"Post '{cleaned_data['title']}' published!"
+        return f"Post '{cleaned_data['title']}' saved as draft."
+```
+
+The message is passed to `buraq.contrib.messages.success(request, msg)` and displayed via the messages framework (add `buraq.middleware.common.MessageMiddleware` to `MIDDLEWARE` and render `{{ messages }}` in your base template).
+
+---
+
 ## Mixin order
 
 Always put mixin classes **before** the view class:

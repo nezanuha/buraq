@@ -527,3 +527,148 @@ class TypedMultipleChoiceField(MultipleChoiceField):
             return [self.coerce(v) for v in values]
         except (ValueError, TypeError):
             raise ValidationError(self.error_messages["invalid"], code="invalid") from None
+
+
+class MultiValueField(Field):
+    """
+    A field that is composed of multiple sub-fields.
+
+    Subclass and define ``fields`` (a list of Field instances) and override
+    ``compress()`` to combine the cleaned sub-values into a single value.
+    """
+
+    def __init__(self, fields: list, *args, **kwargs):
+        self.fields = list(fields)
+        super().__init__(*args, **kwargs)
+
+    def compress(self, data_list: list) -> Any:
+        """Combine the cleaned sub-values into a single value. Must be overridden."""
+        raise NotImplementedError("Subclasses must implement compress().")
+
+    def clean(self, value: Any) -> Any:
+        if not value:
+            if self.required:
+                raise ValidationError(self.error_messages["required"], code="required")
+            return self.compress([])
+        if not isinstance(value, (list, tuple)):
+            value = [value]
+        cleaned = []
+        for i, field in enumerate(self.fields):
+            raw = value[i] if i < len(value) else None
+            cleaned.append(field.clean(raw))
+        return self.compress(cleaned)
+
+
+class ComboField(Field):
+    """
+    A field that applies multiple sub-fields' validation in sequence.
+
+    Usage::
+
+        field = ComboField(fields=[CharField(max_length=20), EmailField()])
+    """
+
+    def __init__(self, fields: list, **kwargs):
+        self.fields = list(fields)
+        super().__init__(**kwargs)
+
+    def clean(self, value: Any) -> Any:
+        for field in self.fields:
+            value = field.clean(value)
+        return value
+
+
+class DurationField(Field):
+    """Accepts a ``HH:MM:SS`` or integer (seconds) and returns a timedelta."""
+
+    def to_python(self, value: Any) -> Any:
+        if value in (None, ""):
+            return None
+        from datetime import timedelta
+        if isinstance(value, timedelta):
+            return value
+        if isinstance(value, (int, float)):
+            return timedelta(seconds=value)
+        s = str(value).strip()
+        # Try HH:MM:SS
+        parts = s.split(":")
+        if len(parts) == 3:
+            try:
+                h, m, sec = int(parts[0]), int(parts[1]), float(parts[2])
+                return timedelta(hours=h, minutes=m, seconds=sec)
+            except ValueError:
+                pass
+        # Try plain seconds
+        try:
+            return timedelta(seconds=float(s))
+        except ValueError:
+            raise ValidationError(
+                "Enter a valid duration in [DD] HH:MM:SS or seconds format.",
+                code="invalid",
+            ) from None
+
+
+class FilePathField(ChoiceField):
+    """
+    A ChoiceField populated with filenames from a directory.
+
+    Usage::
+
+        attachment = FilePathField(path="/var/uploads", match=r".*\\.pdf$")
+    """
+
+    def __init__(self, path: str, match: str = None, recursive: bool = False,
+                 allow_files: bool = True, allow_folders: bool = False, **kwargs):
+        import os
+        import re as _re
+        self.path = path
+        self.match = match
+        self.recursive = recursive
+        self.allow_files = allow_files
+        self.allow_folders = allow_folders
+        choices = self._build_choices()
+        super().__init__(choices=choices, **kwargs)
+
+    def _build_choices(self) -> list:
+        import os
+        import re as _re
+        choices = []
+        matcher = _re.compile(self.match) if self.match else None
+        try:
+            if self.recursive:
+                for root, dirs, files in os.walk(self.path):
+                    entries = []
+                    if self.allow_files:
+                        entries.extend(files)
+                    if self.allow_folders:
+                        entries.extend(dirs)
+                    for entry in entries:
+                        full = os.path.join(root, entry)
+                        if matcher is None or matcher.search(entry):
+                            choices.append((full, entry))
+            else:
+                for entry in os.listdir(self.path):
+                    full = os.path.join(self.path, entry)
+                    is_file = os.path.isfile(full)
+                    is_dir = os.path.isdir(full)
+                    if (self.allow_files and is_file) or (self.allow_folders and is_dir):
+                        if matcher is None or matcher.search(entry):
+                            choices.append((full, entry))
+        except OSError:
+            pass
+        return sorted(choices)
+
+    def set_choices(self) -> None:
+        """
+        Rescan the directory and refresh the field's choices.
+
+        Call this in a form's ``__init__()`` to get per-request directory listings::
+
+            class UploadForm(Form):
+                attachment = FilePathField(path="/var/uploads")
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.fields["attachment"].set_choices()
+        """
+        self.choices = self._build_choices()

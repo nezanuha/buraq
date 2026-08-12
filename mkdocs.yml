@@ -150,6 +150,10 @@ nav:
     - Sites: topics/sites.md
     - App Registry: topics/apps.md
     - PostgreSQL: topics/postgres.md
+    - Cryptographic Signing: topics/signing.md
+    - Background Tasks: topics/tasks.md
+    - Content Security Policy: topics/csp.md
+    - Debugging: topics/debugging.md
   - Management Commands:
     - Built-in Commands: management/commands.md
     - Custom Commands: management/custom-commands.md

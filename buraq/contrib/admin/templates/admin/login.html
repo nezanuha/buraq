@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="darkberry">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in — Buraq Admin</title>
+  <link rel="stylesheet" href="{{ buraq_static }}/admin/frutjam.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .login-wrap { width: 100%; max-width: 22rem; padding: 1rem; }
+    .login-brand { text-align: center; margin-bottom: 1.75rem; }
+    .login-brand .icon { font-size: 2rem; display: block; margin-bottom: .5rem; }
+    .login-brand h1 { font-size: 1.25rem; font-weight: 700; margin: 0 0 .25rem; }
+    .field { display: flex; flex-direction: column; gap: .375rem; margin-bottom: .875rem; }
+    .field label { font-size: .8125rem; font-weight: 600; }
+    .field-hint { font-size: .73rem; }
+  </style>
+</head>
+<body class="bg-base">
+  <div class="login-wrap">
+
+    <div class="login-brand">
+      <span class="icon">⚙</span>
+      <h1>Buraq Admin</h1>
+      <p class="text-neutral">Sign in to continue</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-soft alert-error mb-3 text-sm">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/admin/login">
+      {{ csrf_input(request) }}
+      <div class="card card-outline">
+        <div class="card-content">
+          <div class="field">
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text"
+                   class="input input-outline w-full"
+                   placeholder="Enter username" required autofocus />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password"
+                   class="input input-outline w-full"
+                   placeholder="Enter password" required />
+          </div>
+          <button type="submit" class="btn btn-primary w-full mt-2">Sign in</button>
+        </div>
+      </div>
+    </form>
+
+  </div>
+</body>
+</html>

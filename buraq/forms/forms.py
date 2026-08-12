@@ -34,6 +34,145 @@ from buraq.exceptions import NON_FIELD_ERRORS, ValidationError
 from buraq.forms.fields import Field
 
 
+class ErrorList(list):
+    """A list of form field errors that can render itself as HTML."""
+
+    def as_ul(self) -> str:
+        if not self:
+            return ""
+        items = "".join(f"<li>{e}</li>" for e in self)
+        return f'<ul class="errorlist">{items}</ul>'
+
+    def as_text(self) -> str:
+        return "\n".join(f"* {e}" for e in self)
+
+    def __str__(self):
+        return self.as_ul()
+
+    def as_data(self) -> list:
+        return list(self)
+
+
+class ErrorDict(dict):
+    """A dict of {field: ErrorList} that can render itself."""
+
+    def as_ul(self) -> str:
+        if not self:
+            return ""
+        parts = []
+        for field, errors in self.items():
+            error_list = ErrorList(errors) if not isinstance(errors, ErrorList) else errors
+            parts.append(f"<li>{field}{error_list.as_ul()}</li>")
+        return f'<ul class="errorlist">' + "".join(parts) + "</ul>"
+
+    def as_text(self) -> str:
+        return "\n".join(
+            f"{field}\n" + "\n".join(f"  * {e}" for e in errors)
+            for field, errors in self.items()
+        )
+
+    def __str__(self):
+        return self.as_ul()
+
+
+BLANK_CHOICE_LABEL = "---------"
+
+class MediaDefiningClass(type):
+    """Metaclass that collects CSS/JS Media from fields and the class itself."""
+
+    def __new__(mcs, name, bases, attrs):
+        cls = super().__new__(mcs, name, bases, attrs)
+        return cls
+
+
+class Stylesheet:
+    """
+    A CSS stylesheet path with optional HTML attributes.
+
+    Use inside a ``Media.css`` dict to add custom attributes (e.g. ``media``
+    or ``crossorigin``) to the generated ``<link>`` tag::
+
+        class MyForm(Form):
+            class Media:
+                css = {
+                    "all": [
+                        Stylesheet("/static/print.css", media="print"),
+                        Stylesheet("/static/shared.css", crossorigin="anonymous"),
+                    ]
+                }
+
+    Plain string paths continue to work alongside ``Stylesheet`` objects.
+    """
+
+    def __init__(self, path: str, **attrs):
+        self.path = path
+        self.attrs = attrs
+
+    def __str__(self) -> str:
+        return self.path
+
+    def render(self, medium: str = "all") -> str:
+        attrs_str = ""
+        for k, v in self.attrs.items():
+            attrs_str += f' {k}="{v}"'
+        used_medium = self.attrs.get("media", medium)
+        return f'<link href="{self.path}" type="text/css" media="{used_medium}" rel="stylesheet"{attrs_str}>'
+
+
+class Media:
+    """
+    Tracks CSS and JavaScript dependencies for forms and widgets.
+
+    Usage::
+
+        class MyForm(Form):
+            class Media:
+                css = {"all": ["myapp/css/widget.css"]}
+                js  = ["myapp/js/widget.js"]
+    """
+
+    def __init__(self, media=None, css=None, js=None):
+        if media:
+            css = getattr(media, "css", {})
+            js = getattr(media, "js", [])
+        self._css = css or {}
+        self._js = list(js or [])
+
+    @property
+    def css(self) -> dict:
+        return self._css
+
+    @property
+    def js(self) -> list:
+        return self._js
+
+    def render_css(self) -> str:
+        lines = []
+        for medium, sheets in self._css.items():
+            for sheet in sheets:
+                if isinstance(sheet, Stylesheet):
+                    lines.append(sheet.render(medium))
+                else:
+                    lines.append(f'<link href="{sheet}" type="text/css" media="{medium}" rel="stylesheet">')
+        return "\n".join(lines)
+
+    def render_js(self) -> str:
+        return "\n".join(f'<script src="{src}"></script>' for src in self._js)
+
+    def render(self) -> str:
+        return f"{self.render_css()}\n{self.render_js()}".strip()
+
+    def __add__(self, other: "Media") -> "Media":
+        css = dict(self._css)
+        for medium, sheets in other._css.items():
+            css.setdefault(medium, []).extend(sheets)
+        js = list(dict.fromkeys(self._js + other._js))
+        return Media(css=css, js=js)
+
+    def __str__(self):
+        return self.render()
+
+
 class DeclarativeFieldsMetaclass(type):
     """Collect Field instances declared on the class body."""
 
@@ -237,6 +376,57 @@ class BaseForm:
             )
         return Markup("\n".join(rows))
 
+    def as_ul(self) -> str:
+        """Render form as <li> items (caller must wrap in <ul>)."""
+        from markupsafe import Markup
+        rows = []
+        nfe = self.non_field_errors()
+        if nfe:
+            rows.append('<li><ul class="errorlist nonfield">' +
+                        "".join(f"<li>{e}</li>" for e in nfe) + "</ul></li>")
+        for bf in self:
+            errs = self._html_errors(bf.name)
+            rows.append(
+                f"<li>"
+                f"{errs}"
+                f'<label for="id_{bf.html_name}">{bf.label}:</label> '
+                f"{self._render_field(bf)}"
+                f"</li>"
+            )
+        return Markup("\n".join(rows))
+
+    @property
+    def changed_data(self) -> list:
+        """List of field names that have changed from their initial values."""
+        changed = []
+        for name, field in self.fields.items():
+            initial = self.initial.get(name, field.initial)
+            data = self.data.get(name)
+            if field.has_changed(initial, data):
+                changed.append(name)
+        return changed
+
+    def hidden_fields(self) -> list:
+        """Return BoundFields for hidden widget fields."""
+        return [bf for bf in self if getattr(bf.field, "widget", None) == "hidden"]
+
+    def visible_fields(self) -> list:
+        """Return BoundFields for visible (non-hidden) fields."""
+        return [bf for bf in self if getattr(bf.field, "widget", None) != "hidden"]
+
+    @property
+    def media(self) -> "Media":
+        """Collect Media from all fields."""
+        combined = Media()
+        for field in self.fields.values():
+            field_media = getattr(field, "media", None)
+            if field_media:
+                combined = combined + field_media
+        meta_media = getattr(self.__class__, "Media", None)
+        if meta_media:
+            combined = combined + Media(meta_media)
+        return combined
+
 
 class Form(BaseForm, metaclass=DeclarativeFieldsMetaclass):
     """
@@ -394,6 +584,11 @@ class BoundField:
         self.help_text = field.help_text
 
     @property
+    def id_for_label(self) -> str:
+        """The HTML id attribute value for this field's widget."""
+        return f"id_{self.html_name}"
+
+    @property
     def value(self):
         data = self.form.data.get(self.name)
         if data is None:
@@ -402,8 +597,65 @@ class BoundField:
         return data
 
     @property
-    def errors(self) -> list:
-        return self.form.errors.get(self.name, [])
+    def errors(self) -> ErrorList:
+        errs = self.form.errors.get(self.name, [])
+        return errs if isinstance(errs, ErrorList) else ErrorList(errs)
+
+    def label_tag(self, contents: str = None, attrs: dict = None, label_suffix: str = ":") -> str:
+        """Render a <label> tag for this field."""
+        from markupsafe import Markup
+        label = contents or self.label
+        extra = ""
+        if attrs:
+            extra = " " + " ".join(f'{k}="{v}"' for k, v in attrs.items())
+        return Markup(f'<label for="{self.id_for_label}"{extra}>{label}{label_suffix}</label>')
+
+    def css_classes(self, extra_classes: str = "") -> str:
+        """Return a space-joined string of CSS classes for this field's wrapper element."""
+        classes = []
+        if self.errors:
+            classes.append("error")
+        if self.field.required:
+            classes.append("required")
+        if extra_classes:
+            classes.extend(extra_classes.split())
+        return " ".join(classes)
+
+    def build_widget_attrs(self, attrs: dict = None, widget=None) -> dict:
+        """Return attrs dict with id and name added."""
+        result = {"name": self.html_name, "id": self.id_for_label}
+        if attrs:
+            result.update(attrs)
+        return result
+
+    def as_widget(self, widget=None, attrs: dict = None) -> str:
+        """Render this field's widget as HTML."""
+        from markupsafe import Markup
+        return Markup(self.form._render_field(self))
+
+    def as_text(self, attrs: dict = None) -> str:
+        """Render as a text <input>."""
+        from markupsafe import Markup
+        v = self.value
+        a = self.build_widget_attrs(attrs)
+        attr_str = " ".join(f'{k}="{v2}"' for k, v2 in a.items())
+        return Markup(f'<input type="text" value="{v or ""}" {attr_str}>')
+
+    def as_textarea(self, attrs: dict = None) -> str:
+        """Render as a <textarea>."""
+        from markupsafe import Markup
+        v = self.value
+        a = self.build_widget_attrs(attrs)
+        attr_str = " ".join(f'{k}="{v2}"' for k, v2 in a.items())
+        return Markup(f"<textarea {attr_str}>{v or ''}</textarea>")
+
+    def as_hidden(self, attrs: dict = None) -> str:
+        """Render as a hidden <input>."""
+        from markupsafe import Markup
+        v = self.value
+        a = self.build_widget_attrs(attrs)
+        attr_str = " ".join(f'{k}="{v2}"' for k, v2 in a.items())
+        return Markup(f'<input type="hidden" value="{v or ""}" {attr_str}>')
 
     def __str__(self):
         return str(self.value or "")
@@ -412,162 +664,40 @@ class BoundField:
         return f"<BoundField {self.name}={self.value!r}>"
 
 
-# ── Formsets ──────────────────────────────────────────────────────────────────
+# ── Formsets (canonical implementations live in forms/formsets.py) ────────────
+from buraq.forms.formsets import (  # noqa: E402
+    DELETION_FIELD_NAME,
+    ORDERING_FIELD_NAME,
+    BaseFormSet,
+    modelformset_factory,
+    inlineformset_factory,
+)
 
-class BaseFormSet:
+
+class SuccessMessageMixin:
     """
-    A collection of forms of the same type, bound to the same model.
+    Mixin for CBVs that adds a success message on successful form submission.
 
-    Usage:
-        PostFormSet = modelformset_factory(Post, form=PostForm, extra=2)
+    Usage::
 
-        # In a view:
-        if request.method == "POST":
-            formset = PostFormSet(data=dict(await request.form()))
-            if await formset.is_valid():
-                await formset.save()
-        else:
-            formset = PostFormSet(queryset=await Post.objects.all())
+        class PostCreateView(SuccessMessageMixin, CreateView):
+            model         = Post
+            success_url   = "/posts"
+            success_message = "Post %(title)s was created."
     """
 
-    def __init__(self, data=None, queryset=None, initial=None, prefix="form"):
-        self.data = data or {}
-        self.initial = initial or []
-        self.prefix = prefix
-        self._instances = list(queryset) if queryset is not None else []
-        self.forms = []
-        self._build_forms()
+    success_message: str = ""
 
-    def _build_forms(self):
-        total = self._total_form_count()
-        form_class = self._form_class
-        for i in range(total):
-            instance = self._instances[i] if i < len(self._instances) else None
-            pref = f"{self.prefix}-{i}"
-            form_data = self._extract_form_data(pref) if self.data else None
-            self.forms.append(form_class(data=form_data, instance=instance, prefix=pref))
+    def get_success_message(self, cleaned_data: dict) -> str:
+        return self.success_message % cleaned_data
 
-    def _extract_form_data(self, prefix: str) -> dict:
-        return {
-            k[len(prefix) + 1:]: v
-            for k, v in self.data.items()
-            if k.startswith(prefix + "-")
-        }
-
-    def _total_form_count(self) -> int:
-        if self.data:
+    async def form_valid(self, form):
+        response = await super().form_valid(form)
+        msg = self.get_success_message(form.cleaned_data)
+        if msg:
             try:
-                return int(self.data.get(f"{self.prefix}-TOTAL_FORMS", len(self._instances) + self._extra))
-            except (ValueError, TypeError):
+                from buraq.contrib.messages import success as _success
+                _success(self.request, msg)
+            except Exception:
                 pass
-        return len(self._instances) + self._extra
-
-    async def is_valid(self) -> bool:
-        results = [await f.is_valid() for f in self.forms]
-        return all(results)
-
-    async def save(self, commit: bool = True) -> list:
-        saved = []
-        for form in self.forms:
-            if hasattr(form, "save") and form.cleaned_data:
-                obj = await form.save(commit=commit)
-                saved.append(obj)
-        return saved
-
-    @property
-    def errors(self) -> list:
-        return [f.errors for f in self.forms]
-
-    def management_form_html(self) -> str:
-        from markupsafe import Markup
-        total = len(self.forms)
-        return Markup(
-            f'<input type="hidden" name="{self.prefix}-TOTAL_FORMS" value="{total}">'
-            f'<input type="hidden" name="{self.prefix}-INITIAL_FORMS" value="{len(self._instances)}">'
-        )
-
-    def __iter__(self):
-        return iter(self.forms)
-
-    def __len__(self):
-        return len(self.forms)
-
-
-def modelformset_factory(model, form=None, extra: int = 1, max_num: int = None):
-    """
-    Return a FormSet class for the given model.
-
-    Usage:
-        PostFormSet = modelformset_factory(Post, form=PostForm, extra=2)
-        formset = PostFormSet(queryset=await Post.objects.all())
-    """
-    from buraq.forms.forms import ModelForm
-
-    form_class = form
-    if form_class is None:
-        # Auto-generate a ModelForm
-        class _AutoForm(ModelForm):
-            class Meta:
-                pass
-        _AutoForm.Meta.model = model
-        _AutoForm.Meta.fields = "__all__"
-        form_class = _AutoForm
-
-    class _FormSet(BaseFormSet):
-        _form_class = form_class
-        _extra = extra
-        _max_num = max_num
-
-    _FormSet.__name__ = f"{model.__name__}FormSet"
-    return _FormSet
-
-
-def inlineformset_factory(
-    parent_model,
-    model,
-    form=None,
-    fk_name: str = None,
-    extra: int = 3,
-    max_num: int = None,
-):
-    """
-    Return a FormSet class for inline editing of related objects.
-
-    Usage:
-        CommentFormSet = inlineformset_factory(Post, Comment, form=CommentForm, extra=3)
-
-        # In a view (GET):
-        post = await get_object_or_404(Post, id=pk)
-        comments = await Comment.objects.filter(post_id=post.id).all()
-        formset = CommentFormSet(queryset=comments)
-
-        # In a view (POST):
-        formset = CommentFormSet(data=..., queryset=comments)
-        if await formset.is_valid():
-            instances = await formset.save(commit=False)
-            for obj in instances:
-                obj.post_id = post.id
-                await obj.save()
-    """
-    from buraq.forms.forms import ModelForm
-
-    form_class = form
-    if form_class is None:
-        class _AutoForm(ModelForm):
-            class Meta:
-                pass
-        _AutoForm.Meta.model = model
-        _AutoForm.Meta.fields = "__all__"
-        form_class = _AutoForm
-
-    parent_name = parent_model.__name__.lower()
-    fk = fk_name or f"{parent_name}_id"
-
-    class _InlineFormSet(BaseFormSet):
-        _form_class = form_class
-        _extra = extra
-        _max_num = max_num
-        _fk_name = fk
-
-    _InlineFormSet.__name__ = f"{model.__name__}InlineFormSet"
-    return _InlineFormSet
+        return response

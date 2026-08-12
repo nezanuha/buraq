@@ -212,7 +212,6 @@ def _load_catalog(language: str) -> _gettext.NullTranslations:
                     domain="messages",
                     localedir=locale_path,
                     languages=[language],
-                    codeset="utf-8",
                 )
                 break
             except FileNotFoundError:

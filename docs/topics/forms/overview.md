@@ -87,3 +87,47 @@ async def clean(self):
         self.add_error("end", "End date must be after start date.")
     return data
 ```
+
+## Form Media
+
+Declare JavaScript and CSS assets a form widget needs. Buraq merges `Media` declarations from all widgets on the form.
+
+```python
+from buraq.forms.forms import Media, Stylesheet
+
+class DatePickerWidget:
+    class Media:
+        js  = ["widgets/datepicker.js"]
+        css = {
+            "all": [
+                "widgets/datepicker.css",
+                Stylesheet("widgets/print.css", attrs={"media": "print"}),
+            ]
+        }
+```
+
+`Stylesheet` lets you attach arbitrary HTML attributes to a `<link>` element. A plain string path emits `<link rel="stylesheet" href="…">` with no extra attributes; `Stylesheet(path, attrs={…})` merges the attrs into the tag:
+
+```python
+Stylesheet("widgets/print.css", attrs={"media": "print"})
+# → <link rel="stylesheet" href="widgets/print.css" media="print">
+
+Stylesheet("widgets/screen.css", attrs={"media": "screen", "id": "main-css"})
+# → <link rel="stylesheet" href="widgets/screen.css" media="screen" id="main-css">
+```
+
+## BLANK_CHOICE_LABEL
+
+The constant used for the empty / blank option in select widgets:
+
+```python
+from buraq.forms.forms import BLANK_CHOICE_LABEL
+
+BLANK_CHOICE_LABEL  # → "---------"
+```
+
+Use it when building choice lists that need an "empty" sentinel option consistent with Buraq's default rendering:
+
+```python
+choices = [(BLANK_CHOICE_LABEL, "")] + [(v, label) for v, label in MY_CHOICES]
+```

@@ -101,6 +101,31 @@ urlpatterns = [
 ]
 ```
 
+### preserve_request
+
+By default a redirect responds with `302 Found` (or `301 Moved Permanently`), which instructs the browser to repeat the request as `GET` regardless of the original method. Set `preserve_request = True` to return `307 Temporary Redirect` (or `308 Permanent Redirect`) instead, preserving the original HTTP method:
+
+```python
+urlpatterns = [
+    post(
+        "/submit/",
+        RedirectView.as_view(
+            url="/new-submit/",
+            preserve_request=True,   # 307 — client repeats the POST
+        ),
+    ),
+]
+```
+
+| `permanent` | `preserve_request` | Status |
+|---|---|---|
+| `False` (default) | `False` (default) | `302 Found` |
+| `True` | `False` | `301 Moved Permanently` |
+| `False` | `True` | `307 Temporary Redirect` |
+| `True` | `True` | `308 Permanent Redirect` |
+
+`put()`, `patch()`, and `delete()` handlers are also supported so that non-GET verbs receive the correct redirect response.
+
 ## FormView
 
 Handle a form's GET/POST cycle without tying it to a model. See [FormView](form-view.md) for the full reference.

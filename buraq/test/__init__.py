@@ -21,7 +21,15 @@ Usage::
 """
 
 from buraq.test.client import AsyncClient, RequestFactory
-from buraq.test.testcase import SimpleTestCase, TestCase, TransactionTestCase, override_settings
+from buraq.test.testcase import (
+    DiscoverRunner,
+    MessagesTestMixin,
+    SimpleTestCase,
+    TestCase,
+    TransactionTestCase,
+    captureOnCommitCallbacks,
+    override_settings,
+)
 
 __all__ = [
     "AsyncClient",
@@ -30,4 +38,7 @@ __all__ = [
     "SimpleTestCase",
     "TransactionTestCase",
     "override_settings",
+    "MessagesTestMixin",
+    "captureOnCommitCallbacks",
+    "DiscoverRunner",
 ]

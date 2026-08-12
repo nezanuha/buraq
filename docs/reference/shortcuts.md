@@ -43,6 +43,23 @@ post = await get_object_or_404(Post, id=pk)
 post = await get_object_or_404(Post, slug=slug, is_published=True)
 ```
 
+## get_list_or_404
+
+```python
+async def get_list_or_404(model, **kwargs) -> list
+```
+
+Fetch a filtered list of objects, or raise HTTP 404 if the result is empty.
+
+```python
+from buraq.shortcuts import get_list_or_404
+
+posts = await get_list_or_404(Post, is_published=True)
+# raises 404 if no published posts exist
+```
+
+Use `get_object_or_404` when you need a single object; use `get_list_or_404` when you need at least one result from a filtered set.
+
 ## render_to_string
 
 ```python

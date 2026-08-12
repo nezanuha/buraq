@@ -1,0 +1,631 @@
+{% extends "main.html" %}
+
+{% block tabs %}
+{{ super() }}
+
+<style>
+  .md-main__inner { margin-top: 0; }
+  .md-content { display: none; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #7c3aed 100%);
+    color: #fff;
+    padding: 5rem 1.5rem 4rem;
+    text-align: center;
+  }
+  .hero__badge {
+    display: inline-block;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 2rem;
+    padding: .25rem .9rem;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    margin: 0 0 1rem;
+    line-height: 1.15;
+  }
+  .hero h1 span { color: #a5b4fc; }
+  .hero__sub {
+    font-size: 1.15rem;
+    max-width: 42rem;
+    margin: 0 auto 2.25rem;
+    line-height: 1.7;
+    color: rgba(255,255,255,.85);
+  }
+  .hero__actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+  .hero__btn {
+    display: inline-block;
+    padding: .65rem 1.6rem;
+    border-radius: .5rem;
+    font-weight: 700;
+    font-size: .95rem;
+    text-decoration: none;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .hero__btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+  .hero__btn--primary { background: #fff; color: #4f46e5; }
+  .hero__btn--secondary { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+
+  /* Code snippet in hero */
+  .hero__code {
+    max-width: 52rem;
+    margin: 3rem auto 0;
+    text-align: left;
+    background: rgba(0,0,0,.35);
+    border-radius: .75rem;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.1);
+  }
+  .hero__code-bar {
+    background: rgba(0,0,0,.2);
+    padding: .5rem 1rem;
+    font-size: .78rem;
+    color: rgba(255,255,255,.5);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .hero__code-bar span { width: .7rem; height: .7rem; border-radius: 50%; display: inline-block; }
+  .hero__code pre {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    font-size: .85rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    color: #e2e8f0;
+  }
+  .hero__code .kw  { color: #a5b4fc; }
+  .hero__code .fn  { color: #67e8f9; }
+  .hero__code .st  { color: #86efac; }
+  .hero__code .cm  { color: rgba(255,255,255,.35); font-style: italic; }
+  .hero__code .dec { color: #fde68a; }
+
+  /* Page wrapper */
+  .page { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* Section */
+  .section { padding: 4.5rem 0; }
+  .section__label {
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #6366f1;
+    margin-bottom: .5rem;
+  }
+  .section__title {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 800;
+    margin: 0 0 .75rem;
+    color: var(--md-default-fg-color);
+  }
+  .section__sub {
+    font-size: 1.05rem;
+    color: var(--md-default-fg-color--light);
+    max-width: 36rem;
+    line-height: 1.7;
+    margin: 0 0 2.5rem;
+  }
+
+  /* Feature grid */
+  .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1.25rem; }
+  .feature {
+    background: var(--md-code-bg-color);
+    border: 1px solid var(--md-default-fg-color--lightest);
+    border-radius: .75rem;
+    padding: 1.5rem;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .feature:hover { border-color: #6366f1; box-shadow: 0 4px 20px rgba(99,102,241,.12); }
+  .feature__icon { font-size: 1.8rem; margin-bottom: .75rem; display: block; }
+  .feature__title { font-weight: 700; font-size: 1rem; margin: 0 0 .4rem; color: var(--md-default-fg-color); }
+  .feature__body { font-size: .875rem; color: var(--md-default-fg-color--light); line-height: 1.65; margin: 0; }
+  .feature--star { border-color: #6366f1; background: linear-gradient(135deg, rgba(99,102,241,.06), rgba(124,58,237,.04)); }
+  .feature--star .feature__title::after { content: " ✦"; color: #6366f1; font-size: .75rem; }
+
+  /* Comparison table */
+  .compare-wrap { overflow-x: auto; }
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+  }
+  .compare th {
+    padding: .75rem 1rem;
+    text-align: center;
+    font-weight: 700;
+    border-bottom: 2px solid var(--md-default-fg-color--lightest);
+    color: var(--md-default-fg-color);
+  }
+  .compare th:first-child { text-align: left; }
+  .compare th.buraq { color: #6366f1; }
+  .compare td {
+    padding: .65rem 1rem;
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+    text-align: center;
+    color: var(--md-default-fg-color--light);
+  }
+  .compare td:first-child { text-align: left; font-weight: 500; color: var(--md-default-fg-color); }
+  .compare tr:last-child td { border-bottom: none; }
+  .yes { color: #22c55e; font-size: 1.1rem; }
+  .no  { color: #ef4444; font-size: 1.1rem; }
+  .partial { color: #f59e0b; font-size: .85rem; font-weight: 600; }
+
+  /* CTA */
+  .cta {
+    background: linear-gradient(135deg, #3730a3, #7c3aed);
+    border-radius: 1rem;
+    padding: 3.5rem 2rem;
+    text-align: center;
+    color: #fff;
+    margin: 2rem 0 4.5rem;
+  }
+  .cta h2 { font-size: 1.9rem; font-weight: 800; margin: 0 0 .75rem; }
+  .cta p  { font-size: 1.05rem; color: rgba(255,255,255,.8); margin: 0 0 2rem; }
+  .cta code {
+    display: inline-block;
+    background: rgba(0,0,0,.35);
+    border-radius: .5rem;
+    padding: .5rem 1.25rem;
+    font-size: .95rem;
+    letter-spacing: .02em;
+    color: #a5b4fc;
+    margin-bottom: 1.75rem;
+  }
+  .cta__links { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+  .cta__btn {
+    display: inline-block;
+    padding: .65rem 1.6rem;
+    border-radius: .5rem;
+    font-weight: 700;
+    font-size: .95rem;
+    text-decoration: none;
+    transition: transform .15s;
+  }
+  .cta__btn:hover { transform: translateY(-2px); }
+  .cta__btn--primary { background: #fff; color: #4f46e5; }
+  .cta__btn--secondary { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+
+  /* divider */
+  .divider { border: none; border-top: 1px solid var(--md-default-fg-color--lightest); margin: 0; }
+
+  /* AI section */
+  .ai-section {
+    background: linear-gradient(135deg, rgba(99,102,241,.06) 0%, rgba(124,58,237,.04) 100%);
+    border: 1px solid rgba(99,102,241,.15);
+    border-radius: 1rem;
+    padding: 3rem 2.5rem;
+    margin: 0;
+  }
+  .ai-section .section__label { color: #7c3aed; }
+  .ai-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  .ai-card {
+    background: var(--md-default-bg-color);
+    border: 1px solid var(--md-default-fg-color--lightest);
+    border-radius: .75rem;
+    padding: 1.25rem;
+  }
+  .ai-card__icon { font-size: 1.5rem; display: block; margin-bottom: .5rem; }
+  .ai-card__title { font-weight: 700; font-size: .95rem; margin: 0 0 .35rem; color: var(--md-default-fg-color); }
+  .ai-card__body { font-size: .85rem; color: var(--md-default-fg-color--light); line-height: 1.6; margin: 0; }
+  .ai-code {
+    background: var(--md-code-bg-color);
+    border: 1px solid var(--md-default-fg-color--lightest);
+    border-radius: .75rem;
+    overflow: hidden;
+    margin-top: 2rem;
+  }
+  .ai-code-bar {
+    background: rgba(99,102,241,.08);
+    padding: .45rem 1rem;
+    font-size: .78rem;
+    color: var(--md-default-fg-color--light);
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  }
+  .ai-code pre {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    font-size: .83rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    color: var(--md-code-fg-color);
+  }
+
+  @media (max-width: 600px) {
+    .hero { padding: 3.5rem 1rem 2.5rem; }
+    .section { padding: 3rem 0; }
+    .ai-section { padding: 2rem 1.25rem; }
+  }
+</style>
+
+<!-- ── Hero ─────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero__badge">🚀 Async-first · Production-ready</div>
+  <h1>The async Python framework<br><span>you already know how to use</span></h1>
+  <p class="hero__sub">
+    Buraq brings Django's developer experience — ORM, admin, forms, CBVs — to the modern
+    async ecosystem, built on FastAPI and SQLAlchemy 2.0.
+  </p>
+  <div class="hero__actions">
+    <a href="getting-started/installation/" class="hero__btn hero__btn--primary">Get Started</a>
+    <a href="getting-started/quickstart/" class="hero__btn hero__btn--secondary">Quickstart →</a>
+  </div>
+
+  <div class="hero__code">
+    <div class="hero__code-bar">
+      <span style="background:#ff5f57"></span>
+      <span style="background:#febc2e"></span>
+      <span style="background:#28c840"></span>
+      &nbsp;main.py
+    </div>
+    <pre><code><span class="kw">from</span> buraq <span class="kw">import</span> Buraq
+<span class="kw">from</span> buraq <span class="kw">import</span> models
+<span class="kw">from</span> buraq.shortcuts <span class="kw">import</span> render
+
+app = <span class="fn">Buraq</span>(settings_module=<span class="st">"config.settings"</span>)
+
+<span class="kw">class</span> <span class="fn">Post</span>(models.Model):
+    title   = models.<span class="fn">CharField</span>(max_length=<span class="st">200</span>)
+    content = models.<span class="fn">TextField</span>()
+    created = models.<span class="fn">DateTimeField</span>(auto_now_add=<span class="kw">True</span>)
+
+<span class="dec">@app.get</span>(<span class="st">"/posts/"</span>)
+<span class="kw">async def</span> <span class="fn">post_list</span>(request):
+    posts = <span class="kw">await</span> Post.objects.<span class="fn">filter</span>(is_published=<span class="kw">True</span>).<span class="fn">order_by</span>(<span class="st">"-created"</span>)
+    <span class="kw">return</span> <span class="fn">render</span>(request, <span class="st">"posts/list.html"</span>, {<span class="st">"posts"</span>: posts})</code></pre>
+  </div>
+</section>
+
+<!-- ── Features ──────────────────────────────────────────────── -->
+<div class="page">
+  <section class="section">
+    <p class="section__label">Why Buraq</p>
+    <h2 class="section__title">Everything Django gave you.<br>Now fully async.</h2>
+    <p class="section__sub">
+      Stop choosing between developer ergonomics and async performance.
+      Buraq gives you both without compromise.
+    </p>
+
+    <div class="features">
+
+      <div class="feature feature--star">
+        <span class="feature__icon">⚡</span>
+        <h3 class="feature__title">Automatic Transaction Rollback</h3>
+        <p class="feature__body">
+          SQLAlchemy rolls back the entire transaction automatically when an exception occurs mid-request —
+          no partial writes, no corrupt state. Django requires <code>ATOMIC_REQUESTS</code> or
+          explicit <code>@transaction.atomic</code> decorators to get the same safety.
+        </p>
+      </div>
+
+      <div class="feature feature--star">
+        <span class="feature__icon">🔄</span>
+        <h3 class="feature__title">True Async — No Wrappers</h3>
+        <p class="feature__body">
+          Every view, ORM call, form validator, and signal handler is natively <code>async</code>.
+          No <code>sync_to_async()</code>, no <code>asyncio.run()</code> hacks.
+          One event loop, zero thread overhead.
+        </p>
+      </div>
+
+      <div class="feature feature--star">
+        <span class="feature__icon">🛡️</span>
+        <h3 class="feature__title">Debug Error Page</h3>
+        <p class="feature__body">
+          A rich, browser-based debug page — source context, local variables per frame,
+          full request headers — shown automatically when <code>DEBUG = True</code>.
+          No third-party tools needed.
+        </p>
+      </div>
+
+      <div class="feature">
+        <span class="feature__icon">🗃️</span>
+        <h3 class="feature__title">Django-Style ORM</h3>
+        <p class="feature__body">
+          <code>Model.objects.filter()</code>, <code>Q</code> objects, <code>F</code> expressions,
+          <code>select_related</code>, signals, and <code>get_or_404</code> — powered by
+          SQLAlchemy 2.0 async under the hood.
+        </p>
+      </div>
+
+      <div class="feature">
+        <span class="feature__icon">🏗️</span>
+        <h3 class="feature__title">Built-in Admin Panel</h3>
+        <p class="feature__body">
+          A full CRUD admin at <code>/admin</code> — list, filter, search, create, edit, delete —
+          bundled inside Buraq. No sqladmin dependency, no extra setup.
+        </p>
+      </div>
+
+      <div class="feature">
+        <span class="feature__icon">📋</span>
+        <h3 class="feature__title">ModelForm & Validation</h3>
+        <p class="feature__body">
+          Auto-generate forms from model columns with field-level and cross-field async validation.
+          CSRF protection built in.
+        </p>
+      </div>
+
+      <div class="feature">
+        <span class="feature__icon">🧩</span>
+        <h3 class="feature__title">Class-Based Views</h3>
+        <p class="feature__body">
+          <code>ListView</code>, <code>DetailView</code>, <code>CreateView</code>,
+          <code>UpdateView</code>, <code>DeleteView</code> — the same CBV patterns Django developers
+          already know.
+        </p>
+      </div>
+
+      <div class="feature">
+        <span class="feature__icon">📡</span>
+        <h3 class="feature__title">FastAPI Underneath</h3>
+        <p class="feature__body">
+          Automatic OpenAPI docs at <code>/api/docs</code>, Pydantic integration,
+          dependency injection, and full Starlette middleware compatibility — for free.
+        </p>
+      </div>
+
+      <div class="feature">
+        <span class="feature__icon">🚀</span>
+        <h3 class="feature__title">Granian ASGI Server</h3>
+        <p class="feature__body">
+          Ships with <a href="https://github.com/emmett-framework/granian">Granian</a> — a Rust-based
+          ASGI server that outperforms uvicorn and hypercorn in benchmarks.
+          <code>buraq runserver</code> just works.
+        </p>
+      </div>
+
+      <div class="feature">
+        <span class="feature__icon">🔐</span>
+        <h3 class="feature__title">Auth & Permissions</h3>
+        <p class="feature__body">
+          Built-in user model, <code>login_required</code>, <code>permission_required</code>,
+          groups, and JWT-based session management — no extra packages.
+        </p>
+      </div>
+
+      <div class="feature">
+        <span class="feature__icon">🌍</span>
+        <h3 class="feature__title">i18n & Translations</h3>
+        <p class="feature__body">
+          Django-style internationalization with <code>gettext</code>, translatable model fields,
+          and per-request locale switching.
+        </p>
+      </div>
+
+      <div class="feature">
+        <span class="feature__icon">🧰</span>
+        <h3 class="feature__title">Full CLI</h3>
+        <p class="feature__body">
+          <code>startproject</code>, <code>startapp</code>, <code>migrate</code>,
+          <code>makemigrations</code>, <code>createsuperuser</code>, <code>collectstatic</code> —
+          everything you expect from a batteries-included framework.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ── Comparison ─────────────────────────────────────────── -->
+  <section class="section">
+    <p class="section__label">Comparison</p>
+    <h2 class="section__title">How Buraq stacks up</h2>
+    <p class="section__sub">The best of Django and FastAPI, without the tradeoffs of either.</p>
+
+    <div class="compare-wrap">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Django</th>
+            <th>FastAPI</th>
+            <th class="buraq">Buraq</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Async-first ORM</td>
+            <td><span class="no">✗</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Auto transaction rollback on error</td>
+            <td><span class="partial">opt-in</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Django-style ORM API</td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Admin panel</td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>ModelForm & validation</td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Class-based views</td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Auto OpenAPI docs</td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Type safety</td>
+            <td><span class="partial">partial</span></td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>No sync wrappers needed</td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Built-in debug error page</td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>manage.py CLI</td>
+            <td><span class="yes">✓</span></td>
+            <td><span class="no">✗</span></td>
+            <td><span class="yes">✓</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ── AI section ────────────────────────────────────────── -->
+  <section class="section">
+    <div class="ai-section">
+      <p class="section__label">AI-Ready</p>
+      <h2 class="section__title">The ideal application layer for AI products</h2>
+      <p class="section__sub">
+        Buraq's async-first design means every part of your stack — API calls, database writes,
+        background jobs — runs concurrently without blocking. Ship AI-powered apps faster.
+      </p>
+
+      <div class="ai-grid">
+
+        <div class="ai-card">
+          <span class="ai-card__icon">🤖</span>
+          <h3 class="ai-card__title">Non-blocking LLM calls</h3>
+          <p class="ai-card__body">
+            Await OpenAI, Anthropic, or any async AI SDK directly in your views.
+            No <code>sync_to_async()</code> — the event loop stays free while the model thinks.
+          </p>
+        </div>
+
+        <div class="ai-card">
+          <span class="ai-card__icon">📡</span>
+          <h3 class="ai-card__title">Auto OpenAPI for inference APIs</h3>
+          <p class="ai-card__body">
+            FastAPI underneath gives you typed request/response schemas and live docs at
+            <code>/api/docs</code> — perfect for AI microservices and model inference endpoints.
+          </p>
+        </div>
+
+        <div class="ai-card">
+          <span class="ai-card__icon">🚀</span>
+          <h3 class="ai-card__title">High-concurrency with Granian</h3>
+          <p class="ai-card__body">
+            Bundled Rust-based ASGI server handles hundreds of concurrent AI requests with
+            lower latency than gunicorn or uvicorn. No extra install required.
+          </p>
+        </div>
+
+        <div class="ai-card">
+          <span class="ai-card__icon">🗃️</span>
+          <h3 class="ai-card__title">Async storage for AI data</h3>
+          <p class="ai-card__body">
+            Store chat history, embeddings, user preferences, and model outputs via the
+            async ORM. Works with SQLite (dev), PostgreSQL, and MySQL out of the box.
+          </p>
+        </div>
+
+        <div class="ai-card">
+          <span class="ai-card__icon">⚙️</span>
+          <h3 class="ai-card__title">Background AI jobs</h3>
+          <p class="ai-card__body">
+            Offload slow inference, document indexing, or embedding generation to
+            <code>buraq worker</code> background tasks — results written to the DB when ready.
+          </p>
+        </div>
+
+        <div class="ai-card">
+          <span class="ai-card__icon">🔐</span>
+          <h3 class="ai-card__title">Auth for AI chat apps</h3>
+          <p class="ai-card__body">
+            Built-in user sessions, <code>login_required</code>, and rate limiting
+            (<code>slowapi</code>) — everything needed to secure a multi-user AI assistant.
+          </p>
+        </div>
+
+      </div>
+
+      <div class="ai-code">
+        <div class="ai-code-bar">✦ &nbsp;AI streaming endpoint — main.py</div>
+        <pre><code>from buraq import Buraq
+from buraq.contrib.auth.decorators import login_required
+from fastapi.responses import StreamingResponse
+from anthropic import AsyncAnthropic
+
+app  = Buraq(settings_module="config.settings")
+llm  = AsyncAnthropic()
+
+@app.post("/chat/")
+@login_required
+async def chat(request):
+    body   = await request.json()
+    prompt = body["message"]
+
+    async def token_stream():
+        async with llm.messages.stream(
+            model="claude-opus-5",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        ) as stream:
+            async for text in stream.text_stream:
+                yield text
+
+    return StreamingResponse(token_stream(), media_type="text/plain")</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ── CTA ────────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="cta">
+      <h2>Start building in minutes</h2>
+      <p>One command sets up a full project with database, admin, and auth ready to go.</p>
+      <code>pip install buraq &amp;&amp; buraq startproject myapp</code>
+      <div class="cta__links">
+        <a href="getting-started/installation/" class="cta__btn cta__btn--primary">Installation Guide</a>
+        <a href="getting-started/quickstart/" class="cta__btn cta__btn--secondary">Quickstart</a>
+        <a href="migrating-from-django/" class="cta__btn cta__btn--secondary">Migrating from Django</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% endblock %}
+
+{% block content %}{% endblock %}
+{% block footer %}{{ super() }}{% endblock %}

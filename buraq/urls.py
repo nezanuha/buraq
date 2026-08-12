@@ -75,16 +75,29 @@ class URLPattern:
 
 @dataclass
 class URLInclude:
-    module_path: str
+    module_path: str | None
     _prefix: str = ""
     namespace: str = ""
+    _inline_patterns: list = field(default_factory=list)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def include(module_path: str, namespace: str = "") -> URLInclude:
-    """Include urlpatterns from another module."""
-    return URLInclude(module_path, namespace=namespace)
+def include(module_path_or_patterns, namespace: str = "") -> URLInclude:
+    """
+    Include urlpatterns from a module path string or an inline list of patterns.
+
+    # Module path (standard):
+    path('/auth', include('buraq.contrib.auth.urls'))
+
+    # Inline list — useful when patterns are already imported:
+    path('/auth', include(auth_patterns, namespace="auth"))
+    """
+    if isinstance(module_path_or_patterns, (list, tuple)):
+        inc = URLInclude(module_path=None, namespace=namespace)
+        inc._inline_patterns = list(module_path_or_patterns)
+        return inc
+    return URLInclude(module_path_or_patterns, namespace=namespace)
 
 
 _ALL_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
@@ -196,6 +209,72 @@ def reverse_lazy(name: str, **path_params: Any):
     return _lazy_reverse(name, **path_params)
 
 
+class ResolverMatch:
+    """Holds the result of a successful URL resolve() call."""
+
+    def __init__(self, func, args: tuple, kwargs: dict, url_name: str = "", namespace: str = ""):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.url_name = url_name
+        self.namespace = namespace
+        self.view_name = f"{namespace}:{url_name}" if namespace else url_name
+
+    def __repr__(self):
+        return f"ResolverMatch(func={self.func!r}, kwargs={self.kwargs!r}, url_name={self.url_name!r})"
+
+
+def resolve(path_str: str) -> ResolverMatch:
+    """
+    Resolve a URL path to its view function and kwargs.
+
+    Raises `Resolver404` if no route matches.
+    """
+    from buraq.exceptions import Resolver404
+
+    for name, registered_path in _route_registry.items():
+        pattern = re.sub(r"\{(\w+)\}", r"(?P<\1>[^/]+)", registered_path)
+        m = re.fullmatch(pattern, path_str.rstrip("/") or "/")
+        if m:
+            namespace, _, url_name = name.rpartition(":")
+            return ResolverMatch(
+                func=None,
+                args=(),
+                kwargs=m.groupdict(),
+                url_name=url_name or name,
+                namespace=namespace,
+            )
+    raise Resolver404(f"No URL pattern matches {path_str!r}")
+
+
+def re_path(regex: str, view: Any, name: str = "", **extra) -> URLPattern:
+    """
+    Register a URL with a raw regex pattern.
+
+    Unlike path(), the pattern must be a full Python regex (anchored implicitly).
+    Named groups (``(?P<pk>\\d+)``) become kwargs.
+
+    Usage::
+
+        from buraq.urls import re_path
+
+        urlpatterns = [
+            re_path(r"/articles/(?P<pk>[0-9]+)", views.article_detail, name="article_detail"),
+        ]
+    """
+    # Convert named regex groups to FastAPI path params for registration
+    fastapi_path = re.sub(r"\(\?P<(\w+)>[^)]+\)", r"{\1}", regex)
+    fastapi_path = "/" + fastapi_path.lstrip("/")
+    pattern = URLPattern.__new__(URLPattern)
+    pattern.path = fastapi_path
+    pattern.view = view
+    pattern.name = name
+    pattern.methods = _ALL_METHODS
+    pattern.extra = extra
+    pattern.param_types = {}
+    return pattern
+
+
 def reverse(name: str, **path_params: Any) -> str:
     """
     Return the URL path for a named route.
@@ -215,7 +294,8 @@ def reverse(name: str, **path_params: Any) -> str:
         reverse("post_detail", pk=42)        # → "/ar/posts/42"
     """
     if name not in _route_registry:
-        raise ValueError(f"No URL pattern with name {name!r}. Did you set name= on path()?")
+        from buraq.exceptions import NoReverseMatch
+        raise NoReverseMatch(f"No URL pattern with name {name!r}. Did you set name= on path()?")
 
     path_str = _route_registry[name]
 
@@ -344,8 +424,11 @@ def register_urlpatterns(
             )
 
         elif isinstance(item, URLInclude):
-            module = importlib.import_module(item.module_path)
-            sub_patterns = getattr(module, "urlpatterns", [])
+            if item.module_path is None:
+                sub_patterns = item._inline_patterns
+            else:
+                module = importlib.import_module(item.module_path)
+                sub_patterns = getattr(module, "urlpatterns", [])
             ns = item.namespace or _namespace
             register_urlpatterns(
                 app, sub_patterns, prefix + item._prefix, _i18n=_i18n,

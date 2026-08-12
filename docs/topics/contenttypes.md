@@ -64,3 +64,60 @@ comment = await Comment.objects.create(
     body="Great post!",
 )
 ```
+
+## ContentType lookup helpers
+
+```python
+ct = await ContentType.get_for_model(Post)
+
+# Look up by natural key (app_label, model)
+ct = await ContentType.get_by_natural_key("blog", "post")
+
+# Get the Python class for a ContentType row
+model_class = ct.model_class()   # returns Post class, or None if not importable
+```
+
+## `GenericRelation` — reverse accessor
+
+Add `GenericRelation` to the *target* model to query all objects that point to it via a `GenericForeignKey`:
+
+```python
+from buraq.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from buraq.orm.base import Model
+from sqlalchemy import Column, Integer, String
+
+class Comment(Model):
+    content_type_id = Column(Integer)
+    object_id       = Column(Integer)
+    content_object  = GenericForeignKey()
+    body            = Column(String(500))
+
+class Post(Model):
+    title    = Column(String(200))
+    comments = GenericRelation(Comment)   # reverse accessor
+```
+
+Query through the reverse relation:
+
+```python
+post = await Post.objects.get(id=1)
+
+# All comments for this post
+comments = await post.comments.all()
+
+# Filtered
+recent = await post.comments.filter(created_at__gte=since)
+
+# Count
+n = await post.comments.count()
+
+# Create via relation (content_type_id and object_id filled automatically)
+new_comment = await post.comments.create(body="Nice!")
+```
+
+Use a dotted string to avoid circular imports:
+
+```python
+class Post(Model):
+    comments = GenericRelation("blog.models.Comment")
+```

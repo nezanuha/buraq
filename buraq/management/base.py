@@ -88,6 +88,7 @@ class BaseCommand:
     help: str = ""
     requires_migrations_checks: bool = False
     requires_system_checks: bool = False
+    requires_settings: bool = True
     suppressed_base_arguments: set = set()
 
     def __init__(self, stdout=None, stderr=None, no_color: bool = False):
@@ -142,6 +143,12 @@ class BaseCommand:
 
     def run_from_argv(self, argv: list) -> None:
         """Parse argv and execute the command."""
+        try:
+            from buraq.conf import settings as _s
+            _ = _s.configured
+        except ImportError:
+            if self.requires_settings:
+                raise
         subcommand = argv[1] if len(argv) > 1 else ""
         parser = self.create_parser(argv[0], subcommand)
         options = vars(parser.parse_args(argv[2:]))

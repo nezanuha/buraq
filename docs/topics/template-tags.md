@@ -240,3 +240,46 @@ All decorators accept:
 |---|---|---|
 | `name` | `str` | Override the name used in templates |
 | `is_safe` | `bool` | Wrap output in `Markup` to skip auto-escaping |
+
+---
+
+## Built-in filters
+
+Buraq registers 21 filters automatically — no `{% load %}` needed. They live in `buraq/template/builtins.py` and are installed via `register_builtins(env)` at startup.
+
+### Date & time
+
+| Filter | Usage |
+|---|---|
+| `date` | `{{ dt\|date("Y-m-d") }}` — full Django format-code set |
+| `time` | `{{ dt\|time("H:i:s") }}` |
+| `timesince` | `{{ dt\|timesince }}` → `"2 hours, 5 minutes"` |
+| `timeuntil` | `{{ dt\|timeuntil }}` → `"3 days"` |
+
+### Text
+
+| Filter | Usage |
+|---|---|
+| `truncatechars(n)` | `{{ text\|truncatechars(50) }}` |
+| `truncatewords(n)` | `{{ text\|truncatewords(10) }}` |
+| `wordcount` | `{{ body\|wordcount }}` |
+| `capfirst` | `{{ name\|capfirst }}` |
+| `addslashes` | `{{ val\|addslashes }}` |
+| `slugify` | `{{ title\|slugify }}` |
+| `linenumbers` | `{{ code\|linenumbers }}` |
+| `pluralize` | `{{ n\|pluralize }}` or `{{ n\|pluralize("y,ies") }}` |
+| `yesno` | `{{ flag\|yesno("yes,no,maybe") }}` |
+| `default_if_none` | `{{ val\|default_if_none("—") }}` |
+| `phone2numeric` | `{{ "HELLO"\|phone2numeric }}` → `"43556"` |
+| `floatformat(n)` | `{{ 3.14159\|floatformat(2) }}` → `"3.14"` |
+
+### HTML (marked safe — output not auto-escaped)
+
+| Filter | Usage |
+|---|---|
+| `linebreaks` | `{{ body\|linebreaks }}` |
+| `linebreaksbr` | `{{ body\|linebreaksbr }}` |
+| `urlize` | `{{ text\|urlize }}` |
+| `escapejs` | `var x = "{{ val\|escapejs }}"` |
+| `json_script(id)` | `{{ data\|json_script("app-data") }}` |
+| `filesizeformat` | `{{ size\|filesizeformat }}` → `"1.2 MB"` |

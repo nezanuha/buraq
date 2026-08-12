@@ -43,3 +43,45 @@ class ContentType(Model):
             model=model_name,
         )
         return ct
+
+    @classmethod
+    async def get_by_natural_key(cls, app_label: str, model: str) -> "ContentType":
+        """Look up a ContentType by its natural key (app_label, model)."""
+        ct = await cls.objects.get_or_none(app_label=app_label, model=model)
+        if ct is None:
+            raise cls.DoesNotExist(
+                f"ContentType matching (app_label={app_label!r}, model={model!r}) not found."
+            )
+        return ct
+
+    def model_class(self):
+        """
+        Return the Python class for this ContentType, or None if not importable.
+
+        Searches all installed app modules for a class whose name matches
+        ``self.model`` (case-insensitive) and whose module starts with
+        ``self.app_label``.
+        """
+        import importlib
+        try:
+            from buraq.conf import settings
+            installed = getattr(settings, "INSTALLED_APPS", [])
+        except Exception:
+            installed = []
+
+        for app in installed:
+            if not app.startswith(self.app_label):
+                continue
+            for mod_name in (f"{app}.models", app):
+                try:
+                    mod = importlib.import_module(mod_name)
+                    for attr in dir(mod):
+                        obj = getattr(mod, attr, None)
+                        if (
+                            isinstance(obj, type)
+                            and attr.lower() == self.model.lower()
+                        ):
+                            return obj
+                except ImportError:
+                    continue
+        return None

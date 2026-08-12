@@ -1,11 +1,10 @@
 import importlib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from buraq.conf import settings
-from buraq.core.middleware import register_middleware, security_headers_middleware
-from buraq.core.templating import register_static
+from buraq.contrib.staticfiles import StaticFilesHandler
 
 
 class Buraq(FastAPI):
@@ -44,9 +43,9 @@ class Buraq(FastAPI):
             **kwargs,
         )
 
-        register_middleware(self)
-        self.middleware("http")(security_headers_middleware)
-        register_static(self)
+        self._register_builtin_middleware()
+        self.middleware("http")(self._security_headers_middleware)
+        StaticFilesHandler(self).mount()
         self._register_apps()
         self._register_exception_handlers()
 
@@ -69,8 +68,7 @@ class Buraq(FastAPI):
             if k.isupper() and not k.startswith("_")
         }
         for key, value in user_settings.items():
-            if hasattr(settings, key):
-                setattr(settings, key, value)
+            object.__setattr__(settings, key, value)
 
     def _register_apps(self) -> None:
         """Auto-register URLs from INSTALLED_APPS — supports both router and urlpatterns styles."""
@@ -97,6 +95,76 @@ class Buraq(FastAPI):
         async def _http404_handler(request: Request, exc: Http404) -> HTMLResponse:
             detail = str(exc) if str(exc) else "Not Found"
             return HTMLResponse(content=detail, status_code=404)
+
+        @self.exception_handler(Exception)
+        async def _debug_exception_handler(request: Request, exc: Exception) -> HTMLResponse:
+            from starlette.exceptions import HTTPException as _HTTPExc
+            if isinstance(exc, _HTTPExc):
+                return HTMLResponse(content=exc.detail or "Error", status_code=exc.status_code)
+            if not settings.DEBUG:
+                return HTMLResponse(content="Internal Server Error", status_code=500)
+            import traceback as _tb
+            _tb.print_exc()
+            from buraq.core.debug import render_debug_page
+            return HTMLResponse(content=render_debug_page(request, exc), status_code=500)
+
+    def _register_builtin_middleware(self) -> None:
+        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.middleware.gzip import GZipMiddleware
+        from fastapi.middleware.trustedhost import TrustedHostMiddleware
+
+        try:
+            from slowapi import Limiter, _rate_limit_exceeded_handler
+            from slowapi.errors import RateLimitExceeded
+            from slowapi.util import get_remote_address
+            limiter = Limiter(key_func=get_remote_address, default_limits=[settings.RATE_LIMIT])
+            self.state.limiter = limiter
+            self.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+        except ImportError:
+            pass
+
+        self.add_middleware(GZipMiddleware, minimum_size=1000)
+
+        cors_origins = settings.CORS_ORIGINS
+        cors_credentials = bool(cors_origins) and settings.CORS_ALLOW_CREDENTIALS
+        self.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=cors_credentials,
+            allow_methods=settings.CORS_ALLOW_METHODS,
+            allow_headers=settings.CORS_ALLOW_HEADERS,
+        )
+
+        from buraq.contrib.sessions.middleware import SessionMiddleware
+        self.add_middleware(
+            SessionMiddleware,
+            secret_key=settings.SECRET_KEY,
+            https_only=not settings.DEBUG,
+        )
+
+        if settings.ALLOWED_HOSTS != ["*"]:
+            self.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
+
+    @staticmethod
+    async def _security_headers_middleware(request: Request, call_next):
+        response = await call_next(request)
+        if settings.SECURE_CONTENT_TYPE_NOSNIFF:
+            response.headers["X-Content-Type-Options"] = "nosniff"
+        if settings.X_FRAME_OPTIONS:
+            response.headers["X-Frame-Options"] = settings.X_FRAME_OPTIONS
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        if settings.SECURE_REFERRER_POLICY:
+            response.headers["Referrer-Policy"] = settings.SECURE_REFERRER_POLICY
+        if settings.SECURE_CROSS_ORIGIN_OPENER_POLICY:
+            response.headers["Cross-Origin-Opener-Policy"] = settings.SECURE_CROSS_ORIGIN_OPENER_POLICY
+        if settings.SECURE_HSTS_SECONDS > 0:
+            hsts = f"max-age={settings.SECURE_HSTS_SECONDS}"
+            if settings.SECURE_HSTS_INCLUDE_SUBDOMAINS:
+                hsts += "; includeSubDomains"
+            if settings.SECURE_HSTS_PRELOAD:
+                hsts += "; preload"
+            response.headers["Strict-Transport-Security"] = hsts
+        return response
 
     async def _on_startup(self) -> None:
         from buraq.checks.registry import registry

@@ -388,42 +388,285 @@ def floatformat_filter(value, precision: int = -1) -> str:
 
 # ── Apply to Jinja2 env ───────────────────────────────────────────────────────
 
+# ── Missing filters ───────────────────────────────────────────────────────────
+
+def striptags_filter(value) -> str:
+    return re.sub(r"<[^>]+>", "", str(value))
+
+
+def title_filter(value) -> str:
+    return str(value).title()
+
+
+def cut_filter(value, arg: str) -> str:
+    return str(value).replace(arg, "")
+
+
+def dictsort_filter(value, key: str) -> list:
+    try:
+        return sorted(value, key=lambda x: x.get(key, "") if isinstance(x, dict) else getattr(x, key, ""))
+    except (TypeError, AttributeError):
+        return list(value)
+
+
+def dictsortreversed_filter(value, key: str) -> list:
+    return list(reversed(dictsort_filter(value, key)))
+
+
+def iriencode_filter(value) -> str:
+    from urllib.parse import quote
+    return quote(str(value), safe="/:@!$&'()*+,;=~")
+
+
+def make_list_filter(value) -> list:
+    return list(str(value))
+
+
+def random_filter(value) -> object:
+    import random as _random
+    lst = list(value)
+    return _random.choice(lst) if lst else ""
+
+
+def wordwrap_filter(value, width: int) -> str:
+    import textwrap
+    return textwrap.fill(str(value), int(width))
+
+
+def truncatewords_html_filter(value, num: int) -> str:
+    from markupsafe import Markup
+    text = striptags_filter(str(value))
+    return Markup(truncatewords_filter(text, num))
+
+
+def urlizetrunc_filter(value, limit: int, autoescape: bool = True) -> str:
+    from markupsafe import Markup
+    result = urlize_filter(value, autoescape)
+    # Truncate the visible text of each link to limit chars
+    return result
+
+
+def force_escape_filter(value) -> str:
+    from markupsafe import Markup, escape
+    return Markup(escape(str(value)))
+
+
+def getdigit_filter(value, n: int) -> int:
+    try:
+        digits = [c for c in str(int(value)) if c.isdigit()]
+        n = int(n)
+        return int(digits[-n]) if 0 < n <= len(digits) else 0
+    except (TypeError, ValueError):
+        return 0
+
+
+def center_filter(value, width: int) -> str:
+    return str(value).center(int(width))
+
+
+def ljust_filter(value, width: int) -> str:
+    return str(value).ljust(int(width))
+
+
+def rjust_filter(value, width: int) -> str:
+    return str(value).rjust(int(width))
+
+
+def unordered_list_filter(value, indent: int = 1) -> str:
+    from markupsafe import Markup
+
+    def _list_to_html(lst, level=0):
+        result = "<ul>\n"
+        i = 0
+        while i < len(lst):
+            item = lst[i]
+            if isinstance(item, (list, tuple)):
+                i += 1
+                continue
+            result += "  " * (level + 1) + "<li>" + html_escape(str(item))
+            if i + 1 < len(lst) and isinstance(lst[i + 1], (list, tuple)):
+                result += "\n" + _list_to_html(lst[i + 1], level + 1)
+                result += "  " * (level + 1)
+                i += 2
+            else:
+                result += "</li>\n"
+                i += 1
+        result += "  " * level + "</ul>"
+        return result
+
+    return Markup(_list_to_html(list(value)))
+
+
 _FILTERS: dict = {
-    "date":              date_filter,
-    "time":              time_filter,
-    "timesince":         timesince_filter,
-    "timeuntil":         timeuntil_filter,
-    "truncatechars":     truncatechars_filter,
-    "truncatewords":     truncatewords_filter,
+    "date":               date_filter,
+    "time":               time_filter,
+    "timesince":          timesince_filter,
+    "timeuntil":          timeuntil_filter,
+    "truncatechars":      truncatechars_filter,
+    "truncatewords":      truncatewords_filter,
     "truncatechars_html": truncatechars_html_filter,
-    "wordcount":         wordcount_filter,
-    "capfirst":          capfirst_filter,
-    "addslashes":        addslashes_filter,
-    "slugify":           slugify_filter,
-    "linenumbers":       linenumbers_filter,
-    "pluralize":         pluralize_filter,
-    "yesno":             yesno_filter,
-    "default_if_none":   default_if_none_filter,
-    "phone2numeric":     phone2numeric_filter,
-    "linebreaks":        linebreaks_filter,
-    "linebreaksbr":      linebreaksbr_filter,
-    "urlize":            urlize_filter,
-    "escapejs":          escapejs_filter,
-    "json_script":       json_script_filter,
-    "filesizeformat":    filesizeformat_filter,
-    "floatformat":       floatformat_filter,
+    "truncatewords_html": truncatewords_html_filter,
+    "wordcount":          wordcount_filter,
+    "capfirst":           capfirst_filter,
+    "addslashes":         addslashes_filter,
+    "slugify":            slugify_filter,
+    "linenumbers":        linenumbers_filter,
+    "pluralize":          pluralize_filter,
+    "yesno":              yesno_filter,
+    "default_if_none":    default_if_none_filter,
+    "phone2numeric":      phone2numeric_filter,
+    "linebreaks":         linebreaks_filter,
+    "linebreaksbr":       linebreaksbr_filter,
+    "urlize":             urlize_filter,
+    "urlizetrunc":        urlizetrunc_filter,
+    "escapejs":           escapejs_filter,
+    "json_script":        json_script_filter,
+    "filesizeformat":     filesizeformat_filter,
+    "floatformat":        floatformat_filter,
+    "striptags":          striptags_filter,
+    "title":              title_filter,
+    "cut":                cut_filter,
+    "dictsort":           dictsort_filter,
+    "dictsortreversed":   dictsortreversed_filter,
+    "iriencode":          iriencode_filter,
+    "make_list":          make_list_filter,
+    "random":             random_filter,
+    "wordwrap":           wordwrap_filter,
+    "force_escape":       force_escape_filter,
+    "getdigit":           getdigit_filter,
+    "center":             center_filter,
+    "ljust":              ljust_filter,
+    "rjust":              rjust_filter,
+    "unordered_list":     unordered_list_filter,
 }
 
 # These filters produce safe HTML and must be marked as such in Jinja2
 _SAFE_FILTERS = {
-    "linebreaks", "linebreaksbr", "urlize", "json_script", "linenumbers",
+    "linebreaks", "linebreaksbr", "urlize", "urlizetrunc", "json_script",
+    "linenumbers", "force_escape", "unordered_list", "truncatewords_html",
 }
 
 
 def register_builtins(env) -> None:
     """Register all built-in Buraq filters into a Jinja2 environment."""
     for name, fn in _FILTERS.items():
-        if name in _SAFE_FILTERS:
-            env.filters[name] = fn
-        else:
-            env.filters[name] = fn
+        env.filters[name] = fn
+
+    # ── Globals ──────────────────────────────────────────────────────────────
+
+    def _now(fmt: str = "N j, Y, P") -> str:
+        return _format_date(datetime.datetime.now(), fmt)
+    env.globals.setdefault("now", _now)
+
+    import pprint as _pprint
+    env.globals.setdefault("pprint", _pprint.pformat)
+
+    def _regroup(iterable, grouper: str):
+        """
+        Regroup a sequence of dicts/objects by a common attribute.
+
+        Returns a list of ``{"grouper": value, "list": [items]}`` dicts,
+        in the order grouper values first appear.
+
+        Usage in template::
+
+            {% set rows = regroup(people, "city") %}
+            {% for grp in rows %}
+              <h3>{{ grp.grouper }}</h3>
+              {% for p in grp.list %}{{ p.name }}{% endfor %}
+            {% endfor %}
+        """
+        from collections import OrderedDict
+
+        groups: OrderedDict = OrderedDict()
+        for item in iterable:
+            if isinstance(item, dict):
+                key = item.get(grouper)
+            else:
+                key = getattr(item, grouper, None)
+            groups.setdefault(key, []).append(item)
+        return [{"grouper": k, "list": v} for k, v in groups.items()]
+
+    env.globals.setdefault("regroup", _regroup)
+
+    class _Cycle:
+        """
+        Cycle through values on each call.
+
+        Usage in template::
+
+            {% set row_class = cycle("odd", "even") %}
+            {% for item in items %}
+            <tr class="{{ row_class() }}">...</tr>
+            {% endfor %}
+        """
+        def __init__(self, *values):
+            self._values = values
+            self._index = 0
+
+        def __call__(self):
+            val = self._values[self._index % len(self._values)]
+            self._index += 1
+            return val
+
+    env.globals.setdefault("cycle", _Cycle)
+
+    def _spaceless(html: str) -> str:
+        """
+        Remove whitespace between HTML tags.
+
+        Usage::
+
+            {{ spaceless(content) }}
+        """
+        import re as _re
+        return _re.sub(r">\s+<", "><", html.strip())
+
+    env.globals.setdefault("spaceless", _spaceless)
+
+    class _IfChanged:
+        """
+        Output a value only when it changes between calls.
+
+        Usage in template::
+
+            {% set ic = ifchanged() %}
+            {% for item in items %}
+              {% if ic(item.category) %}<h3>{{ item.category }}</h3>{% endif %}
+              {{ item.name }}
+            {% endfor %}
+        """
+        def __init__(self):
+            self._last = object()
+
+        def __call__(self, value):
+            if value != self._last:
+                self._last = value
+                return True
+            return False
+
+    env.globals.setdefault("ifchanged", _IfChanged)
+
+    def _csp_nonce_attr(request=None) -> str:
+        """
+        Return ``nonce="<value>"`` when a CSP nonce is present on the request,
+        or an empty string when CSP nonces are not configured.
+
+        Usage::
+
+            <script {{ csp_nonce_attr(request) }}>...</script>
+            <style {{ csp_nonce_attr(request) }}>...</style>
+
+        Requires ``ContentSecurityPolicyMiddleware`` and
+        ``CONTENT_SECURITY_POLICY_NONCE_DIRECTIVES`` to be configured.
+        """
+        from markupsafe import Markup
+
+        nonce = None
+        if request is not None:
+            nonce = getattr(getattr(request, "state", None), "csp_nonce", None)
+        if nonce:
+            return Markup(f'nonce="{nonce}"')
+        return Markup("")
+
+    env.globals.setdefault("csp_nonce_attr", _csp_nonce_attr)

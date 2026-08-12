@@ -1,0 +1,66 @@
+{% extends "admin/base.html" %}
+{% block title %}Delete {{ ma.get_verbose_name() | title }}{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs">
+  <a href="/admin/">Home</a>
+  <span class="sep text-neutral">/</span>
+  <span class="text-neutral">{{ ma.get_app_label() | replace("_", " ") | title }}</span>
+  <span class="sep text-neutral">/</span>
+  <a href="/admin/{{ app_label }}/{{ model_name }}/">{{ ma.get_verbose_name_plural() | title }}</a>
+  <span class="sep text-neutral">/</span>
+  <a href="/admin/{{ app_label }}/{{ model_name }}/{{ obj_id }}/change/" class="text-neutral">#{{ obj_id }}</a>
+  <span class="sep text-neutral">/</span>
+  <span>Delete</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-hd">
+  <h1 class="page-title">Delete {{ ma.get_verbose_name() | title }}</h1>
+</div>
+
+<div class="max-w-[32rem]">
+
+  <div class="alert alert-soft alert-error flash">
+    <strong>Are you sure?</strong>
+    This will permanently delete the {{ ma.get_verbose_name() }} shown below. This action cannot be undone.
+  </div>
+
+  <div class="card card-outline mb-5">
+    <div class="card-content">
+      <table class="table table-sm w-full">
+        <tbody>
+          {% for key, value in obj.items() %}
+          <tr>
+            <td class="text-neutral font-semibold text-sm w-2/5 whitespace-nowrap">
+              {{ key | replace("_", " ") | title }}
+            </td>
+            <td class="text-sm">
+              {% if value is none %}
+                <span class="text-neutral">—</span>
+              {% elif value == True %}
+                <span class="badge badge-soft badge-success badge-sm">Yes</span>
+              {% elif value == False %}
+                <span class="badge badge-soft badge-error badge-sm">No</span>
+              {% else %}
+                {{ value }}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <form method="post" class="flex gap-2 items-center">
+    {{ csrf_input(request) }}
+    <button type="submit" class="btn btn-error btn-sm">Yes, delete</button>
+    <a href="/admin/{{ app_label }}/{{ model_name }}/{{ obj_id }}/change/"
+       class="btn btn-ghost btn-sm">Cancel</a>
+  </form>
+
+</div>
+{% endblock %}

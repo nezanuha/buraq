@@ -91,14 +91,14 @@ class JsonResponse(HttpResponse):
         return JsonResponse([1, 2, 3], safe=False)
         return JsonResponse({"error": "not found"}, status=404)
 
-    ``safe=True`` (default) restricts the top-level value to a dict.
-    Set ``safe=False`` to serialize lists, primitives, etc.
+    ``safe`` is ``False`` by default, allowing any JSON-serializable type.
+    Set ``safe=True`` to restrict the top-level value to a dict.
     """
 
     def __init__(
         self,
         data: Any,
-        safe: bool = True,
+        safe: bool = False,
         status: int = 200,
         json_opts: int = 0,
     ) -> None:
@@ -200,6 +200,49 @@ class HttpResponseServerError(HttpResponse):
 
 
 # ── Exception ──────────────────────────────────────────────────────────────────
+
+class FileResponse(HttpResponse):
+    """
+    Serve a file from disk with the correct Content-Type and Content-Disposition.
+
+    Usage::
+
+        return FileResponse("/path/to/report.pdf")
+        return FileResponse("/path/to/data.csv", filename="export.csv")
+        return FileResponse("/path/to/image.png", as_attachment=False)
+
+    ``as_attachment=True`` (default) sets ``Content-Disposition: attachment``
+    so the browser downloads the file rather than rendering it inline.
+    Set ``as_attachment=False`` for inline display (e.g. images, PDFs in a viewer).
+    """
+
+    def __init__(
+        self,
+        file_path: str,
+        filename: str | None = None,
+        as_attachment: bool = True,
+        content_type: str | None = None,
+    ) -> None:
+        import mimetypes
+        from pathlib import Path
+
+        path = Path(file_path)
+        if not path.is_file():
+            raise FileNotFoundError(f"FileResponse: {file_path!r} does not exist.")
+
+        data = path.read_bytes()
+        name = filename or path.name
+
+        if content_type is None:
+            guessed, _ = mimetypes.guess_type(name)
+            content_type = guessed or "application/octet-stream"
+
+        super().__init__(content=data, content_type=content_type, status=200)
+
+        disposition = "attachment" if as_attachment else "inline"
+        self["Content-Disposition"] = f'{disposition}; filename="{name}"'
+        self["Content-Length"] = str(len(data))
+
 
 class Http404(Exception):
     """

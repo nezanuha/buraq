@@ -184,4 +184,29 @@ class ExpressionWrapper:
         return self.expression
 
 
-__all__ = ["Value", "When", "Case", "OuterRef", "Subquery", "Exists", "ExpressionWrapper"]
+class JSONNull:
+    """
+    Explicit representation of the JSON scalar ``null``.
+
+    Use instead of Python's ``None`` when you need to store or query for
+    the JSON ``null`` primitive rather than SQL ``NULL``.
+
+    Usage::
+
+        await Post.objects.filter(metadata=JSONNull())
+        await Post.objects.create(metadata=JSONNull())
+
+    Resolves to the SQLAlchemy JSON literal ``null``.
+    """
+
+    def resolve(self, model) -> sa.sql.ColumnElement:
+        return sa.cast(sa.literal(None), sa.JSON)
+
+    def __repr__(self) -> str:
+        return "JSONNull()"
+
+
+__all__ = [
+    "Value", "When", "Case", "OuterRef", "Subquery", "Exists",
+    "ExpressionWrapper", "JSONNull",
+]

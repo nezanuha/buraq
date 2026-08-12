@@ -160,3 +160,51 @@ class Paginator:
             items = self.object_list[bottom:top]
 
         return Page(items, number, self)
+
+
+# ── Async paginator ────────────────────────────────────────────────────────────
+
+class AsyncPage(Page):
+    """
+    Identical to :class:`Page` but returned by :class:`AsyncPaginator`.
+    Exists as a distinct class so isinstance checks work cleanly.
+    """
+
+
+class AsyncPaginator(Paginator):
+    """
+    Async-only paginator — ``page()`` always awaits the count from a QuerySet
+    and uses async slicing. Use this instead of :class:`Paginator` when you
+    want to be explicit that the paginator is async-only.
+
+    Usage::
+
+        paginator = AsyncPaginator(Post.objects.filter(published=True), per_page=10)
+        page = await paginator.page(1)
+        for post in page:
+            print(post.title)
+    """
+
+    async def page(self, number) -> AsyncPage:
+        if self._count is None:
+            if hasattr(self.object_list, "count") and callable(self.object_list.count):
+                import asyncio
+                count = self.object_list.count()
+                if asyncio.iscoroutine(count):
+                    count = await count
+                self._count = count
+            else:
+                self._count = len(self.object_list)
+
+        number = self.validate_number(number)
+        bottom = (number - 1) * self.per_page
+        top = bottom + self.per_page
+        if top + self.orphans >= self.count:
+            top = self.count
+
+        if hasattr(self.object_list, "offset"):
+            items = await self.object_list.offset(bottom).limit(top - bottom).all()
+        else:
+            items = self.object_list[bottom:top]
+
+        return AsyncPage(items, number, self)

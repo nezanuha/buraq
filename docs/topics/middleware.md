@@ -67,6 +67,74 @@ app.add_middleware(AuthenticationMiddleware)   # registered second → runs firs
 app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 ```
 
+## CommonMiddleware
+
+`CommonMiddleware` handles two common HTTP concerns:
+
+- **Trailing-slash redirects** — when `APPEND_SLASH = True` (the default), requests for URLs without a trailing slash are redirected to the slash version if the route exists.
+- **`Content-Length` header** — automatically adds a `Content-Length` header to responses that don't already have one.
+
+```python title="config/settings.py"
+MIDDLEWARE = [
+    ...
+    "buraq.middleware.common.CommonMiddleware",
+]
+APPEND_SLASH = True   # default; set False to disable redirect behaviour
+```
+
+## BrokenLinkEmailsMiddleware
+
+Sends an email to each address in `MANAGERS` when a 404 response is returned for a request that came from an internal `Referer` (i.e. a broken link on your own site). Silently ignores 404s from external referrers.
+
+```python title="config/settings.py"
+MIDDLEWARE = [
+    "buraq.middleware.common.CommonMiddleware",
+    "buraq.middleware.common.BrokenLinkEmailsMiddleware",   # must come after CommonMiddleware
+    ...
+]
+
+MANAGERS = [
+    ("Alice", "alice@example.com"),
+    ("Bob",   "bob@example.com"),
+]
+```
+
+If `MANAGERS` is empty or unset, the middleware is a no-op. The email includes the broken URL and the referrer so you can fix the link.
+
+## GZipMiddleware
+
+Compresses HTTP responses using gzip when the client sends `Accept-Encoding: gzip`. Only compresses text-based content types above a minimum size threshold.
+
+```python title="config/settings.py"
+MIDDLEWARE = [
+    ...
+    "buraq.middleware.gzip.GZipMiddleware",
+]
+```
+
+## ConditionalGetMiddleware
+
+Adds `ETag` and `Last-Modified` headers to responses and returns `304 Not Modified` when the browser's conditional headers (`If-None-Match`, `If-Modified-Since`) match, saving bandwidth for unchanged resources.
+
+```python title="config/settings.py"
+MIDDLEWARE = [
+    ...
+    "buraq.middleware.common.ConditionalGetMiddleware",
+]
+```
+
+## MessageMiddleware
+
+Persists flash messages in the session between requests. Required by `buraq.contrib.messages` and `SuccessMessageMixin`:
+
+```python title="config/settings.py"
+MIDDLEWARE = [
+    "buraq.contrib.sessions.middleware.SessionMiddleware",
+    "buraq.middleware.common.MessageMiddleware",   # must come after SessionMiddleware
+    ...
+]
+```
+
 ## Rate limiting
 
 Buraq includes SlowAPI rate limiting:

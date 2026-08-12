@@ -27,12 +27,15 @@ DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
 TEMPLATES_DIR = str(BASE_DIR / "templates")
 
 # STATIC FILES
-STATIC_DIR  = str(BASE_DIR / "static")
-STATIC_URL  = "/static/"
-STATIC_ROOT = str(BASE_DIR / "staticfiles")   # for collectstatic
+STATIC_URL       = "/static/"
+STATIC_ROOT      = str(BASE_DIR / "staticfiles")  # destination for collectstatic
+STATICFILES_DIRS = [str(BASE_DIR / "static")]      # source directories
+
+# Storage backend — ManifestStaticFilesStorage adds content-hashed filenames
+STATICFILES_STORAGE = "buraq.contrib.staticfiles.storage.StaticFilesStorage"
 
 # MEDIA
-MEDIA_DIR = ""
+MEDIA_DIR = str(BASE_DIR / "media")
 MEDIA_URL = "/media/"
 ```
 
@@ -158,9 +161,17 @@ See [Context Processors](../topics/context-processors.md) for writing custom pro
 ## Authentication
 
 ```python
-SECRET_KEY          = "your-jwt-secret-key"
-JWT_ALGORITHM       = "HS256"
-JWT_EXPIRY_MINUTES  = 60
+SECRET_KEY                 = "your-jwt-secret-key"
+JWT_ALGORITHM              = "HS256"
+JWT_EXPIRY_MINUTES         = 60
+
+# Custom user model — dotted path to your User model class
+# Default: "buraq.contrib.auth.models.User"
+AUTH_USER_MODEL            = "myapp.models.MyUser"
+
+# How long (in seconds) password-reset links remain valid
+# Default: 259200 (3 days)
+PASSWORD_RESET_TIMEOUT     = 259200
 ```
 
 ## Password validators

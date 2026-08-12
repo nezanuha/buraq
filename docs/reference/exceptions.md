@@ -118,6 +118,51 @@ except SuspiciousFileOperation as e:
 You do not normally raise this yourself — `FileSystemStorage` raises it
 automatically before any disk access occurs.
 
+## Request / security exceptions
+
+These are raised internally by Buraq and result in specific HTTP error responses. You rarely raise them yourself, but you may need to catch them in middleware or custom exception handlers.
+
+| Exception | HTTP status | Description |
+|---|---|---|
+| `DisallowedHost` | 400 | `Host` header not in `ALLOWED_HOSTS` |
+| `DisallowedRedirect` | 400 | Redirect target is not a safe URL |
+| `SuspiciousMultipartForm` | 400 | Malformed multipart upload |
+| `TooManyFieldsSent` | 400 | Form POST exceeds `DATA_UPLOAD_MAX_NUMBER_FIELDS` |
+| `TooManyFilesSent` | 400 | Multipart upload exceeds `DATA_UPLOAD_MAX_NUMBER_FILES` |
+| `RequestDataTooBig` | 400 | Request body exceeds `DATA_UPLOAD_MAX_MEMORY_SIZE` |
+| `RequestAborted` | — | Client disconnected before the response was sent |
+| `InvalidSessionKey` | — | Session key contains illegal characters |
+
+```python
+from buraq.exceptions import DisallowedHost, DisallowedRedirect
+
+# Catch in an exception handler middleware:
+try:
+    response = await call_next(request)
+except DisallowedHost:
+    return PlainTextResponse("Bad request", status_code=400)
+```
+
+## ORM / framework exceptions
+
+| Exception | When raised |
+|---|---|
+| `FieldDoesNotExist` | Accessing a field name that doesn't exist on a model |
+| `ViewDoesNotExist` | URL resolver cannot find the named view |
+| `EmptyResultSet` | A queryset optimisation path produces an empty set |
+| `FullResultSet` | A queryset optimisation path matches all rows |
+| `AppRegistryNotReady` | App models accessed before `AppConfig.ready()` |
+| `MiddlewareNotUsed` | Raised by middleware `__init__` to remove itself from the stack |
+
+```python
+from buraq.exceptions import FieldDoesNotExist
+
+try:
+    field = MyModel._meta.get_field("nonexistent")
+except FieldDoesNotExist:
+    ...
+```
+
 ## Reference
 
 | Exception | Module | When to raise / catch |
@@ -126,8 +171,22 @@ automatically before any disk access occurs.
 | `MultipleObjectsReturned` | `buraq.exceptions` | Catch after `get()` |
 | `ValidationError` | `buraq.exceptions` | Raise in validators / `clean()` |
 | `FieldError` | `buraq.exceptions` | Invalid field names in queries |
+| `FieldDoesNotExist` | `buraq.exceptions` | Non-existent model field |
 | `PermissionDenied` | `buraq.exceptions` | Access control → 403 |
 | `ImproperlyConfigured` | `buraq.exceptions` | Bad settings / startup |
 | `SuspiciousOperation` | `buraq.exceptions` | Malicious / malformed input |
 | `SuspiciousFileOperation` | `buraq.exceptions` | File name escapes storage root |
+| `SuspiciousMultipartForm` | `buraq.exceptions` | Malformed multipart body |
+| `DisallowedHost` | `buraq.exceptions` | Invalid Host header |
+| `DisallowedRedirect` | `buraq.exceptions` | Unsafe redirect URL |
+| `RequestAborted` | `buraq.exceptions` | Client disconnected |
+| `TooManyFieldsSent` | `buraq.exceptions` | POST field limit exceeded |
+| `TooManyFilesSent` | `buraq.exceptions` | File upload count exceeded |
+| `RequestDataTooBig` | `buraq.exceptions` | Body size limit exceeded |
+| `InvalidSessionKey` | `buraq.exceptions` | Illegal characters in session key |
+| `ViewDoesNotExist` | `buraq.exceptions` | Named view not found |
+| `EmptyResultSet` | `buraq.exceptions` | ORM optimisation — empty set |
+| `FullResultSet` | `buraq.exceptions` | ORM optimisation — full set |
+| `AppRegistryNotReady` | `buraq.exceptions` | Models accessed too early |
+| `MiddlewareNotUsed` | `buraq.exceptions` | Middleware self-removal |
 | `Http404` | `buraq.http` | Resource not found → 404 |

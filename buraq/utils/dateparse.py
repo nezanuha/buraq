@@ -39,6 +39,9 @@ _DURATION_RE = re.compile(
     r")?$"
 )
 
+# Pure ISO 8601 week period: P2W, P1.5W, -P3W
+_WEEK_ONLY_RE = re.compile(r"^(?P<sign>[-+]?)P(?P<weeks>\d+(?:\.\d+)?)W$")
+
 _SIMPLE_DURATION_RE = re.compile(
     r"^(?P<sign>[-+]?)(?:(?P<days>\d+) )?"
     r"(?P<hours>\d+):(?P<minutes>\d{2}):(?P<seconds>\d{2})"
@@ -128,6 +131,12 @@ def parse_duration(value: str) -> timedelta | None:
     if not value:
         return None
     value = value.strip()
+
+    # ISO 8601 week-only period: P2W, P1.5W
+    m = _WEEK_ONLY_RE.match(value)
+    if m:
+        sign = -1 if m["sign"] == "-" else 1
+        return sign * timedelta(weeks=float(m["weeks"]))
 
     # Try simple HH:MM:SS format first
     m = _SIMPLE_DURATION_RE.match(value)

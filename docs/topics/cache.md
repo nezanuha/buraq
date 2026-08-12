@@ -7,6 +7,7 @@
 CACHE_BACKEND = "buraq.contrib.cache.backends.memory.MemoryCacheBackend"
 
 # Redis (recommended for production)
+# Requires: uv add "buraq[redis]"  or  pip install "buraq[redis]"
 CACHE_BACKEND   = "buraq.contrib.cache.backends.redis.RedisCacheBackend"
 CACHE_REDIS_URL = "redis://localhost:6379/0"
 
@@ -165,6 +166,120 @@ async def post_detail(request, slug: str):
     return render(request, "posts/detail.html", {"post": post})
 ```
 
+## Multi-cache `CACHES` dict
+
+Configure multiple named backends the same way as Django's `CACHES` setting:
+
+```python title="config/settings.py"
+CACHES = {
+    "default": {
+        "BACKEND": "buraq.contrib.cache.backends.redis.RedisCacheBackend",
+        "LOCATION": "redis://localhost:6379/0",
+    },
+    "sessions": {
+        "BACKEND": "buraq.contrib.cache.backends.redis.RedisCacheBackend",
+        "LOCATION": "redis://localhost:6379/1",
+    },
+    "views": {
+        "BACKEND": "buraq.contrib.cache.backends.memory.MemoryCacheBackend",
+    },
+}
+```
+
+Access any backend by alias via the `caches` proxy:
+
+```python
+from buraq.contrib.cache import caches
+
+await caches["default"].set("key", value)
+await caches["sessions"].get("session:abc")
+await caches["views"].clear()
+```
+
+`cache` (the default-backend shortcut) still works as before.
+
+## `DatabaseCache` backend
+
+Store cached values in a database table — no Redis or Memcached required:
+
+```python title="config/settings.py"
+CACHE_BACKEND = "buraq.contrib.cache.backends.db.DatabaseCache"
+```
+
+Create the table first:
+
+```bash
+python manage.py createcachetable
+# or with a custom name:
+python manage.py createcachetable --table my_cache
+```
+
+By default `DatabaseCache` automatically culls expired entries on ~10% of writes to prevent unbounded table growth. Tune or disable via `CACHE_CULL_PROBABILITY`:
+
+```python title="config/settings.py"
+CACHE_CULL_PROBABILITY = 0.05   # cull on 5% of writes (default 0.1)
+CACHE_CULL_PROBABILITY = 0.0    # disable automatic culling
+```
+
+## `CacheMiddleware`
+
+Full per-view response caching as middleware — caches all `GET`/`HEAD` responses automatically:
+
+```python title="config/urls.py"
+from buraq.middleware.cache import CacheMiddleware
+
+app.add_middleware(CacheMiddleware, cache_timeout=300)
+```
+
+Use the layered pair for fine-grained control:
+
+```python
+from buraq.middleware.cache import FetchFromCacheMiddleware, UpdateCacheMiddleware
+
+# Order matters — Starlette middleware is applied outermost-last
+app.add_middleware(FetchFromCacheMiddleware)
+app.add_middleware(UpdateCacheMiddleware, cache_timeout=300)
+```
+
+Use a named cache alias:
+
+```python
+app.add_middleware(CacheMiddleware, cache_timeout=600, cache_alias="views")
+```
+
+Responses with `Cache-Control: no-store`, `private`, or `no-cache` headers are never stored.
+
+## `{% cache %}` template tag
+
+Cache a block of template output for a given number of seconds. Rendered HTML is stored in the default cache backend — no DB or view involvement needed.
+
+```html+jinja
+{% cache 600 "sidebar" %}
+  {# This block is rendered once, then cached for 10 minutes #}
+  {% for item in get_popular_posts() %}
+    <li>{{ item.title }}</li>
+  {% endfor %}
+{% endcache %}
+```
+
+The second argument is the **cache key** (a string literal). Make it unique per context when the content varies per user or URL:
+
+```html+jinja
+{% cache 300 "user-nav-" ~ request.user.id %}
+  <nav>Hello, {{ request.user.username }}</nav>
+{% endcache %}
+```
+
+Pass `0` to disable caching entirely (useful when `DEBUG = True`):
+
+```html+jinja
+{% cache 0 "nav" %}...{% endcache %}
+```
+
+The tag uses the default cache backend configured in `CACHE_BACKEND`. There is no way to select a named backend from the template — use `@cache_result` in a view helper if you need a specific backend.
+
+---
+
 ## Backends
 
 | Backend | Install | Best for |
@@ -173,3 +288,4 @@ async def post_detail(request, slug: str):
 | `FileCacheBackend` | built-in | Small sites, dev |
 | `RedisCacheBackend` | `uv add redis[hiredis]` | Production, multi-worker |
 | `MemcachedCacheBackend` | `uv add aiomcache` | Production, high-throughput |
+| `DatabaseCache` | built-in | Persistent cache, no extra service |

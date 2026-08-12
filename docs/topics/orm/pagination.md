@@ -111,3 +111,19 @@ Paginator(
 | `PageNotAnInteger` | Page number cannot be converted to an integer |
 | `EmptyPage` | Page number is out of range |
 | `InvalidPage` | Base class for the above two |
+
+## AsyncPaginator
+
+`AsyncPaginator` is an explicitly async-only variant of `Paginator`. It always awaits the queryset count before slicing, making it cleaner in codebases where you want to be explicit about async behaviour.
+
+```python
+from buraq.paginator import AsyncPaginator, AsyncPage
+
+paginator = AsyncPaginator(Post.objects.filter(published=True), per_page=10)
+page = await paginator.page(1)      # returns AsyncPage instead of Page
+
+# isinstance checks work cleanly
+assert isinstance(page, AsyncPage)
+```
+
+`AsyncPage` is a subclass of `Page` and has the same navigation API (`has_next()`, `next_page_number()`, etc.).

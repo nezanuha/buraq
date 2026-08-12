@@ -66,6 +66,47 @@ posts = await Post.objects.all().limit(10)
 posts = await Post.objects.all().limit(10).offset(20)
 ```
 
+## Fetch modes for deferred fields
+
+When a queryset uses `defer()` or `only()`, accessing a deferred field normally triggers an extra per-instance query. `fetch_mode()` lets you control that behaviour explicitly.
+
+```python
+from buraq.orm.manager import FETCH_ONE, FETCH_PEERS, FETCH_RAISE
+
+# Default — reload each instance individually on deferred-field access
+posts = await Post.objects.only("title").fetch_mode(FETCH_ONE).all()
+
+# Reload all peers in a single batch the first time any deferred field is accessed
+posts = await Post.objects.only("title").fetch_mode(FETCH_PEERS).all()
+
+# Raise FieldFetchBlocked immediately on any deferred-field access
+posts = await Post.objects.only("title").fetch_mode(FETCH_RAISE).all()
+```
+
+### totally_ordered
+
+`QuerySet.totally_ordered` returns `True` when the queryset's `ORDER BY` includes the primary key (or another unique column). A totally ordered queryset is safe for cursor-based pagination because the order is deterministic.
+
+```python
+qs = Post.objects.order_by("-created_at", "id")
+qs.totally_ordered  # → True (id is the PK)
+
+qs2 = Post.objects.order_by("-created_at")
+qs2.totally_ordered  # → False (created_at is not unique)
+```
+
+### in_bulk() with values/values_list
+
+`in_bulk()` now correctly handles querysets narrowed by `values()` or `values_list()`:
+
+```python
+# Returns {pk: dict}
+mapping = await Post.objects.values("id", "title").in_bulk([1, 2, 3])
+
+# Returns {pk: tuple}
+mapping = await Post.objects.values_list("id", "title").in_bulk([1, 2, 3])
+```
+
 ## Lookup expressions
 
 ```python
@@ -109,6 +150,42 @@ Post.objects.filter(created_at__day=15)                   # extract day
 | `year` | `EXTRACT(year ...)` | DateTimeField only |
 | `month` | `EXTRACT(month ...)` | DateTimeField only |
 | `day` | `EXTRACT(day ...)` | DateTimeField only |
+| `iso_year` | `EXTRACT(isoyear ...)` | ISO 8601 year (differs from `year` around new year) |
+| `iso_week_day` | `EXTRACT(isodow ...)` | ISO weekday: 1=Monday … 7=Sunday |
+| `contained_by` | `col <@ value` | PostgreSQL JSON/array: column is subset of value |
+| `has_key` | `col ? key` | PostgreSQL JSONB: top-level key exists |
+| `has_keys` | `col ?& keys` | PostgreSQL JSONB: all listed keys exist |
+| `has_any_keys` | `col ?\| keys` | PostgreSQL JSONB: any listed key exists |
+| `overlap` | `col && value` | PostgreSQL array/range: shares at least one element |
+
+### Date lookup examples
+
+```python
+# ISO year — useful for filtering around week boundaries (e.g. Dec 31 → ISO year +1)
+Post.objects.filter(published__iso_year=2025)
+
+# ISO weekday
+Post.objects.filter(published__iso_week_day=1)   # Monday only
+```
+
+### PostgreSQL JSON / array lookup examples
+
+```python
+# JSONB: find rows where "metadata" JSONB column contains the key "color"
+Product.objects.filter(metadata__has_key="color")
+
+# JSONB: find rows where all of these keys exist
+Product.objects.filter(metadata__has_keys=["color", "size"])
+
+# JSONB: find rows where any of these keys exist
+Product.objects.filter(metadata__has_any_keys=["color", "material"])
+
+# JSONB / array: column value is contained in the given set
+Product.objects.filter(tags__contained_by=["python", "django", "buraq"])
+
+# Array: find rows whose tags array overlaps with the given list
+Product.objects.filter(tags__overlap=["python", "async"])
+```
 
 ## Q objects — complex filters
 
@@ -496,6 +573,49 @@ post, created = await Post.objects.get_or_create(
 ```
 
 `update_or_create` is race-safe by the same mechanism.
+
+## Set operations — union / intersection / difference
+
+Combine multiple querysets using SQL set operations. All querysets must select the same columns.
+
+```python
+published = Post.objects.filter(is_published=True)
+featured  = Post.objects.filter(is_featured=True)
+
+# UNION — all published or featured posts (duplicates removed)
+result = await published.union(featured).all()
+
+# UNION ALL — keep duplicates
+result = await published.union(featured, all=True).all()
+
+# INTERSECT — posts that are both published AND featured
+result = await published.intersection(featured).all()
+
+# EXCEPT — published but not featured
+result = await published.difference(featured).all()
+```
+
+## extra() — raw SQL fragments
+
+`extra()` is a low-level escape hatch for SQL that can't be expressed with the ORM.
+
+```python
+posts = await Post.objects.extra(
+    select={"word_count": "length(content)"},
+    where=["LENGTH(content) > %s"],
+    params=[500],
+).all()
+```
+
+| Parameter | Purpose |
+|---|---|
+| `select` | Dict of `{alias: sql_expression}` added to the `SELECT` list |
+| `where` | List of raw `WHERE` clause fragments joined with `AND` |
+| `params` | Positional values for `%s` placeholders in `where` |
+| `tables` | Additional table names appended to `FROM` |
+
+!!! warning
+    `extra()` bypasses ORM safety guarantees. Prefer ORM expressions and `raw()` where possible.
 
 ## bulk_update — single round-trip
 

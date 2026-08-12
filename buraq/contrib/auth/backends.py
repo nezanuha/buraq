@@ -38,8 +38,8 @@ class ModelBackend:
     async def authenticate(self, request, *, username: str, password: str):
         import asyncio
 
+        from buraq.contrib.auth._passwords import verify_password
         from buraq.contrib.auth.models import User
-        from buraq.core.auth import verify_password
 
         try:
             user = await User.objects.get(username=username)
@@ -56,6 +56,55 @@ class ModelBackend:
         if not ok:
             return None
 
+        return user
+
+    async def get_user(self, user_id: int):
+        from buraq.contrib.auth.models import User
+        return await User.objects.get_or_none(id=user_id)
+
+
+class AllowAllUsersModelBackend(ModelBackend):
+    """
+    Like ``ModelBackend`` but authenticates inactive users too.
+
+    Use when you want to allow disabled accounts to authenticate (e.g. to
+    show a "your account is disabled" page after login rather than a generic
+    "invalid credentials" error).
+    """
+
+    async def authenticate(self, request, *, username: str, password: str):
+        import asyncio
+
+        from buraq.contrib.auth._passwords import verify_password
+        from buraq.contrib.auth.models import User
+
+        try:
+            user = await User.objects.get(username=username)
+        except Exception:
+            await asyncio.to_thread(verify_password, password, _DUMMY_HASH)
+            return None
+
+        ok = await asyncio.to_thread(verify_password, password, user.hashed_password)
+        return user if ok else None
+
+
+class AllowAllUsersRemoteUserBackend:
+    """
+    Remote-user backend that authenticates inactive users.
+
+    Pair with ``RemoteUserMiddleware`` when the upstream server performs
+    authentication and you want Buraq to accept the asserted identity even
+    for accounts with ``is_active=False``.
+    """
+
+    async def authenticate(self, request, *, remote_user: str):
+        if not remote_user:
+            return None
+        from buraq.contrib.auth.models import User
+        user, _ = await User.objects.get_or_create(
+            username=remote_user,
+            defaults={"is_active": True},
+        )
         return user
 
     async def get_user(self, user_id: int):

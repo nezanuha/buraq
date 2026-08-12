@@ -80,3 +80,17 @@ if await form.is_valid():
     post.author_id = request.user.id   # set extra fields
     await post.save()
 ```
+
+## HTML rendering
+
+Render a form directly to HTML without writing a template loop:
+
+```python
+form = PostForm()
+
+form.as_p()       # each field wrapped in <p>
+form.as_table()   # each field as a <tr> (wrap in <table> yourself)
+form.as_div()     # each field in <div class="form-group">
+```
+
+Each method emits labels, widgets, and inline error lists. Useful for quick prototypes or email bodies; use a custom template loop for full control over markup.

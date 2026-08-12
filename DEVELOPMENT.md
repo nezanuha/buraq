@@ -252,7 +252,7 @@ buraq/
 │   └── transaction.py  # atomic() — async context manager + decorator
 └── contrib/
     ├── auth/      # JWT auth, User model
-    ├── admin/     # SQLAdmin auto-admin
+    ├── admin/     # built-in admin panel (BuraqAdmin, ModelAdmin, AdminSite)
     ├── cache/     # memory / redis / file backends (all async)
     ├── email/     # smtp / console / file backends (all async)
     ├── messages/  # Flash messages (in-memory, sync OK)

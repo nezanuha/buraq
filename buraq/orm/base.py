@@ -4,7 +4,18 @@ import sqlalchemy as sa
 
 from buraq.core.db import Base
 from buraq.orm.fields import Field, ManyToManyField
-from buraq.orm.manager import DoesNotExist, Manager
+from buraq.orm.manager import DoesNotExist, Manager, _ReverseFKDescriptor
+
+
+class _ModelState:
+    """Mirrors Django's Model._state — tracks per-instance ORM state."""
+
+    __slots__ = ("adding", "db", "fields_cache")
+
+    def __init__(self, adding: bool = True, db: str = "default"):
+        self.adding = adding
+        self.db = db
+        self.fields_cache: dict = {}
 
 
 def _to_table_name(class_name: str) -> str:
@@ -181,7 +192,77 @@ class Model(Base):
         for attr_name, m2m in m2m_fields.items():
             m2m.contribute_to_class(cls, attr_name)
 
+        # ── 10. Set up reverse FK descriptors on parent models ────────────
+        for attr_name in list(vars(cls)):
+            attr = vars(cls)[attr_name]
+            if isinstance(attr, Field) and hasattr(attr, "_to") and hasattr(attr, "related_name"):
+                # ForeignKey field — register a reverse accessor on the parent model
+                target = getattr(attr, "_to", None)
+                related_name = getattr(attr, "related_name", "") or f"{cls.__name__.lower()}_set"
+                if target and isinstance(target, type) and issubclass(target, Base):
+                    fk_field = attr_name
+                    child_cls = cls
+                    descriptor = _ReverseFKDescriptor(child_cls, fk_field, related_name)
+                    if not hasattr(target, related_name):
+                        setattr(target, related_name, descriptor)
+
+    # ── Class-level helpers ────────────────────────────────────────────────────
+
+    @classmethod
+    def from_db(cls, db: str, field_names: list, values: tuple):
+        """
+        Construct an instance from database row data.
+
+        Mirrors Django's Model.from_db() — sets _state.adding=False and populates
+        _state.fields_cache with the loaded values.
+        """
+        kwargs = dict(zip(field_names, values, strict=False))
+        instance = cls(**kwargs)
+        instance._state.adding = False
+        instance._state.db = db
+        instance._state.fields_cache = dict(kwargs)
+        return instance
+
+    def get_deferred_fields(self) -> set:
+        """Return the set of field names that have NOT been loaded from the database."""
+        all_fields = {c.name for c in self.__class__.__table__.columns}
+        loaded = set(self._state.fields_cache.keys()) if self._state.fields_cache else all_fields
+        return all_fields - loaded
+
+    async def validate_constraints(self, exclude: list | None = None) -> None:
+        """Check all model constraints (unique, check). Raises ValidationError on failure."""
+        await self.validate_unique()
+
+    def get_absolute_url(self) -> str:
+        """Return the canonical URL for this object. Override in subclasses."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not define get_absolute_url()."
+        )
+
+    def natural_key(self) -> tuple:
+        """Return a tuple of field values that uniquely identify this object naturally (no PK)."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not define natural_key()."
+        )
+
+    # ── pk alias ──────────────────────────────────────────────────────────────
+
+    @property
+    def pk(self):
+        return self.id
+
+    @pk.setter
+    def pk(self, value):
+        self.id = value
+
     # ── Instance methods ──────────────────────────────────────────────────────
+
+    def __init__(self, **kwargs):
+        from buraq.signals import post_init, pre_init
+        pre_init.send_sync(sender=self.__class__, args=(), kwargs=kwargs)
+        self._state = _ModelState(adding=True)
+        super().__init__(**kwargs)
+        post_init.send_sync(sender=self.__class__, instance=self)
 
     async def save(self, update_fields: list | None = None) -> None:
         """Insert or update this instance. Participates in the current atomic() session if active."""

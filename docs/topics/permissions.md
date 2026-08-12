@@ -59,6 +59,19 @@ await UserPermission.objects.create(user_id=user.id, permission_id=perm.id)
 user._invalidate_perm_cache()   # clear cached set so next has_perm() re-fetches
 ```
 
+### Permission.user_perm_str
+
+`Permission` instances expose a `user_perm_str` read-only property that returns the formatted permission string ready for use with `has_perm()`:
+
+```python
+perm = await Permission.objects.get(codename="publish_post")
+perm.user_perm_str  # → "blog.publish_post"
+
+await user.has_perm(perm.user_perm_str)  # → True / False
+```
+
+The format is `"<app_label>.<codename>"`, where `app_label` is derived from `Permission.content_type`. If `content_type` is unset, `"buraq"` is used as the app label.
+
 ### In a view
 
 ```python

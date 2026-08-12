@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="darkberry">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Admin{% endblock %} — Buraq Admin</title>
+  <link rel="stylesheet" href="{{ buraq_static }}/admin/frutjam.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+
+    /* ── Shell layout ────────────────────────────────────── */
+    .admin-shell { display: flex; flex-direction: column; min-height: 100vh; }
+    .admin-body  { display: flex; flex: 1; min-height: 0; }
+
+    /* ── Top nav ─────────────────────────────────────────── */
+    .admin-topnav {
+      position: sticky; top: 0; z-index: 100;
+      height: 3rem; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 1rem;
+    }
+    .admin-brand {
+      font-weight: 700; font-size: .9375rem;
+      letter-spacing: -.01em; text-decoration: none;
+    }
+    .admin-topnav-end { display: flex; align-items: center; gap: .5rem; }
+
+    /* ── Sidebar ─────────────────────────────────────────── */
+    .admin-sidebar {
+      width: 13rem; flex-shrink: 0;
+      position: sticky; top: 3rem;
+      height: calc(100vh - 3rem); overflow-y: auto;
+    }
+
+    /* ── Main ────────────────────────────────────────────── */
+    .admin-main { flex: 1; min-width: 0; padding: 1.5rem 1.75rem; }
+
+    /* ── Breadcrumbs ─────────────────────────────────────── */
+    .breadcrumbs {
+      display: flex; align-items: center; gap: .25rem;
+      font-size: .8rem; margin-bottom: 1rem;
+    }
+    .breadcrumbs a { text-decoration: none; color: inherit; }
+    .breadcrumbs a:hover { text-decoration: underline; }
+    .breadcrumbs .sep { margin: 0 .1rem; }
+
+    /* ── Page header ─────────────────────────────────────── */
+    .page-hd {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 1rem; margin-bottom: 1.125rem;
+    }
+    .page-title { font-size: 1.3125rem; font-weight: 700; line-height: 1.2; margin: 0; }
+    .page-meta  { font-size: .78rem; margin-top: .2rem; }
+
+    /* ── Flash ───────────────────────────────────────────── */
+    .flash { margin-bottom: 1rem; }
+
+    /* ── List layout ─────────────────────────────────────── */
+    .list-wrap  { display: flex; gap: 1.25rem; align-items: flex-start; }
+    .list-main  { flex: 1; min-width: 0; }
+    .filter-sidebar { width: 10.5rem; flex-shrink: 0; font-size: .8125rem; }
+
+    /* ── Toolbar ─────────────────────────────────────────── */
+    .list-toolbar {
+      display: flex; align-items: center; gap: .5rem;
+      margin-bottom: .625rem; flex-wrap: wrap;
+    }
+    .select-count { font-size: .78rem; margin-left: auto; }
+
+    /* ── Table helpers ───────────────────────────────────── */
+    .th-sort {
+      display: inline-flex; align-items: center; gap: .2rem;
+      text-decoration: none; color: inherit; white-space: nowrap;
+    }
+    .col-check   { width: 2.25rem; }
+    .col-actions { width: 8rem; text-align: right; white-space: nowrap; }
+    .row-actions { display: flex; gap: .25rem; justify-content: flex-end; }
+    .truncate    { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 18rem; }
+
+    /* ── Form layout ─────────────────────────────────────── */
+    .form-wrap   { max-width: 38rem; }
+    .field-group { display: flex; flex-direction: column; gap: .375rem; margin-bottom: 1.1rem; }
+    .field-label { font-size: .8125rem; font-weight: 600; display: flex; align-items: center; gap: .2rem; }
+    .field-req   { color: var(--color-error, #ef4444); }
+    .field-hint  { font-size: .73rem; }
+    .field-readonly { font-size: .875rem; padding: .3rem 0; }
+    .form-textarea {
+      width: 100%; border-radius: .375rem;
+      border: 1px solid var(--color-neutral, #6b7280);
+      background: transparent; padding: .45rem .65rem;
+      font-size: .875rem; font-family: ui-monospace, monospace;
+      resize: vertical; outline: none; transition: border-color .15s;
+      color: inherit;
+    }
+    .form-textarea:focus { border-color: var(--color-primary, #7c3aed); }
+
+    /* ── Save row ────────────────────────────────────────── */
+    .save-row {
+      display: flex; align-items: center; gap: .5rem;
+      margin-top: 1.25rem; flex-wrap: wrap;
+      padding-top: 1rem; border-top: 1px solid var(--color-neutral, #6b7280);
+    }
+    .save-row-right { margin-left: auto; display: flex; gap: .5rem; }
+
+    /* ── Dashboard cards ─────────────────────────────────── */
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+      gap: .875rem;
+    }
+    .model-card-count  { font-size: 2rem; font-weight: 700; line-height: 1; margin: .4rem 0 .6rem; }
+    .model-card-name   { font-size: .875rem; font-weight: 600; }
+    .model-card-footer {
+      display: flex; gap: .375rem; padding-top: .625rem;
+      border-top: 1px solid var(--color-neutral, #6b7280);
+      margin-top: .25rem;
+    }
+
+    /* ── Misc ────────────────────────────────────────────── */
+    .w-full  { width: 100%; }
+  </style>
+</head>
+<body class="bg-base">
+<div class="admin-shell">
+
+  {# ── Top navbar ───────────────────────────────────────── #}
+  <nav class="admin-topnav surface surface-1 border-b border-neutral">
+    <a href="/admin/" class="admin-brand text-primary">⚙ Buraq Admin</a>
+    <div class="admin-topnav-end">
+      {% if user %}
+        <span class="text-sm text-neutral">{{ user.username }}</span>
+        <a href="/admin/logout" class="btn btn-ghost btn-sm">Sign out</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <div class="admin-body">
+
+    {# ── Sidebar ──────────────────────────────────────────── #}
+    <aside class="admin-sidebar surface surface-1 border-r border-neutral">
+      <ul class="menu menu-sm w-full">
+
+        <li class="menu-title">Navigation</li>
+        <li>
+          <a href="/admin/"
+             class="menu-item {% if current_path == '/admin/' %}menu-active{% endif %}">
+            Dashboard
+          </a>
+        </li>
+
+        {% for app_label, model_admins in app_groups.items() %}
+        <li class="menu-title">{{ app_label | replace("_", " ") | title }}</li>
+        {% for ma in model_admins %}
+        <li>
+          <a href="/admin/{{ app_label }}/{{ ma.get_model_name() }}/"
+             class="menu-item {% if ('/admin/' + app_label + '/' + ma.get_model_name() + '/') in current_path %}menu-active{% endif %}">
+            {{ ma.get_verbose_name_plural() | title }}
+          </a>
+        </li>
+        {% endfor %}
+        {% endfor %}
+
+      </ul>
+    </aside>
+
+    {# ── Main content ─────────────────────────────────────── #}
+    <main class="admin-main">
+      {% block breadcrumbs %}{% endblock %}
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const all = document.getElementById('select-all');
+    if (!all) return;
+    const boxes = () => document.querySelectorAll('.row-check');
+    const counter = document.getElementById('select-count');
+
+    function updateCount() {
+      const n = document.querySelectorAll('.row-check:checked').length;
+      if (counter) counter.textContent = n + ' selected';
+    }
+
+    all.addEventListener('change', function () {
+      boxes().forEach(b => { b.checked = all.checked; });
+      updateCount();
+    });
+
+    document.addEventListener('change', function (e) {
+      if (e.target.classList.contains('row-check')) updateCount();
+    });
+  });
+</script>
+</body>
+</html>

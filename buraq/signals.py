@@ -122,6 +122,23 @@ class Signal:
             responses.append((handler, result))
         return responses
 
+    def send_sync(self, sender, **kwargs) -> list:
+        """Fire all sync receivers synchronously (used from __init__ where no event loop runs)."""
+        import logging
+        _log = logging.getLogger("buraq.signals")
+        responses = []
+        for handler in self._live_receivers(sender):
+            if not inspect.iscoroutinefunction(handler):
+                try:
+                    result = handler(sender=sender, **kwargs)
+                    responses.append((handler, result))
+                except Exception:
+                    _log.exception(
+                        "Error in signal handler %r for signal sent by %r",
+                        handler, sender,
+                    )
+        return responses
+
     async def send_robust(self, sender, **kwargs) -> list:
         """Like send() but catches exceptions instead of raising."""
         responses = []

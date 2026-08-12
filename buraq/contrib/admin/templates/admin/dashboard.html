@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-hd">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-meta text-neutral">Welcome back, {{ user.username }}</p>
+  </div>
+</div>
+
+{% if model_cards %}
+<div class="model-grid">
+  {% for card in model_cards %}
+  <div class="card card-outline">
+    <div class="card-content">
+      <p class="model-card-app text-neutral text-xs">{{ card.app_label | replace("_", " ") | title }}</p>
+      <h3 class="model-card-name">{{ card.verbose_name_plural | title }}</h3>
+      <p class="model-card-count text-primary">{{ card.count }}</p>
+      <div class="model-card-footer">
+        <a href="/admin/{{ card.app_label }}/{{ card.model_name }}/"
+           class="btn btn-ghost btn-sm flex-1">View</a>
+        {% if card.can_create %}
+        <a href="/admin/{{ card.app_label }}/{{ card.model_name }}/add/"
+           class="btn btn-primary btn-sm flex-1">+ Add</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card card-outline">
+  <div class="card-content text-center py-12 px-4">
+    <p class="text-4xl mt-0 mb-2">📦</p>
+    <p class="font-semibold mt-0 mb-1">No models registered</p>
+    <p class="text-sm text-neutral">Add an <code>admin.py</code> to your app and call <code>site.register(MyModel)</code>.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

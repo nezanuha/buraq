@@ -116,7 +116,7 @@ constant_time_compare(expected_token, provided_token)
 ```python
 from buraq.utils.crypto import pbkdf2
 
-key = pbkdf2("my-password", "random-salt", iterations=260000, dklen=32)
+key = pbkdf2("my-password", "random-salt", iterations=1_800_000, dklen=32)
 ```
 
 ### salted_hmac
@@ -193,7 +193,112 @@ parse_duration("P1DT2H30M")
 
 parse_duration("1 02:30:00")   # simple DD HH:MM:SS format
 # → timedelta(days=1, hours=2, minutes=30)
+
+# ISO 8601 week-only periods — P<n>W
+parse_duration("P2W")     # → timedelta(weeks=2)
+parse_duration("P1.5W")   # → timedelta(weeks=1.5)
+parse_duration("-P3W")    # → timedelta(weeks=-3)
 ```
+
+---
+
+## Module Loading (`buraq.utils.module_loading`)
+
+```python
+from buraq.utils.module_loading import import_string, autodiscover_modules
+```
+
+### import_string
+
+Load any Python module, class, function, or value by its dotted path — useful for settings-driven pluggability. Top-level modules and submodules are supported directly.
+
+```python
+from buraq.utils.module_loading import import_string
+
+Backend = import_string("myapp.backends.LDAPBackend")
+backend = Backend()
+
+# Top-level and submodule imports also work
+import_string("json")        # returns the json module
+import_string("os.path")     # returns the os.path module
+```
+
+Raises `ImportError` if the path cannot be resolved.
+
+### autodiscover_modules
+
+Import a named submodule from every app in `INSTALLED_APPS` for side effects — signals, admin registrations, tasks, etc.
+
+```python
+from buraq.utils.module_loading import autodiscover_modules
+
+# In AppConfig.ready():
+autodiscover_modules("signals", "tasks")
+# → imports myapp.signals, otherapp.signals, myapp.tasks, …
+```
+
+Modules that don't exist are silently skipped.
+
+---
+
+## Decorators (`buraq.utils.decorators`)
+
+```python
+from buraq.utils.decorators import method_decorator
+```
+
+### method_decorator
+
+Wrap a **function** decorator so it can be applied to a class-based view method. Handles both sync and async methods correctly.
+
+```python
+from buraq.utils.decorators import method_decorator
+from buraq.decorators import login_required
+from buraq.views.generic import View
+
+class DashboardView(View):
+    @method_decorator(login_required)
+    async def get(self, request):
+        ...
+```
+
+Pass `name=` to decorate via the class body (useful when you can't modify the method directly):
+
+```python
+@method_decorator(login_required, name="dispatch")
+class DashboardView(View):
+    ...
+```
+
+---
+
+## Data Structures (`buraq.utils.datastructures`)
+
+```python
+from buraq.utils.datastructures import MultiValueDict
+```
+
+### MultiValueDict
+
+A `dict` subclass that holds multiple values per key — mirrors form data where a single field name can appear more than once (e.g. multi-select checkboxes).
+
+```python
+from buraq.utils.datastructures import MultiValueDict
+
+d = MultiValueDict({"colors": ["red", "green", "blue"], "name": ["Alice"]})
+
+d["colors"]             # → "blue"  (last value, like a plain dict)
+d.getlist("colors")     # → ["red", "green", "blue"]
+d.getfirst("colors")    # → "red"
+d.get("missing", "—")   # → "—"
+
+d.appendlist("colors", "yellow")   # ["red", "green", "blue", "yellow"]
+d.setlist("colors", ["purple"])    # replace all values
+
+list(d.lists())   # → [("colors", ["purple"]), ("name", ["Alice"])]
+```
+
+`MultiValueDict` is returned by `request.form()` when a form posts multiple values for the same field name.
 
 ---
 

@@ -19,12 +19,32 @@ class Post(models.Model):
 | `__table__` | The underlying SQLAlchemy `Table` |
 | `__tablename__` | The database table name |
 
+### Class attributes
+
+| Attribute | Description |
+|---|---|
+| `objects` | The default `Manager` for this model |
+| `__table__` | The underlying SQLAlchemy `Table` |
+| `__tablename__` | The database table name |
+| `pk` | Alias for the primary key field (usually `id`) |
+
+### Instance attributes
+
+| Attribute | Description |
+|---|---|
+| `instance._state.adding` | `True` if the instance has never been saved; `False` after the first `save()` |
+| `instance.pk` | Value of the primary key field |
+
 ### Instance methods
 
 | Method | Description |
 |---|---|
 | `await instance.save()` | Insert or update this instance |
 | `await instance.delete()` | Delete this instance |
+| `await instance.refresh_from_db(fields=None)` | Reload field values from the database |
+| `await instance.full_clean(exclude=None)` | Run all validation steps in order |
+| `instance.get_absolute_url()` | Return canonical URL (override in subclass; raises `NotImplementedError` by default) |
+| `instance.natural_key()` | Return a tuple uniquely identifying the instance (override in subclass; raises `NotImplementedError` by default) |
 
 ---
 
@@ -72,7 +92,9 @@ Q1 | Q2                     # OR
 ### Supported lookups
 
 `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `contains`, `icontains`, `startswith`,
-`istartswith`, `endswith`, `iendswith`, `in`, `isnull`, `year`, `month`, `day`
+`istartswith`, `endswith`, `iendswith`, `in`, `isnull`, `range`,
+`year`, `month`, `day`, `iso_year`, `iso_week_day`,
+`contained_by`, `has_key`, `has_keys`, `has_any_keys`, `overlap`
 
 ---
 

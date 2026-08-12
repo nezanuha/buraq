@@ -1,11 +1,9 @@
-from datetime import UTC, datetime
+from fastapi import HTTPException
 
-from fastapi import Depends, HTTPException, status
-
-from buraq.core.auth import create_access_token, get_current_user_id, hash_password, verify_password
+from buraq.contrib.auth import make_password
 
 from .models import User
-from .schemas import LoginRequest, TokenResponse, UserCreate, UserRead
+from .schemas import UserCreate, UserRead
 
 
 async def register(payload: UserCreate) -> UserRead:
@@ -16,7 +14,7 @@ async def register(payload: UserCreate) -> UserRead:
             username=payload.username,
             first_name=payload.first_name,
             last_name=payload.last_name,
-            hashed_password=hash_password(payload.password),
+            hashed_password=await make_password(payload.password),
         )
     except IntegrityError as exc:
         msg = str(exc).lower()
@@ -25,29 +23,6 @@ async def register(payload: UserCreate) -> UserRead:
         if "username" in msg:
             raise HTTPException(status_code=400, detail="Username already taken") from exc
         raise HTTPException(status_code=400, detail="Registration failed due to a conflict.") from exc
-
-
-async def login(payload: LoginRequest) -> TokenResponse:
-    user = await User.objects.get_or_none(username=payload.username)
-    if not user or not verify_password(payload.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="Account is disabled")
-
-    await User.objects.update(user.id, last_login=datetime.now(UTC))
-    token = create_access_token({"sub": str(user.id)})
-    return {"access_token": token, "token_type": "bearer"}
-
-
-async def get_me(user_id: int = Depends(get_current_user_id)) -> UserRead:
-    user = await User.objects.get_or_none(id=user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
 
 
 # ── Class-based auth views ───────────────────────────────────────────────────
@@ -104,18 +79,16 @@ class LoginView:
         })
 
     async def post(self, request, **kwargs):
+        from buraq.contrib.auth import authenticate, login
         from buraq.shortcuts import redirect, render
         form_data = dict(await request.form())
         username = form_data.get("username", "")
         password = form_data.get("password", "")
 
-        user = await User.objects.get_or_none(username=username)
-        if user and verify_password(password, user.hashed_password) and user.is_active:
-            await User.objects.update(user.id, last_login=datetime.now(UTC))
-            token = create_access_token({"sub": str(user.id)})
-            response = redirect(self.get_success_url(request))
-            response.set_cookie("access_token", token, httponly=True)
-            return response
+        user = await authenticate(request, username=username, password=password)
+        if user:
+            await login(request, user)
+            return redirect(self.get_success_url(request))
 
         return render(request, self.template_name, {
             "error": "Invalid username or password.",
@@ -153,10 +126,10 @@ class LogoutView:
         return await self.get(request, **kwargs)
 
     async def get(self, request, **kwargs):
+        from buraq.contrib.auth import logout
         from buraq.shortcuts import redirect
-        response = redirect(self.next_page)
-        response.delete_cookie("access_token")
-        return response
+        await logout(request)
+        return redirect(self.next_page)
 
 
 class PasswordChangeView:
@@ -206,14 +179,14 @@ class PasswordChangeView:
             errors.append("You must be logged in to change your password.")
         else:
             user = await User.objects.get_or_none(id=user_id)
-            if not user or not verify_password(old_pw, user.hashed_password):
+            if not user or not await check_password(old_pw, user.hashed_password):
                 errors.append("Your old password was entered incorrectly.")
             elif new_pw1 != new_pw2:
                 errors.append("The two password fields didn't match.")
             elif not new_pw1:
                 errors.append("New password cannot be empty.")
             else:
-                await User.objects.update(user.id, hashed_password=hash_password(new_pw1))
+                await User.objects.update(user.id, hashed_password=await make_password(new_pw1))
                 return redirect(self.success_url)
 
         return render(request, self.template_name, {"errors": errors})
@@ -331,8 +304,6 @@ class PasswordResetConfirmView:
         return await self.post(request, **kwargs)
 
     def _verify_token(self, token: str):
-        import hashlib
-        import hmac
         import time
         from buraq.conf import settings
 
@@ -343,8 +314,8 @@ class PasswordResetConfirmView:
             uid = parts[0]
             timestamp = parts[1]
             sig = "-".join(parts[2:])
-            # Token expires after 24 hours
-            if int(time.time()) - int(timestamp) > 86400:
+            timeout = getattr(settings, "PASSWORD_RESET_TIMEOUT", 259200)
+            if int(time.time()) - int(timestamp) > timeout:
                 return None
             return uid, timestamp, sig
         except (ValueError, IndexError):
@@ -401,8 +372,83 @@ class PasswordResetConfirmView:
                 "error": "Password cannot be empty.",
             })
 
-        await User.objects.update(user.id, hashed_password=hash_password(pw1))
+        await User.objects.update(user.id, hashed_password=await make_password(pw1))
         return redirect(self.success_url)
+
+
+class PasswordResetDoneView:
+    """
+    Shown after a password-reset email has been sent.
+
+    Template: ``registration/password_reset_done.html``
+    """
+
+    template_name: str = "registration/password_reset_done.html"
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = cls(**initkwargs)
+
+        async def _view(request, **kwargs):
+            from buraq.shortcuts import render
+            return render(request, view.template_name, {})
+
+        _view.view_class = cls
+        return _view
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+
+class PasswordChangeDoneView:
+    """
+    Shown after a successful password change.
+
+    Template: ``registration/password_change_done.html``
+    """
+
+    template_name: str = "registration/password_change_done.html"
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = cls(**initkwargs)
+
+        async def _view(request, **kwargs):
+            from buraq.shortcuts import render
+            return render(request, view.template_name, {})
+
+        _view.view_class = cls
+        return _view
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+
+class PasswordResetCompleteView:
+    """
+    Shown after a successful password reset.
+
+    Template: ``registration/password_reset_complete.html``
+    """
+
+    template_name: str = "registration/password_reset_complete.html"
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = cls(**initkwargs)
+
+        async def _view(request, **kwargs):
+            from buraq.shortcuts import render
+            return render(request, view.template_name, {})
+
+        _view.view_class = cls
+        return _view
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
 
 def render_to_string_safe(template_name, context=None, request=None) -> str:

@@ -39,7 +39,18 @@ Both sync and async processors are supported. Async processors are awaited autom
 
 ## Using in views
 
-Call `run_context_processors` to merge all processors into a context dict:
+`render()` automatically calls every listed processor and merges the results before rendering — you don't need to do anything:
+
+```python
+from buraq.shortcuts import render
+
+async def my_view(request):
+    posts = await Post.objects.filter(is_published=True).all()
+    return render(request, "posts/list.html", {"posts": posts})
+    # {{ user }}, {{ request }}, etc. are available automatically
+```
+
+If you're building context manually (e.g. with `TemplateResponse` directly), call `run_context_processors` yourself:
 
 ```python
 from buraq.template.context_processors import run_context_processors

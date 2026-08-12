@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-12
+
 ### Security
 
 - **Path traversal in `FileSystemStorage`** — `_full_path()` used `os.path.normpath` + `lstrip` which did not resolve symlinks; a name like `../etc/passwd` bypassed the check. Now uses `os.path.realpath()` to resolve all `..` components and symlinks, then verifies the result starts with the storage root. `SuspiciousFileOperation` is raised before any disk I/O occurs.
@@ -27,9 +29,290 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+**Built-in Admin Panel**
+- `buraq.contrib.admin.BuraqAdmin` — mounts the admin panel onto a `Buraq` app; auto-discovers every installed app's `admin.py` on startup; no third-party dependencies
+- `buraq.contrib.admin.ModelAdmin` — per-model configuration class; options: `list_display`, `search_fields`, `ordering`, `list_per_page`, `fields`, `readonly_fields`, `can_create`, `can_edit`, `can_delete`
+- `buraq.contrib.admin.AdminSite` — central model registry; `register()`, `unregister()`, `is_registered()`, `autodiscover()`; module-level `site` singleton; supports isolated multi-tenant sites via `BuraqAdmin(app, admin_site=private_site)`
+- Auto-CRUD views at `/admin/{app}/{model}/` — list with search and pagination, add form, change form, delete confirmation
+- List view renders boolean columns as coloured badges; type-aware form fields (checkbox, textarea, datetime-local, number)
+- Admin cookie auth (`_buraq_admin` cookie, HMAC-SHA256 signed with `SECRET_KEY`); any `is_staff` or `is_superuser` account can log in
+- Darkberry-themed UI using Frutjam CSS + Tailwind CDN; sidebar groups models by app label
+
+**Debug Error Page**
+- `buraq.core.debug.render_debug_page(request, exc)` — full-page HTML traceback shown in the browser when `DEBUG=True`; project frames highlighted, library frames dimmed
+- Displays: exception type + message, each frame with source context (5 lines), collapsible local variables, chained-exception notice, query params, and request headers (cookie header excluded)
+- Plain-text traceback section for copy-paste
+- Registered automatically in `Buraq._register_exception_handlers()`; zero configuration required
+
+**Management Commands**
+- `--settings MODULE` global option — accepted by every `buraq` command; loads the named settings module before the command runs, overriding the defaults (e.g. `buraq migrate --settings config.prod_settings`); also read from the `BURAQ_SETTINGS_MODULE` environment variable
+- `createsuperuser` — completely rewritten: interactive prompts for username, email, and password with two-pass confirmation; checks for duplicate username and email before inserting; accepts `--username`, `--email`, `--password`, and `--no-input` for scripted/CI use; uses `User.objects.create()` instead of raw SQLAlchemy session
+
+**Static Files — Django-equivalent feature set**
+- `STATICFILES_DIRS` setting — list of source directories searched by finders (replaces single `STATIC_DIR`; `STATIC_DIR` kept for backward compatibility)
+- `STATICFILES_FINDERS` setting — list of finder class paths; defaults to `FileSystemFinder` + `AppDirectoriesFinder`
+- `STATICFILES_STORAGE` setting — pluggable storage backend class path; defaults to `StaticFilesStorage`
+- `buraq.contrib.staticfiles.finders.FileSystemFinder` — searches all `STATICFILES_DIRS` in order; first match wins
+- `buraq.contrib.staticfiles.finders.AppDirectoriesFinder` — searches each installed app's `static/` subdirectory
+- `buraq.contrib.staticfiles.finders.find(path)` — module-level helper; returns absolute path or `None`
+- `buraq.contrib.staticfiles.finders.get_files()` — yields `(relative, absolute)` pairs across all finders, deduplicated
+- `buraq.contrib.staticfiles.storage.StaticFilesStorage` — default local filesystem backend; `url()`, `path()`, `exists()`, `save()`, `post_process()`
+- `buraq.contrib.staticfiles.storage.ManifestStaticFilesStorage` — post-processes collected files to append content-hash to filenames (e.g. `style.abc123de.css`); writes `staticfiles.json` manifest; `url()` returns hashed URL automatically
+- `buraq.contrib.staticfiles.storage.get_storage()` — lazy singleton accessor for the configured storage backend
+- `buraq.contrib.staticfiles.storage.reset_storage()` — clears cached storage instance for use in tests with `override_settings`
+- `buraq.contrib.staticfiles.templatetags.StaticExtension` — Jinja2 extension registered automatically; adds `{% static 'path' %}` and `{% media 'path' %}` block tags with no `{% load %}` required
+- `{{ media('path') }}` template global — resolves media file URLs via `MEDIA_URL`; symmetric with `{{ static('path') }}`
+- `{{ static('path') }}` now routes through the configured storage backend — returns hashed URLs automatically when `ManifestStaticFilesStorage` is active
+- `buraq collectstatic` — updated to use finders (discovers from all configured dirs and apps) and storage (calls `post_process()` for manifest generation); output now shows `Post-processed` count
+
+**Bug Fixes**
+- `db/transaction.py` — replaced `_Atomic` singleton (shared instance state caused session corruption under concurrent requests) with a plain `atomic()` function; `async with atomic():` returns a fresh `_atomic_cm()` each call; session leak on commit failure also resolved
+- `orm/manager.py` — `RelatedManager.get()` now raises `DoesNotExist` / `MultipleObjectsReturned` instead of returning a list
+- `orm/manager.py` — `RelatedManager.add()` / `remove()` now issue one bulk `UPDATE … WHERE id IN (…)` instead of N individual `save()` calls
+- `serializers/base.py` — `_load_records()` now batches existence checks per model class (one `SELECT … WHERE id IN (…)`) instead of one query per record
+- `signals.py` — `send_sync()` now logs handler exceptions via `logging.getLogger("buraq.signals").exception()` instead of silently swallowing them
+- `test/testcase.py` — `TransactionTestCase._begin_transaction()` now sets `_current_session` to the test connection so ORM calls inside the test use the same session; `_rollback_transaction()` fixed to call `rollback()` explicitly and close cleanly
+- `test/testcase.py` — `LiveServerTestCase` replaced `asyncio.ensure_future(..., loop=self._loop)` (removed in Python 3.10) with `self._loop.create_task()`
+- `test/testcase.py` — `override_settings` replaced deprecated `asyncio.get_event_loop().run_until_complete()` with `asyncio.get_running_loop().create_task()` (async context) / `asyncio.run()` (sync context); signal is no longer silently dropped inside async tests
+- `contrib/email/backends/locmem.py` — logs a warning when `outbox` exceeds 500 messages to prevent silent unbounded memory growth in long-running test suites
+- `contrib/staticfiles/handlers.py` — `StaticFilesHandler` now mounts media files via `_mount_media()`; WhiteNoise fallback now logs a warning instead of silently degrading; wired into `application.py` replacing `register_static()`
+
+**Cache — Multi-backend and middleware**
+- `CACHES` dict setting — configure multiple named backends identical to the standard multi-cache pattern; `caches["alias"]` proxy object routes to any named backend
+- `buraq.contrib.cache.core.caches` — `_CachesHandler` dict-style proxy; `caches["default"]` returns the default backend, `caches["sessions"]` returns any named backend from `CACHES`
+- `DatabaseCache` backend (`buraq.contrib.cache.backends.db`) — SQL table-backed cache; create table via `python manage.py createcachetable`
+- `CacheMiddleware` (`buraq.middleware.cache`) — full per-view response cache; caches all `GET`/`HEAD` responses; skips `no-store`/`private`/`no-cache`
+- `FetchFromCacheMiddleware` — outer half of the layered cache pair; returns cached response before the view runs
+- `UpdateCacheMiddleware` — inner half; stores the view response in cache after it runs
+
+**Sessions — Server-side backends**
+- `buraq.contrib.sessions.backends.base.SessionBase` — abstract base class for all server-side session backends; uniform async API: `get`, `set`, `pop`, `clear`, `flush`, `cycle_key`, `save`, `load`, `delete`, `exists`
+- `buraq.contrib.sessions.backends.file.FileSessionBackend` — JSON files under `SESSION_FILE_PATH`; expired files cleaned on access
+- `buraq.contrib.sessions.backends.db.DatabaseSessionBackend` — rows in `buraq_sessions` table; clean with `python manage.py clearsessions`
+- `buraq.contrib.sessions.backends.cache.CachedSessionBackend` — cache-backed; uses `SESSION_CACHE_ALIAS` (default `"default"`); expiry is automatic
+
+**Syndication framework**
+- `buraq.contrib.syndication.Feed` — class-based feed view with `items()`, `item_title()`, `item_description()`, `item_link()`, `item_pubdate()`, `item_author()`, `item_categories()`, `item_guid()` hooks
+- `buraq.contrib.syndication.RssFeed` — RSS 2.0 renderer with Atom `self` link; `write()` returns XML string
+- `buraq.contrib.syndication.Atom1Feed` — Atom 1.0 renderer
+- `Feed.as_feed(feed_type="rss"|"atom")` — returns an ASGI view function for a given format
+
+**Content Types — new methods**
+- `ContentType.get_by_natural_key(app_label, model)` — look up a `ContentType` row by its natural key; raises `DoesNotExist` if not found
+- `ContentType.model_class()` — return the Python class for a `ContentType` row by searching `INSTALLED_APPS`; returns `None` if not importable
+- `GenericRelation` (`buraq.contrib.contenttypes.fields`) — reverse accessor for `GenericForeignKey`; declare on the target model; exposes async `all()`, `filter()`, `count()`, `create()` through `_GenericRelatedManager`
+
+**Templates — app-directories loader**
+- `APP_DIRS = True` setting (default) — `get_templates()` now scans every installed app's `templates/` subfolder and adds them to the Jinja2 `FileSystemLoader`; project-level `TEMPLATES_DIR` takes priority
+
+**Templates — new Jinja2 globals**
+- `regroup(iterable, grouper)` — group a sequence by an attribute; returns `[{"grouper": value, "list": [items]}, …]`
+- `cycle(*values)` — returns a callable object that cycles through values on each call
+- `ifchanged()` — returns a callable that is truthy only when its argument changes between successive calls
+- `spaceless(html)` — removes whitespace between HTML tags
+
+**Background Tasks**
+- `buraq.contrib.tasks.background_task` — decorator that marks any async or sync function as a background task; decorated functions grow an `aenqueue()` method and still behave as normal callables
+- `buraq.contrib.tasks.Task` — wrapper class returned by `@background_task`; exposes `aenqueue(*args, **kwargs)` with `_queue` / `_priority` per-call overrides
+- `buraq.contrib.tasks.TaskResult` — dataclass returned by `aenqueue()`; fields: `id`, `status`, `return_value`, `exception`, `attempts`; `await result.arefresh()` fetches latest state from the backend
+- `buraq.contrib.tasks.TaskStatus` — enum: `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`
+- `buraq.contrib.tasks.backends.base.BaseTaskBackend` — abstract base; implement `aenqueue()` + `aget_result()` for custom backends
+- `buraq.contrib.tasks.backends.dummy.DummyBackend` — executes tasks immediately in-process; ideal for tests and development; results stored in memory
+- `buraq.contrib.tasks.backends.db.DatabaseBackend` — persists tasks to `buraq_tasks` table; `buraq worker` polls and executes pending tasks; full status lifecycle (PENDING → RUNNING → SUCCEEDED / FAILED)
+- `TASKS` setting — `{"default": {"BACKEND": "..."}}` — selects the active backend
+- `buraq worker [--queue] [--concurrency] [--poll-interval] [--max-tasks]` — management command that runs the task worker process; polls `DatabaseBackend` for pending tasks and executes them concurrently; exits cleanly on `SIGINT`/`SIGTERM`
+
+**Content Security Policy**
+- `buraq.middleware.csp.ContentSecurityPolicyMiddleware` — ASGI middleware; adds `Content-Security-Policy` and/or `Content-Security-Policy-Report-Only` headers to every response based on `CONTENT_SECURITY_POLICY` / `CONTENT_SECURITY_POLICY_REPORT_ONLY` settings
+- `CONTENT_SECURITY_POLICY` / `CONTENT_SECURITY_POLICY_REPORT_ONLY` settings — dicts of directives; directive names accept hyphens or underscores
+- `CONTENT_SECURITY_POLICY_NONCE_DIRECTIVES` — list of directives that receive an auto-generated per-request nonce; nonce available in templates as `{{ request.state.csp_nonce }}`
+- `buraq.views.decorators.csp.csp_override(**directives)` — replace the enforced CSP for a single view; pass `None` to suppress the header entirely
+- `buraq.views.decorators.csp.csp_report_only_override(**directives)` — override the report-only header for a single view
+- `buraq.utils.csp.CSP` — programmatic CSP builder; `CSP(default_src=["'self'"], ...).as_header()` renders the header string; `nonce=True` generates a per-instance random nonce; `update(**overrides)` returns a new derived policy
+
+**Auth Backends**
+- `buraq.contrib.auth.backends.AllowAllUsersModelBackend` — like `ModelBackend` but skips the `is_active` check; authenticates inactive accounts (useful for "account disabled" post-login pages)
+- `buraq.contrib.auth.backends.AllowAllUsersRemoteUserBackend` — remote-user backend that authenticates inactive users
+
+**Model Fields**
+- `buraq.orm.fields.GeneratedField(expression, output_field, db_persist=True)` — database-computed column; maps to SQLAlchemy `Computed`; `db_persist=True` creates a STORED column (PostgreSQL 12+, MySQL 5.7+, SQLite 3.31+); read-only in Python; exported from `buraq.models` and `buraq.orm`
+- `buraq.orm.fields.CompositePrimaryKey(*fields)` — declare a multi-column primary key in `Meta.primary_key`; suppresses the implicit auto-increment `id` column; exported from `buraq.models` and `buraq.orm`
+
+**Aggregates**
+- `buraq.orm.aggregates.AnyValue(field)` — returns an arbitrary non-NULL value from the group; useful in `GROUP BY` queries where the column is functionally dependent on the key; native on MySQL 8.0.2+ and MariaDB 10.3+
+
+**Test Utilities**
+- `buraq.test.MessagesTestMixin` — mixin for `TestCase`; adds `assertMessages(response, expected, *, ordered=True)` to compare flash messages in a response by text (and optionally level)
+- `buraq.test.captureOnCommitCallbacks(*, execute=False)` — context manager; patches `buraq.db.on_commit` to collect callbacks instead of waiting for a real commit; `execute=True` runs them immediately
+- `buraq.contrib.staticfiles.storage.InMemoryStorage` — volatile in-memory storage backend; stores files as `bytes` in a dict; no disk I/O; `clear()` removes all stored files; ideal for tests
+
+**Utils**
+- `buraq.utils.csp` module — `CSP` class with `as_header()`, `nonce` property, and `update()` method
+- `csp_nonce_attr(request)` Jinja2 global — renders `nonce="<value>"` when a CSP nonce is present on the request, empty string otherwise; registered automatically into every Jinja2 environment
+
+**Cryptographic Signing**
+- `buraq.utils.signing.Signer` — HMAC-SHA256 string signer; `sign(value)` / `unsign(signed_value)` / `sign_object(obj)` / `unsign_object(signed_value)`; configurable `key`, `sep`, `salt`, `algorithm`
+- `buraq.utils.signing.TimestampSigner` — extends `Signer` with an embedded UTC timestamp; `unsign(signed_value, max_age=N)` raises `SignatureExpired` when the value is older than `max_age` seconds
+- `buraq.utils.signing.dumps(obj, salt, compress)` — serialize any JSON-serializable object and return a signed URL-safe string
+- `buraq.utils.signing.loads(s, salt, max_age)` — verify and deserialize; raises `BadSignature` or `SignatureExpired`
+- `BadSignature` / `SignatureExpired` — importable directly from `buraq.utils.signing`
+
+**Upcoming framework alignment**
+- `DatabaseCache` — `CACHE_CULL_PROBABILITY` setting (default `0.1`) triggers automatic culling of expired entries on a percentage of writes; set to `0.0` to disable; prevents unbounded table growth without a scheduled job; read from settings at startup, overridable per-instance via the `cull_probability` constructor kwarg
+- `BaseCommand.requires_settings` — new class attribute (`bool`, default `True`); when `True` (default), an `ImportError` from the settings module propagates at command startup; when `False`, the error is suppressed and the command runs without settings (useful for scaffold/init commands)
+- `startproject` now generates `main.py` at the project root, re-exporting `app` from `config.urls`; this makes the default `buraq runserver` entry point (`main:app`) resolve correctly out of the box
+- `listurls` management command — prints all URL patterns from the project's root URLconf; columns: path, view dotted name, route name; `--urlconf` selects a non-default URLconf module
+- `import_string()` now supports top-level modules (e.g. `import_string("json")`) and submodules (e.g. `import_string("os.path")`); previously only attribute paths worked
+- `JsonResponse` `safe` parameter now defaults to `False`; any JSON-serializable type is accepted without passing `safe=False` explicitly; pass `safe=True` to restrict top-level value to `dict`
+- `BuraqJSONEncoder` (`buraq.utils.json`) — stdlib `json.JSONEncoder` subclass handling `datetime`, `date`, `time`, `timedelta`, `Decimal`, `UUID`; `datetime` and `time` objects with zero microseconds are serialized without the millisecond component (e.g. `"2026-01-01T12:00:00"` not `"2026-01-01T12:00:00.000"`)
+- `pbkdf2()` default iteration count raised from 260,000 to 1,800,000 to match current security guidance
+- `force_login()` (test client) — now skips authentication backends that do not implement `get_user()` or `aget_user()`; permission-only backends no longer cause `AttributeError` during forced login in tests
+
+**Management commands**
+- `version` — print the installed Buraq version string (`Buraq 0.1.0`)
+- `findstatic <path> [--first]` — locate a static file by searching all configured `STATICFILES_FINDERS`; prints absolute path for each match; `--first` stops at the first result
+- `testserver <fixture> ... [--port] [--host] [--no-input]` — flush the database, load one or more JSON fixture files, then start the development server; useful for manual QA with realistic data without touching production
+- `sqlflush` — print the `DELETE` SQL statements that `flush` would execute, without running them; redirect output to generate a manual reset script
+- `sqlsequencereset [app ...]` — print `SELECT setval(...)` SQL to reset PostgreSQL autoincrement sequences after bulk data imports; no-op on SQLite/MySQL
+- `optimizemigration <revision1> <revision2> ... [--name]` — merge two or more divergent Alembic revision heads into one via `alembic merge`; requires at least two revision IDs; exits with an error if fewer than two are given
+- `remove_stale_contenttypes [--no-input] [--include-stale-apps]` — delete `ContentType` rows for models that no longer exist; run after removing an app or model from `INSTALLED_APPS`
+- `sqlmigrate <revision>` — print the SQL for an Alembic revision without executing it; `--backwards` shows the downgrade SQL
+- `squashmigrations <start> <end>` — merge a range of Alembic revisions into one via `alembic merge`; `--name` controls the message
+- `createcachetable [--table NAME]` — create the SQL table used by `DatabaseCache`
+- `clearsessions` — delete all expired rows from the `buraq_sessions` table (database session backend)
+- `test [paths] [--failfast] [--verbosity]` — run the test suite via pytest; sets `BURAQ_ENV=test` automatically
+
+**Utils**
+- `buraq.utils.__init__` — now re-exports all utility submodules so `from buraq.utils import signing`, `from buraq.utils import crypto`, etc. work without the full dotted path
+
+**Signals**
+- `pre_migrate` and `post_migrate` are now fired by the `migrate` and `rollback` management commands with a `revision` kwarg
+
+**Views**
+- `ListView.allow_empty = False` now enforced — raises `Http404` when the queryset is empty and `allow_empty` is set to `False`
+
+**Template — Built-in Filters**
+- `buraq/template/builtins.py` — 21 built-in Jinja2 filters registered automatically into every environment:
+  - **Date/time:** `date`, `time`, `timesince`, `timeuntil`
+  - **Text:** `truncatechars`, `truncatewords`, `truncatechars_html`, `wordcount`, `capfirst`, `addslashes`, `slugify`, `linenumbers`, `pluralize`, `yesno`, `default_if_none`, `phone2numeric`
+  - **HTML:** `linebreaks`, `linebreaksbr`, `urlize`, `escapejs`, `json_script`
+  - **Numbers/sizes:** `filesizeformat`, `floatformat`
+- `date` filter supports the full date format code set: `d`, `j`, `D`, `l`, `S`, `m`, `n`, `M`, `N`, `F`, `Y`, `y`, `H`, `G`, `h`, `g`, `i`, `s`, `A`, `a`, `U`, `W`, `z`, `t`
+- `timesince` / `timeuntil` return human-readable elapsed/remaining time up to 2 significant units
+- `json_script(value, element_id)` safely embeds JSON data in a `<script type="application/json">` tag; HTML-special characters are Unicode-escaped to prevent XSS
+
+**Template — Globals**
+- `url(name, **kwargs)` global — calls `reverse()` from templates; crashes were silently obscuring missing registrations until this was wired
+- `static(path)` global — prepends `STATIC_URL` to the given path
+- `csrf_input(request)` global — returns `Markup('<input type="hidden" name="csrfmiddlewaretoken" value="...">')` ready for use inside `<form>` tags
+- `csrf_token(request)` global — returns the raw CSRF token string for custom `<input>` rendering
+- `STATIC_URL` and `MEDIA_URL` globals — available in every template without explicit context passing
+
+**Template — Context Processors**
+- `render()` in `buraq.shortcuts` now automatically calls `run_context_processors(request)` and merges results into the template context before rendering; caller-supplied keys override processor values; any processor error is silently ignored so rendering is never blocked
+
+**Shortcuts**
+- `get_list_or_404(model, **kwargs)` — fetches a filtered queryset and raises `HTTP 404` if the result is empty; mirrors `get_object_or_404` for list views
+
+**URLs**
+- `reverse_lazy(name, **kwargs)` — lazy URL reversal that is not evaluated until the result is used as a string; suitable for class-level `success_url` attributes and other places where the URL registry may not yet be populated at class definition time
+
+**Utilities**
+- `buraq.utils.module_loading` — `import_string(dotted_path)` loads any class or function by dotted Python path; `autodiscover_modules(*names)` imports `<app>.<name>` for every app in `INSTALLED_APPS` (signals, admin registrations, etc.)
+- `buraq.utils.decorators` — `method_decorator(decorator, name="")` converts a function decorator for use on a class-based view method; handles async methods correctly
+- `buraq.utils.datastructures` — `MultiValueDict` — a `dict` subclass that stores multiple values per key; `getlist(key)` returns all values, `getfirst(key)` returns the first, `appendlist(key, value)` appends without overwriting, `lists()` iterates `(key, [values])` pairs
+
+**Signals**
+- `m2m_changed` — fires `pre_add` / `post_add`, `pre_remove` / `post_remove`, `pre_clear` / `post_clear` around every `_M2MManager` operation; kwargs: `sender` (through table), `action`, `instance` (source model), `reverse=False`, `model` (target class), `pk_set` (set of affected PKs, or `None` for `clear`)
+- `pre_migrate` / `post_migrate` — fired around migration runs; kwargs: `app_config`, `verbosity`, `interactive`, `using`
+- `class_prepared` — fired after a model class body is fully prepared
+
+**ORM — Signals**
+- `pre_init` / `post_init` signals now fired inside `Model.__init__`; `pre_init` receives `args` and `kwargs` before the instance is built, `post_init` receives the completed `instance`
+- `Signal.send_sync(sender, **kwargs)` — synchronous dispatch path for contexts where no async event loop is running (e.g. object construction); only fires non-coroutine receivers
+
+**ORM — Lookups**
+- `iso_year` lookup — filters by ISO 8601 year using `EXTRACT(isoyear …)`; e.g. `filter(published__iso_year=2025)`
+- `iso_week_day` lookup — filters by ISO weekday (1=Monday … 7=Sunday) using `EXTRACT(isodow …)`
+- `contained_by` lookup — PostgreSQL `<@` operator; tests that a JSON/array column is contained in the given value
+- `has_key` lookup — PostgreSQL `?` operator; tests that a JSONB column contains a top-level key
+- `has_keys` lookup — PostgreSQL `?&` operator; all keys in list must be present
+- `has_any_keys` lookup — PostgreSQL `?|` operator; any key in list must be present
+- `overlap` lookup — PostgreSQL `&&` operator; array/range column overlaps with the given value
+
+**ORM — QuerySet**
+- `QuerySet.union(*qs)` / `.intersection(*qs)` / `.difference(*qs)` — SQL `UNION` / `INTERSECT` / `EXCEPT` set operations; all delegate to SQLAlchemy `union`, `intersect`, `except_`
+- `QuerySet.extra(select, where, params, tables)` — low-level escape hatch for raw SQL fragments; adds `SELECT` expressions, `WHERE` clauses, and extra `FROM` tables to the compiled query
+
+**ORM — Model**
+- `Model._state` — `_ModelState(adding=True/False)` attached to every instance; `adding` is `True` for unsaved instances and `False` after the first `save()`
+- `Model.get_absolute_url()` — stub that raises `NotImplementedError`; override in subclasses to return the canonical URL for a model instance
+- `Model.natural_key()` — stub that raises `NotImplementedError`; override to return a tuple that uniquely identifies the instance without its surrogate PK
+- `RelatedManager` — async reverse FK / M2M accessor; `all()`, `filter()`, `create()`, `add()`, `remove()`, `clear()`, `set()`
+
+**ORM — Fields**
+- `SmallAutoField` — `SMALLSERIAL` / `INTEGER AUTOINCREMENT` primary key for tables with fewer than 32 768 rows
+- `BigAutoField` — `BIGSERIAL` / `BIGINT AUTOINCREMENT` primary key; chosen automatically when `DEFAULT_AUTO_FIELD` is set
+
+**ORM**
+- `Aggregate(default=value)` — wraps the aggregate expression in `COALESCE(agg, default)` so queries return a defined value instead of `NULL` when the result set is empty (e.g. `Count("id", default=0)`)
+
+**Forms**
+- `SplitDateTimeField` — accepts a `(date_string, time_string)` two-element list and combines them into a `datetime.datetime`; available in `buraq.forms.fields`
+- `BaseForm.as_p()` — render the form as `<p>` blocks with label, widget, and inline error list
+- `BaseForm.as_table()` — render as `<tr>` rows (caller wraps in `<table>`)
+- `BaseForm.as_div()` — render as `<div class="form-group">` blocks
+- `BaseForm.as_ul()` — render as `<li>` items (caller wraps in `<ul>`)
+- `ErrorList` / `ErrorDict` — list and dict subclasses for form error rendering; `ErrorList.as_ul()` returns an `<ul class="errorlist">` block; `ErrorDict.as_ul()` groups errors by field
+- `BoundField.label_tag()` — returns the `<label>` HTML for a field, respecting `label_suffix`; `BoundField.css_classes(extra_classes)` — returns a space-joined string of CSS classes for the field wrapper
+- `BaseFormSet` — collection of same-type forms; `is_valid()`, `save(commit=)`, `errors`, `management_form_html()`; `__iter__` and `__len__` for template iteration
+- `BaseFormSet.can_order` — when `True`, each form gets an `ORDER` `IntegerField`; `formset.ordered_forms` returns forms sorted by that value
+- `BaseFormSet.can_delete` — when `True`, each form gets a `DELETE` `BooleanField`; `formset.deleted_forms` returns forms marked for deletion; `cleaned_data` omits deleted forms automatically
+- `SuccessMessageMixin` (`buraq.views.mixins`) — mixin for `FormView`/`CreateView`/`UpdateView`; set `success_message = "..."` (supports `%(field)s` placeholders from `cleaned_data`); override `get_success_message()` for dynamic messages; calls `buraq.contrib.messages.success()` after `form_valid()`
+- `modelformset_factory(model, form, extra, max_num)` — returns a `BaseFormSet` subclass for editing multiple instances of a model
+- `inlineformset_factory(parent_model, model, form, fk_name, extra, max_num)` — inline variant bound to a parent instance; stores `_fk_name` so callers can set the FK before saving with `commit=False`
+
+**Auth Forms**
+- `buraq.contrib.auth.forms.AuthenticationForm` — validates `username` + `password`; `await form.get_user(request)` returns the authenticated user or `None`
+- `buraq.contrib.auth.forms.BaseUserCreationForm` — validates `username`, `password1`, `password2` (must match); `await form.save()` creates the user; subclass to add extra fields
+- `buraq.contrib.auth.forms.SetPasswordForm` — sets a new password for a known user without requiring the old one; used in password-reset flows
+- `buraq.contrib.auth.forms.PasswordChangeForm` — extends `SetPasswordForm` with an `old_password` field that must match the current password
+- `buraq.contrib.auth.forms.AdminPasswordChangeForm` — sets any user's password without knowing the current one; intended for staff-only administration flows
+
+**Auth — Class-Based Views**
+- `LoginView` — renders a login form on GET; calls `authenticate()` then `login()` on POST (session-based); redirects to the `next` query parameter or `success_url`; template: `registration/login.html`
+- `LogoutView` — calls `logout()` (flushes session, resets `request.user` to `AnonymousUser`) and redirects to `next_page`; template: `registration/logged_out.html`
+- `PasswordChangeView` — authenticated POST endpoint for `old_password` + `new_password1` + `new_password2`; updates `hashed_password` on success; template: `registration/password_change_form.html`
+- `PasswordResetView` — accepts an email address, generates a HMAC-SHA256–signed token (expires after 24 h), emails a reset link; silently succeeds even for unknown addresses to prevent user enumeration; template: `registration/password_reset_form.html`
+- `PasswordResetConfirmView` — validates the signed token, verifies the HMAC, and updates the password; rejects expired or tampered tokens with a clear error message; template: `registration/password_reset_confirm.html`
+
+**Testing**
+- `buraq.test.DiscoverRunner` — test runner that discovers and runs tests using pytest; `run_tests(paths)` returns failure count; accepts `verbosity`, `failfast`, `keepdb` constructor arguments; used internally by `buraq test`
+- `override_settings(**kwargs)` — context manager and decorator that temporarily replaces settings values; fires `setting_changed` signal on apply and restore; handles both sync and async test functions; exported from `buraq.test`
+- `SimpleTestCase.assertFormError(form, field, errors)` — asserts that a form field (or `None` for non-field errors) contains the expected error string(s)
+- `SimpleTestCase.assertHTMLEqual(html1, html2)` — compares two HTML strings after collapsing whitespace
+- `SimpleTestCase.assertRaisesMessage(exc_class, message)` — context manager that asserts the given exception is raised and its string representation contains `message`
+
+**Management Commands**
+- `shell` — interactive Python shell (`code.interact`) with all model classes from `INSTALLED_APPS` and `SessionLocal` pre-imported; `--command/-c` runs a Python expression and exits
+- `check` — runs all registered system checks and prints results with severity labels; exits with code 1 on errors
+- `dbshell` — opens the native database CLI (`sqlite3`, `psql`, or `mysql`) for the configured `DATABASE_URL`; connection args are derived from the URL
+- `dumpdata` — serialises all database tables to JSON; `--output/-o` writes to a file; `--exclude/-e` skips named tables; timestamps and binary values are serialised via `str()`
+- `loaddata` — reads a JSON fixture file and bulk-inserts rows into the matching tables; `--table/-t` restricts which tables to load
+- `flush` — deletes all rows from every table in reverse dependency order without dropping the schema; requires explicit confirmation unless `--no-input`
+- `changepassword` — prompts for a new password (with confirmation) for the named user and updates `hashed_password` via `hash_password()`
+- `inspectdb` — introspects the live database schema and prints model class stubs to stdout; `--table/-t` restricts output; redirect to `models.py` to bootstrap a project from an existing database
+- `diffsettings` — compares current settings against defaults and prints changed values marked with `###`; `--all` shows every setting
+- `sendtestemail` — sends a plain-text test email to the given address using the configured email backend; useful for verifying `EMAIL_HOST`, `EMAIL_PORT`, and credentials without writing a view
+
 **ORM — Expressions & Functions**
 - `buraq.orm.expressions` — `Case`, `When`, `Value`, `OuterRef`, `Subquery`, `Exists`, `ExpressionWrapper` for conditional queries and correlated subqueries
-- `buraq.orm.functions` — 60+ database functions: date/time (`Now`, `TruncDate`, `TruncMonth`, `TruncYear`, `ExtractYear`, …), string (`Concat`, `Upper`, `Lower`, `Trim`, `Replace`, `Substr`, `LPad`, …), math (`Abs`, `Ceil`, `Floor`, `Round`, `Sqrt`, `Power`, …), NULL handling (`Coalesce`, `NullIf`, `Greatest`, `Least`), type casting (`Cast`), hash (`MD5`, `SHA1`, `SHA256`, `SHA512`)
+- `buraq.orm.functions` — 70+ database functions: date/time (`Now`, `TruncDate`, `TruncTime`, `TruncMonth`, `TruncYear`, `ExtractYear`, …), string (`Concat`, `Upper`, `Lower`, `Trim`, `Replace`, `Substr`, `LPad`, `Collate`, …), math (`Abs`, `Ceil`, `Floor`, `Round`, `Sqrt`, `Exp`, `Pi`, `Cot`, `Power`, …), NULL handling (`Coalesce`, `NullIf`, `Greatest`, `Least`), type casting (`Cast`), hash (`MD5`, `SHA1`, `SHA256`, `SHA512`), UUID (`UUID4`, `UUID7`)
+- `TruncTime(field)` — cast a datetime column to its time component
+- `Exp(field)` — e raised to the column value
+- `Pi()` — the π constant (no field argument)
+- `Cot(field)` — cotangent
+- `Collate(field, collation)` — apply a named collation for locale-aware ordering (e.g. `"und-x-icu"` on PostgreSQL)
 - `buraq.orm.window` — window function support: `Window`, `RowNumber`, `Rank`, `DenseRank`, `PercentRank`, `CumeDist`, `Ntile`, `Lag`, `Lead`, `FirstValue`, `LastValue`, `NthValue`
 
 **ORM — QuerySet**
@@ -65,6 +348,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **ORM — Prefetch**
 - `Prefetch(field, queryset, to_attr)` — pass to `prefetch_related()` for filtered or ordered prefetch querysets; `to_attr` stores results under a custom attribute; importable from `buraq.models`
 
+**ORM — Fetch modes for deferred field access**
+- `FETCH_ONE`, `FETCH_PEERS`, `FETCH_RAISE` — constants controlling deferred-field access strategy; importable from `buraq.orm.manager`
+- `QuerySet.fetch_mode(mode)` — set the fetch strategy for all instances returned by `all()`: `FETCH_ONE` reloads each instance individually, `FETCH_PEERS` reloads all peers in a single batch query, `FETCH_RAISE` raises `FieldFetchBlocked` on any deferred-field access
+- `FieldFetchBlocked` — exception raised when `FETCH_RAISE` is active and a deferred field is accessed; importable from `buraq.orm.manager`
+- `QuerySet.totally_ordered` — read-only property; returns `True` when the queryset's `ORDER BY` clause includes the model's primary key (or another unique column), guaranteeing a stable, deterministic page-by-page iteration order
+
+**ORM — in_bulk() values/values_list support**
+- `Manager.in_bulk(id_list)` — now correctly handles querysets that have been narrowed with `values()` or `values_list()`, returning a `{pk: dict}` or `{pk: tuple}` mapping respectively
+
+**ORM — Expressions**
+- `JSONNull` (`buraq.orm.expressions`) — explicit JSON scalar `null` expression; renders as `CAST(NULL AS JSON)`; distinct from SQL `NULL` so JSON columns can store the JSON null value without ambiguity
+
+**ORM — Database functions**
+- `UUID4` (`buraq.orm.functions`) — generates a version-4 UUID at the database level via `gen_random_uuid()` (PostgreSQL) or equivalent
+- `UUID7` (`buraq.orm.functions`) — generates a version-7 (time-ordered) UUID via `uuid_generate_v7()` on PostgreSQL; falls back to `gen_random_uuid()` on other databases
+
+**ORM — Aggregates**
+- `BitAnd(field)` — bitwise AND across all values; maps to `bit_and()` on supporting databases
+- `BitOr(field)` — bitwise OR across all values; maps to `bit_or()`
+- `BitXor(field)` — bitwise XOR across all values; maps to `bit_xor()`
+
+**Sessions**
+- `SessionBase.__bool__()` — session instances are now truthy when the session cache contains data and falsy when empty or not yet loaded; allows simple `if session:` guards
+
+**Forms**
+- `BLANK_CHOICE_LABEL` — constant `"---------"` for the default empty/blank select option; importable from `buraq.forms.forms`
+- `Stylesheet` (`buraq.forms.forms`) — CSS path descriptor with custom HTML attributes for `Media`; pass as a member of `Media.css` lists alongside plain string paths; `Stylesheet(path, attrs={…}).render(medium)` emits a `<link>` tag with the provided attributes
+- `FilePathField.set_choices()` — rescans the directory and refreshes `self.choices` on demand; useful for long-running processes where the directory contents change after form class creation
+
+**Auth**
+- `Permission.user_perm_str` — read-only property on `Permission` instances; returns the permission string in the `"<app_label>.<codename>"` format expected by `User.has_perm()`
+
+**Views**
+- `RedirectView.preserve_request = True` — returns `307 Temporary Redirect` (or `308 Permanent Redirect` when `permanent=True`) instead of `302`/`301`; instructs the client to repeat the request with the same HTTP method rather than downgrading to `GET`
+- `RedirectView.put()`, `.patch()`, `.delete()` — now explicitly handled alongside `get()` and `post()` so that method-preserving redirects work for non-GET verbs
+
+**Utils**
+- `parse_duration()` — now parses ISO 8601 week-only period strings: `P2W`, `P1.5W`, `-P3W`, etc.; previously only parsed them as part of a full `PnYnMnWnDTnHnMnS` string
+
 **Auth**
 - `Permission`, `Group`, `UserGroup`, `UserPermission`, `GroupPermission` models (`buraq.contrib.auth.models`)
 - `User.has_perm(perm)`, `User.has_perms(perms)`, `User.has_module_perms(app)` — async permission checks with in-memory result caching; `_invalidate_perm_cache()` clears cached results
@@ -86,7 +408,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@cache_page(timeout)` — full-response cache decorator; uses active cache backend
 - `WeekArchiveView`, `DayArchiveView`, `TodayArchiveView`, `ArchiveIndexView`, `DateDetailView` — date-based archive views
 
+**Middleware**
+- `GZipMiddleware` (`buraq.middleware.gzip`) — ASGI middleware that gzip-compresses responses larger than a configurable threshold; respects `Accept-Encoding: gzip`; skips already-compressed content types
+- `ConditionalGetMiddleware` (`buraq.middleware.common`) — sets `ETag` and `Last-Modified` headers; returns `304 Not Modified` when the request carries a matching `If-None-Match` or `If-Modified-Since` header
+- `MessageMiddleware` (`buraq.middleware.common`) — persists flash messages across redirects; stores messages in the session between requests
+- `BrokenLinkEmailsMiddleware` (`buraq.middleware.common`) — emails `MANAGERS` when a 404 is returned for a request originating from an internal `Referer`; silent no-op when `MANAGERS` is empty
+
+**Paginator**
+- `buraq.paginator.AsyncPaginator` — explicit async-only variant of `Paginator`; always awaits the queryset count before slicing; returns `AsyncPage` instances
+- `buraq.paginator.AsyncPage` — subclass of `Page` returned by `AsyncPaginator`; same navigation API (`has_next()`, `next_page_number()`, etc.)
+
+**HTTP Responses**
+- `buraq.http.FileResponse` — serve a file from disk with automatic `Content-Type` (guessed via `mimetypes`) and `Content-Disposition` header; `as_attachment=True` (default) triggers a download; `as_attachment=False` renders inline; `filename` overrides the download name
+
+**HTTP Caching Decorators**
+- `@condition(etag_func, last_modified_func)` — returns `304 Not Modified` based on ETag and/or Last-Modified callbacks; both sync and async callables supported; sets the corresponding response headers for cache-friendly GETs
+- `@conditional_page` — zero-config ETag computed from MD5 of the response body; returns `304` when the client already has the current version; use `@condition` when you can compute the ETag cheaply before the view runs
+
+**PostgreSQL Aggregates**
+- `BoolAnd(field)` — `True` if all non-null values are true
+- `BoolOr(field)` — `True` if any non-null value is true
+- `Corr(y, x)` — Pearson correlation coefficient
+- `CovarPop(y, x)` — population covariance
+- `CovarSamp(y, x)` — sample covariance
+- `RegrAvgX(y, x)`, `RegrAvgY(y, x)` — averages of the independent and dependent variables
+- `RegrCount(y, x)` — number of rows where both inputs are non-null
+- `RegrIntercept(y, x)` — Y-intercept of the least-squares-fit line
+- `RegrR2(y, x)` — R² (coefficient of determination)
+- `RegrSlope(y, x)` — slope of the least-squares-fit line
+- `RegrSXX(y, x)`, `RegrSXY(y, x)`, `RegrSYY(y, x)` — sums of squares and cross products for regression
+
+**URLs**
+- `re_path(pattern, view, kwargs, name)` — register a route with a raw regex pattern instead of a path converter string
+- `resolve(path)` — reverse-resolve a URL path to a `ResolverMatch`; raises `Resolver404` if no pattern matches
+- `ResolverMatch` — named tuple-like result of `resolve()`; attributes: `func`, `args`, `kwargs`, `url_name`, `app_name`
+- `Resolver404` — exception raised by `resolve()` when no pattern matches the given path
+- `NoReverseMatch` — exception raised by `reverse()` when the named URL cannot be constructed from the given arguments
+
+**Auth**
+- `PasswordResetTokenGenerator` (`buraq.contrib.auth`) — generates and validates HMAC-SHA256–signed, time-limited tokens for password-reset links; `make_token(user)` → token string; `check_token(user, token)` → `bool`; configurable `PASSWORD_RESET_TIMEOUT` in seconds (default 86 400)
+
 **CSRF**
+- `CsrfViewMiddleware` — full ASGI class-based CSRF middleware; add to `MIDDLEWARE` list; validates `X-CSRFToken` header or `csrfmiddlewaretoken` POST field on unsafe methods; sets `csrftoken` cookie on every response; buffers and replays the request body when reading a form POST so the view still receives it
 - `buraq.contrib.csrf` — `get_token(request)`, `@csrf_protect`, `@ensure_csrf_cookie`
 
 **Forms**
@@ -99,6 +462,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `buraq.forms.formsets` — `BaseFormSet`, `BaseModelFormSet`, `BaseInlineFormSet`; `formset_factory`, `modelformset_factory`, `inlineformset_factory`
 
 **Email**
+- `InMemoryEmailBackend` (`buraq.contrib.email.backends.locmem.EmailBackend`) — test backend that stores all sent messages in a module-level `outbox` list instead of delivering them; thread-safe via `threading.Lock`; set `EMAIL_BACKEND = "buraq.contrib.email.backends.locmem.EmailBackend"` in tests; import `outbox` / `clear_outbox()` to inspect or reset
+- `EmailMultiAlternatives` — `EmailMessage` subclass for sending a single message with both `text/plain` and `text/html` bodies; `.attach_alternative(content, mimetype)` adds each part
 - `mail_admins(subject, message)` — send email to all `ADMINS` in settings
 - `mail_managers(subject, message)` — send email to all `MANAGERS` in settings
 
@@ -154,11 +519,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **PostgreSQL**
 - `buraq.contrib.postgres.fields` — `JSONField` (JSONB), `ArrayField` (ARRAY), `HStoreField` (hstore) column types for SQLAlchemy models
+- `CITextField` / `CICharField` / `CIEmailField` — case-insensitive text columns backed by `CITEXT` (requires `CREATE EXTENSION IF NOT EXISTS citext`)
+- `IntegerRangeField` / `BigIntegerRangeField` / `DecimalRangeField` / `DateRangeField` / `DateTimeRangeField` — PostgreSQL native range type columns (`int4range`, `int8range`, `numrange`, `daterange`, `tstzrange`)
+- `GinIndex` / `GistIndex` / `BrinIndex` / `SpGistIndex` / `BloomIndex` / `HashIndex` — helper functions returning a correctly configured `sqlalchemy.Index` with the matching `postgresql_using=` option; pass to `Meta.indexes`
+- `TrgmIndex(name, *columns, index_type="gin")` — trigram index using the `pg_trgm` extension; enables fast `LIKE`, `ILIKE`, and similarity (`%`) queries; `index_type` can be `"gin"` (default) or `"gist"` (better for `ORDER BY similarity`); requires `CREATE EXTENSION IF NOT EXISTS pg_trgm`
 - `buraq.contrib.postgres.search` — `SearchQuery`, `SearchVector`, `SearchRank`; all use `plainto_tsquery` for safe user input
 - `buraq.contrib.postgres.aggregates` — `ArrayAgg`, `StringAgg`, `JsonAgg`, `BitAnd`, `BitOr`
 - `buraq.contrib.postgres.functions` — `Unaccent`, `Now`, `Random`
 
 **Testing**
+- `SimpleTestCase.assertNumQueries(n)` — context manager; asserts exactly `n` SQL queries are executed in the block; records queries via SQLAlchemy event hook
+- `SimpleTestCase.assertInHTML(needle, haystack, count=None)` — asserts that an HTML fragment appears (optionally exactly `count` times) inside a larger HTML string; whitespace-normalised comparison
+- `SimpleTestCase.assertFormsetError(formset, form_index, field, errors)` — asserts that a specific form in a formset has the given error(s) on a field (or `None` for non-field errors)
+- `LiveServerTestCase` — spins up a real ASGI server on a random port in a background thread; `self.live_server_url` gives the base URL; server is started in `setUpClass` and torn down in `tearDownClass`
 - `buraq.test.AsyncClient` — exercises the full ASGI stack in-process; `get`, `post`, `put`, `patch`, `delete`, `head`, `options`; `json=` shorthand; `headers=` injection; `follow_redirects=`; `force_login(user)`
 - `buraq.test.RequestFactory` — builds `starlette.requests.Request` objects for unit-testing individual views
 - `buraq.test.TestCase` — async-aware `unittest.TestCase` with `asyncSetUp`/`asyncTearDown`; assertion helpers: `assertContains`, `assertNotContains`, `assertRedirects`, `assertStatusCode`, `assertJSONEqual`
@@ -174,7 +547,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `buraq.utils.functional` — `cached_property`, `LazyObject`, `SimpleLazyObject`, `lazy`, `classproperty`
 - `buraq.utils.dateparse` — `parse_date`, `parse_time`, `parse_datetime`, `parse_duration` — ISO 8601 + `DD HH:MM:SS` formats
 - `buraq.contrib.humanize` — `intcomma`, `ordinal`, `apnumber`, `pluralize`, `naturalday`, `naturaltime`, `naturalduration`, `intword`
-- `buraq.serializers` — serialize querysets and model instances to JSON, Python, or XML; JSON backend uses `orjson` with stdlib fallback
+- `buraq.serializers` — serialize querysets and model instances to JSON, Python, XML, or YAML; JSON backend uses `orjson` with stdlib fallback
+- YAML serializer (`buraq.serializers.yaml.YamlSerializer`) — round-trips model data to YAML via PyYAML; registered under `"yaml"` format; `pip install pyyaml` required
+- `BaseSerializer.load(data)` — deserializes and upserts records into the database; finds existing rows by PK or creates new instances; returns the list of saved model objects
+- `deserialize_objects(format, data)` (`buraq.serializers`) — convenience async function that calls `deserialize()` then reconstructs model instances from the resulting record dicts
 
 **Settings**
 - `AUTH_PASSWORD_VALIDATORS` — pre-configured with `MinimumLengthValidator`, `CommonPasswordValidator`, `NumericPasswordValidator`
@@ -186,6 +562,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis `get_many` / `set_many` optimised — `get_many()` uses a single `MGET` command; `set_many()` uses a pipeline (previously one round-trip per key)
 
 ### Fixed
+
+- **`management/cli.py` — `runserver` rejected IP host:port syntax** — the condition `"." not in bind.split(":")[0]` treated `0.0.0.0:8001` as a module path because IP addresses contain dots; replaced with a digit-check on the port portion so any `host:port` where the port is numeric is parsed correctly
+- **`management/cli.py` — `test --pattern` prevented tests from running** — `--collect-only` was appended to pytest args when a custom pattern was given, causing pytest to discover but never execute tests; replaced with `--ignore-glob`
+- **`management/cli.py` — `testserver` bind argument was unreachable** — the `fixtures` list argument consumed all positional input, leaving the `bind` positional argument permanently unreachable; `bind` is now an `--app` option
+- **`management/cli.py` — `optimizemigration` always failed with a single revision** — `alembic merge` requires two or more revision IDs; passing a single revision raised an Alembic error every time; the command now accepts a list of revisions and exits with a clear error if fewer than two are provided
+
+- **`contrib/cache/backends/base.py` — sequential N-RTT loops in batch operations** — `get_many()`, `set_many()`, and `delete_many()` awaited each key serially; replaced with `asyncio.gather()` so all operations execute concurrently
+- **`contrib/cache/backends/memory.py` — `asyncio.Lock()` created before event loop** — the lock was instantiated in `__init__`, before an event loop existed, raising `RuntimeError` in some startup paths; replaced with a lazy `_get_lock()` method that creates the lock on first use
+- **`contrib/auth/views.py` — `NameError` on `obtain_auth_token` and `get_me`** — both functions referenced `create_access_token` and `get_current_user_id` which were removed in a prior cleanup; calling either view raised `NameError` at runtime; both functions removed; `LoginView.post()` and `LogoutView.get()` rewritten to use session-based `authenticate()` / `login()` / `logout()`
+- **`contrib/auth/__init__.py` — discarded `asyncio.create_task()` reference** — `login()` called `asyncio.create_task(_update_last_login())` without storing the return value; if the background task raised, Python emitted an unraisable "Task exception was never retrieved" warning; the task is now stored and a `done_callback` attached to log failures
+- **`contrib/email/message.py` — `get_backend()` does not exist** — `EmailMessage.send()` imported `get_backend` from `buraq.contrib.email.send`; the function is named `get_connection`; all sends raised `ImportError`
+- **`contrib/email/message.py` — `EmailMultiAlternatives` silently dropped attachments** — `build_mime()` only assembled the `alternative` part (plain + HTML) and ignored `self.attachments`; fixed by wrapping the `alternative` block in a `mixed` outer container when attachments are present
+- **`contrib/cache/backends/db.py` — SQL named-parameter type mismatch** — `_execute()` built the binding dict with integer keys (`{0: value}`) via `dict(enumerate(params))`, but the `:0` placeholders in the SQL require string keys; fixed by casting with `{str(i): v for i, v in enumerate(params)}`
+- **`contrib/cache/backends/db.py` — non-atomic DELETE + INSERT in `set()`** — `set()` opened two separate `_execute()` calls (one to delete, one to insert), each auto-committing independently; a crash between them left no entry in the table; both statements now share one `SessionLocal()` context with a single commit
+- **`orm/transaction.py` — `ContextVar` leak on commit failure** — if the transaction committed then a post-commit callback raised, `_current_session` and `_on_commit_callbacks` were left set for the remainder of the request; both are now reset inside a `finally` block regardless of outcome
+- **`orm/transaction.py` — sync callback returning a coroutine was not awaited** — a callback registered as a lambda wrapping an async function (e.g. `lambda: async_fn(arg)`) returned a coroutine object from the sync branch; the coroutine was discarded silently; `inspect.iscoroutine(result)` now detects and awaits it
+- **`middleware/csp.py` — `csp_override(None)` did not suppress CSP header** — `getattr(request.state, "_csp_override", None)` returned `None` both when the decorator was not applied and when it was explicitly applied with `None` to suppress the header; a module-level `_UNSET = object()` sentinel now distinguishes the two states
+- **`contrib/sessions/backends/file.py` — blocking file I/O on the async event loop** — `load()`, `save()`, `delete()`, `exists()`, and `clear_expired()` all called `Path` I/O methods directly on the event loop, blocking it for each disk operation; all I/O is now wrapped in `asyncio.to_thread()`; `clear_expired()` is now `async def`
+- **`User` concrete model missing `check_password` / `set_password`** — the concrete `User` class in `contrib/auth/models.py` does not inherit from `AbstractBaseUser`, so it had no password-checking methods; `check_password(raw_password)` and `set_password(raw_password)` are now defined directly on `User`, delegating to `verify_password` / `hash_password` from `buraq.contrib.auth._passwords`; the admin login was silently failing as a result
+- **`createsuperuser` used raw SQLAlchemy session** — the command called `db.add(user)` + `db.commit()` directly on a Buraq model, which bypasses the ORM layer and fails; replaced with `User.objects.create()`
 
 - **`refresh_from_db(fields=...)` was a no-op** — the `fields` parameter was accepted but ignored; the method always reloaded all columns. It now issues a `SELECT` limited to the requested columns and updates only those attributes on the instance.
 - **`Model.save()` returned stale data** — after an `UPDATE`, `save()` returned the pre-update Python object while the database row held the new values. The merged SQLAlchemy instance is now synced back to `self` so all columns reflect the committed state.
@@ -218,9 +614,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Private Starlette import in `RequestFactory`** — `_TestClientTransport` is an internal symbol that can be removed in any Starlette release. Import removed.
 - **`asyncSetUp` failure leaked event loop** — if `asyncSetUp` raised, `TestCase.setUp` exited without closing the loop. Both methods now use `try/finally`.
 - **Backend cache not used** — `_load_backends()` re-instantiated all auth backend classes on every `authenticate()` call. Result is now cached at module level.
+- **`TruncHour/Day/Week/Month/Quarter/Year` were PostgreSQL-only** — all truncation functions used `func.date_trunc(...)`, which is a PostgreSQL extension. On SQLite the queries raised `OperationalError`; on MySQL/MariaDB they produced wrong results. All six functions now detect the configured database dialect via `DATABASE_URL` and emit `strftime` for SQLite, `date_format` for MySQL/MariaDB, and `date_trunc` for PostgreSQL.
 
 ### Changed
 
+- **Password utilities relocated** — `hash_password()` and `verify_password()` moved from the now-deleted `buraq/core/auth.py` to `buraq/contrib/auth/_passwords.py`; all internal call sites updated; importing from `buraq.contrib.auth` (`make_password`, `check_password`) is unchanged
+- **`buraq.core.auth` deleted** — the module contained only dead JWT helpers (`create_access_token`, `get_current_user_id`) and the password functions now in `_passwords.py`; no public import path existed
+- **`buraq.core.middleware` deleted** — `security_headers_middleware` and `register_middleware` inlined directly into `buraq.core.application`; the separate module was an import-only indirection with no public API
+- **`buraq.db.transaction` moved to `buraq.orm.transaction`** — transaction logic now lives under `orm/`; `buraq.db` re-exports `transaction`, `atomic`, and `on_commit` for backward compatibility
+- **`buraq.views.decorators/` flattened** — the two-file directory (`__init__.py` + `csp.py`) replaced by a single `buraq/views/decorators.py`; public import paths unchanged
+- **`LoginView`/`LogoutView` rewritten to session auth** — dead JWT functions `obtain_auth_token` and `get_me` (which referenced `create_access_token` and `get_current_user_id`, both removed in a prior cleanup) removed from `contrib/auth/views.py`; `LoginView.post()` now calls `authenticate()` then `login()` (session-based); `LogoutView.get()` now calls `logout()` instead of deleting a JWT cookie
+- **`aiosqlite` moved to core dependencies** — the default `DATABASE_URL` uses `sqlite+aiosqlite://`; new projects failed immediately without it; `aiosqlite` is now bundled so SQLite works out of the box with no extra install
+- **`asyncpg` moved to optional `[postgres]` extra** — PostgreSQL C extension is no longer pulled in for all users; install with `pip install "buraq[postgres]"` or `uv add "buraq[postgres]"`
+- **`[production]` extra removed** — the extra listed `whitenoise` and `gunicorn`, neither of which is imported anywhere in the framework; `granian` (Rust ASGI server) has been bundled in core since 1.0.0 and serves production traffic without additional packages
 - `path()` now accepts an optional dict as the third positional argument to pass extra keyword arguments to the view; internally applied via `functools.partial`
 
 ## [1.4.0] - 2026-08-04
@@ -306,7 +712,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Built-in authentication system with JWT (PyJWT) and session support
 - Flash messages backed by session storage
 - Middleware system compatible with ASGI
-- Admin interface powered by SQLAdmin
+- Built-in admin panel at `/admin` (replaced by the full `BuraqAdmin` in `[Unreleased]`)
 - Session management with Redis and cookie backends
 - Cache framework with Redis and Memcached backends
 - Signals system for decoupled application components
@@ -319,7 +725,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Argon2 password hashing via argon2-cffi
 - orjson for high-performance JSON serialization
 
-[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/nezanuha/buraq/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/nezanuha/buraq/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/nezanuha/buraq/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/nezanuha/buraq/compare/v1.1.0...v1.2.0

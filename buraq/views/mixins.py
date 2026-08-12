@@ -100,4 +100,39 @@ class PermissionRequiredMixin(LoginRequiredMixin):
         return await View.dispatch(self, request, **kwargs)
 
 
-__all__ = ["AccessMixin", "LoginRequiredMixin", "UserPassesTestMixin", "PermissionRequiredMixin"]
+class SuccessMessageMixin:
+    """
+    Add a success flash message after a successful form save.
+
+    Mix with any ``FormView`` / ``CreateView`` / ``UpdateView``::
+
+        class CreatePostView(SuccessMessageMixin, CreateView):
+            model = Post
+            success_message = "Post '%(title)s' was created."
+
+    ``success_message`` is a format string; ``%(field)s`` placeholders are
+    filled from ``form.cleaned_data``.  Override ``get_success_message()`` for
+    dynamic messages.
+    """
+
+    success_message: str = ""
+
+    def get_success_message(self, cleaned_data: dict) -> str:
+        return self.success_message % cleaned_data if self.success_message else ""
+
+    async def form_valid(self, request, form):
+        response = await super().form_valid(request, form)
+        msg = self.get_success_message(form.cleaned_data)
+        if msg:
+            try:
+                from buraq.contrib.messages import success
+                success(request, msg)
+            except Exception:
+                pass
+        return response
+
+
+__all__ = [
+    "AccessMixin", "LoginRequiredMixin", "UserPassesTestMixin",
+    "PermissionRequiredMixin", "SuccessMessageMixin",
+]

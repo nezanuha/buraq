@@ -77,9 +77,13 @@ from buraq.http import JsonResponse
 async def api_view(request):
     return JsonResponse({"status": "ok", "count": 42})
 
-# Non-dict types require safe=False
+# Lists, primitives, etc. work by default (safe=False is the default)
 async def list_view(request):
-    return JsonResponse([1, 2, 3], safe=False)
+    return JsonResponse([1, 2, 3])
+
+# Restrict to dicts only with safe=True
+async def strict_view(request):
+    return JsonResponse({"status": "ok"}, safe=True)
 
 # Custom status
 async def error_view(request):
@@ -119,6 +123,37 @@ async def csv_export(request):
     response = StreamingHttpResponse(generate(), content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="users.csv"'
     return response
+```
+
+---
+
+## FileResponse
+
+Serve a file from disk with the correct `Content-Type` and `Content-Disposition`.
+
+```python
+from buraq.http import FileResponse
+
+# Download attachment (default)
+async def download_report(request):
+    return FileResponse("/reports/monthly.pdf")
+
+# Inline display (opens in browser)
+async def preview_image(request, pk: int):
+    doc = await Document.objects.get(id=pk)
+    return FileResponse(doc.path, as_attachment=False)
+
+# Custom download filename
+async def export_csv(request):
+    return FileResponse("/tmp/export.csv", filename="users.csv")
+```
+
+`as_attachment=True` (default) sets `Content-Disposition: attachment` so the browser downloads the file. Set `as_attachment=False` for inline rendering (e.g. PDFs, images).
+
+The `Content-Type` is guessed from the filename using Python's `mimetypes` module; pass `content_type` explicitly to override:
+
+```python
+FileResponse("/data/blob", content_type="application/octet-stream")
 ```
 
 ---
@@ -268,6 +303,42 @@ async def localised_view(request): ...
 @vary_on_cookie
 async def personalised_view(request): ...
 ```
+
+### condition
+
+Return `304 Not Modified` when the client already has the current version, using ETag and/or Last-Modified callbacks you supply:
+
+```python
+from buraq.decorators import condition
+
+def post_etag(request, pk):
+    post = ... # synchronous lookup or cached value
+    return f'"{post.updated_at.isoformat()}"'
+
+def post_last_modified(request, pk):
+    post = ...
+    return post.updated_at   # datetime
+
+@condition(etag_func=post_etag, last_modified_func=post_last_modified)
+async def post_detail(request, pk: int):
+    ...
+```
+
+Either argument may be omitted. Async callables are supported.
+
+### conditional_page
+
+Zero-config ETag support — computes the ETag automatically from the MD5 of the response body:
+
+```python
+from buraq.decorators import conditional_page
+
+@conditional_page
+async def article(request, pk: int):
+    ...
+```
+
+Use `@condition` when you can compute the ETag cheaply before hitting the database; use `@conditional_page` when the body is always rendered anyway.
 
 ### cache_page
 

@@ -1,15 +1,17 @@
-from buraq.orm.aggregates import Avg, Count, Max, Min, StdDev, Sum, Variance
+from buraq.orm.aggregates import AnyValue, Avg, Count, Max, Min, StdDev, Sum, Variance
 from buraq.orm.base import Model
 from buraq.orm.expressions import Case, Exists, ExpressionWrapper, OuterRef, Subquery, Value, When
 from buraq.orm.fields import (
     BigIntegerField,
     BooleanField,
     CharField,
+    CompositePrimaryKey,
     DateField,
     DateTimeField,
     DurationField,
     FloatField,
     ForeignKey,
+    GeneratedField,
     GenericIPAddressField,
     IntegerField,
     JSONField,
@@ -41,7 +43,8 @@ __all__ = [
     "PositiveBigIntegerField",
     "DoesNotExist", "MultipleObjectsReturned",
     "Q", "F",
-    "Count", "Sum", "Avg", "Min", "Max", "StdDev", "Variance",
+    "Count", "Sum", "Avg", "Min", "Max", "StdDev", "Variance", "AnyValue",
+    "GeneratedField", "CompositePrimaryKey",
     "Case", "When", "Value", "OuterRef", "Subquery", "Exists", "ExpressionWrapper",
     "Window", "RowNumber", "Rank", "DenseRank", "PercentRank", "CumeDist", "Ntile",
     "Lag", "Lead", "FirstValue", "LastValue", "NthValue",

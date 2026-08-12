@@ -112,9 +112,10 @@ class BigIntegerField(Field):
 
 class PositiveIntegerField(Field):
     def to_sa_column(self, name: str = "") -> sa.Column:
+        constraint_name = f"ck_{name}_positive" if name else None
         return sa.Column(
             sa.Integer,
-            sa.CheckConstraint(sa.column(name) >= 0),
+            sa.CheckConstraint(f"{name} >= 0", name=constraint_name) if name else sa.CheckConstraint("value >= 0"),
             nullable=self.null,
             unique=self.unique,
             index=self.db_index,
@@ -124,9 +125,10 @@ class PositiveIntegerField(Field):
 
 class PositiveSmallIntegerField(Field):
     def to_sa_column(self, name: str = "") -> sa.Column:
+        constraint_name = f"ck_{name}_positive" if name else None
         return sa.Column(
             sa.SmallInteger,
-            sa.CheckConstraint(sa.column(name) >= 0),
+            sa.CheckConstraint(f"{name} >= 0", name=constraint_name) if name else sa.CheckConstraint("value >= 0"),
             nullable=self.null,
             unique=self.unique,
             index=self.db_index,
@@ -273,6 +275,34 @@ class AutoField(Field):
 
     def to_sa_column(self, name: str = "") -> sa.Column:
         return sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+
+
+class SmallAutoField(Field):
+    """SmallInteger primary key (auto-increment)."""
+
+    def to_sa_column(self, name: str = "") -> sa.Column:
+        return sa.Column(sa.SmallInteger, primary_key=True, autoincrement=True)
+
+
+class BigAutoField(Field):
+    """BigInteger primary key (auto-increment)."""
+
+    def to_sa_column(self, name: str = "") -> sa.Column:
+        return sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
+
+
+class FilePathField(CharField):
+    """CharField that stores a filesystem path; optionally restricted to a directory."""
+
+    def __init__(self, path: str = "", match: str = None, recursive: bool = False,
+                 allow_files: bool = True, allow_folders: bool = False,
+                 max_length: int = 100, **kwargs):
+        super().__init__(max_length=max_length, **kwargs)
+        self.path = path
+        self.match = match
+        self.recursive = recursive
+        self.allow_files = allow_files
+        self.allow_folders = allow_folders
 
 
 class ForeignKey(Field):
@@ -582,4 +612,104 @@ class _M2MManager:
                 select(func.count()).where(assoc.c.source_id == self._instance.id)
             )
             return result.scalar() or 0
+
+
+class GeneratedField(Field):
+    """
+    A read-only field whose value is computed by the database engine.
+
+    The ``expression`` is a raw SQL string (or SQLAlchemy ``text()``/expression)
+    evaluated by the database on every INSERT or UPDATE.
+
+    ``db_persist=True`` (default) creates a STORED/PERSISTENT generated column —
+    the value is computed once on write and stored alongside the row.  This is
+    the most portable option (PostgreSQL 12+, MySQL 5.7+, SQLite 3.31+).
+
+    ``db_persist=False`` creates a VIRTUAL generated column computed on every
+    read.  Not supported by all databases (e.g. PostgreSQL does not support
+    virtual generated columns).
+
+    Usage::
+
+        class Product(models.Model):
+            price      = models.DecimalField(max_digits=10, decimal_places=2)
+            tax_rate   = models.FloatField(default=0.2)
+            price_incl = GeneratedField(
+                expression="price * (1 + tax_rate)",
+                output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                db_persist=True,
+            )
+
+    .. note::
+        Generated columns are database-managed and cannot be set in Python.
+        Attempting to assign a value to a generated field is a no-op.
+    """
+
+    def __init__(self, expression, output_field: Field, db_persist: bool = True, **kwargs):
+        kwargs.setdefault("editable", False)
+        super().__init__(**kwargs)
+        self.expression = expression
+        self.output_field = output_field
+        self.db_persist = db_persist
+
+    def to_sa_column(self, name: str = "") -> sa.Column:
+        out = self.output_field
+        sa_type = out._sa_type if out._sa_type is not None else sa.Text()
+
+        # For CharField/similar, resolve type with parameters.
+        if isinstance(out, CharField):
+            sa_type = sa.String(out.max_length)
+        elif isinstance(out, DecimalField):
+            sa_type = sa.Numeric(precision=out.max_digits, scale=out.decimal_places)
+        elif isinstance(out, IntegerField):
+            sa_type = sa.Integer()
+        elif isinstance(out, FloatField):
+            sa_type = sa.Float()
+        elif isinstance(out, BooleanField):
+            sa_type = sa.Boolean()
+
+        expr_text = (
+            self.expression
+            if isinstance(self.expression, str)
+            else str(self.expression.compile(compile_kwargs={"literal_binds": True}))
+        )
+        return sa.Column(
+            sa_type,
+            sa.Computed(expr_text, persisted=self.db_persist),
+            nullable=True,
+        )
+
+
+class CompositePrimaryKey:
+    """
+    Declares a composite (multi-column) primary key for a model.
+
+    Set ``primary_key`` on the model's ``Meta`` class::
+
+        class OrderItem(models.Model):
+            order_id   = models.ForeignKey(Order, on_delete=models.CASCADE)
+            product_id = models.ForeignKey(Product, on_delete=models.CASCADE)
+            quantity   = models.IntegerField(default=1)
+
+            class Meta:
+                primary_key = CompositePrimaryKey("order_id", "product_id")
+
+    The named columns will have ``primary_key=True`` in the generated
+    SQLAlchemy table definition and the implicit auto-increment ``id`` column
+    will **not** be added.
+
+    .. note::
+        Models with a composite primary key do not have an ``id`` attribute.
+        Use the individual key columns to look up rows::
+
+            item = await OrderItem.objects.get(order_id=1, product_id=5)
+    """
+
+    def __init__(self, *fields: str):
+        if len(fields) < 2:
+            raise ValueError("CompositePrimaryKey requires at least two field names.")
+        self.fields = fields
+
+    def __repr__(self) -> str:
+        return f"CompositePrimaryKey({', '.join(repr(f) for f in self.fields)})"
 

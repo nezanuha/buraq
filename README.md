@@ -233,7 +233,7 @@ Buraq is built on the fastest available Python components at every layer:
 - **ModelForm** with field validation and `await form.save()`
 - **Jinja2 templates** with Django-compatible template tags
 - **Built-in auth** — JWT + session, login/register/logout
-- **Auto admin panel** via SQLAdmin — `buraq createsuperuser`
+- **Built-in admin panel** — auto-CRUD for every model, `buraq createsuperuser`
 - **Flash messages** backed by session storage
 - **Signals** — `post_save`, `pre_delete`, custom signals
 - **Cache backends** — Redis, Memcached, in-memory (all async)

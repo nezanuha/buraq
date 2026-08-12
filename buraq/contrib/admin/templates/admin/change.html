@@ -1,0 +1,124 @@
+{% extends "admin/base.html" %}
+{% block title %}{% if is_add %}Add{% else %}Edit{% endif %} {{ ma.get_verbose_name() | title }}{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs">
+  <a href="/admin/">Home</a>
+  <span class="sep text-neutral">/</span>
+  <span class="text-neutral">{{ ma.get_app_label() | replace("_", " ") | title }}</span>
+  <span class="sep text-neutral">/</span>
+  <a href="/admin/{{ app_label }}/{{ model_name }}/">{{ ma.get_verbose_name_plural() | title }}</a>
+  <span class="sep text-neutral">/</span>
+  <span>{% if is_add %}Add{% else %}{{ obj.get("id", "Edit") }}{% endif %}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-hd">
+  <h1 class="page-title">
+    {% if is_add %}Add {{ ma.get_verbose_name() | title }}
+    {% else %}Edit {{ ma.get_verbose_name() | title }} #{{ obj.get("id", "") }}{% endif %}
+  </h1>
+</div>
+
+{% if success == "created" %}
+<div class="alert alert-soft alert-success flash">Object created successfully.</div>
+{% elif success == "saved" %}
+<div class="alert alert-soft alert-success flash">Changes saved successfully.</div>
+{% endif %}
+
+{% if error %}
+<div class="alert alert-soft alert-error flash">{{ error }}</div>
+{% endif %}
+
+<form method="post" class="form-wrap">
+  {{ csrf_input(request) }}
+
+  <div class="card card-outline">
+    <div class="card-content">
+
+      {% for field in form_fields %}
+      <div class="field-group">
+
+        <label class="field-label" for="f_{{ field.name }}">
+          {{ field.label }}
+          {% if field.required %}<span class="field-req">*</span>{% endif %}
+        </label>
+
+        {% if field.readonly %}
+          <div class="field-readonly">{{ obj.get(field.name, "") or "—" }}</div>
+
+        {% elif field.type == "boolean" %}
+          <input type="checkbox" name="{{ field.name }}" id="f_{{ field.name }}"
+                 class="checkbox checkbox-primary"
+                 {% if obj.get(field.name) %}checked{% endif %} />
+
+        {% elif field.type in ("textarea", "json") %}
+          <textarea name="{{ field.name }}" id="f_{{ field.name }}" rows="6"
+                    class="form-textarea"
+                    {% if field.required %}required{% endif %}>{{ obj.get(field.name, "") or "" }}</textarea>
+
+        {% elif field.type == "integer" %}
+          <input type="number" step="1" name="{{ field.name }}" id="f_{{ field.name }}"
+                 class="input input-outline w-full"
+                 value="{{ obj.get(field.name, '') if obj.get(field.name) is not none else '' }}"
+                 {% if field.required %}required{% endif %} />
+
+        {% elif field.type == "float" %}
+          <input type="number" step="any" name="{{ field.name }}" id="f_{{ field.name }}"
+                 class="input input-outline w-full"
+                 value="{{ obj.get(field.name, '') if obj.get(field.name) is not none else '' }}"
+                 {% if field.required %}required{% endif %} />
+
+        {% else %}
+          <input type="{{ field.type }}" name="{{ field.name }}" id="f_{{ field.name }}"
+                 class="input input-outline w-full"
+                 value="{{ obj.get(field.name, '') if obj.get(field.name) is not none else '' }}"
+                 {% if field.required %}required{% endif %} />
+        {% endif %}
+
+        {% if field.nullable and not field.required %}
+        <p class="field-hint">Optional</p>
+        {% endif %}
+
+      </div>
+      {% else %}
+      <p class="text-neutral text-sm">No editable fields configured.</p>
+      {% endfor %}
+
+    </div>
+  </div>
+
+  <div class="save-row">
+    <button type="submit" name="_save_action" value="_save" class="btn btn-primary btn-sm">
+      {% if is_add %}Create{% else %}Save{% endif %}
+    </button>
+    <button type="submit" name="_save_action" value="_continue" class="btn btn-ghost btn-sm">
+      Save and continue editing
+    </button>
+    {% if is_add %}
+    <button type="submit" name="_save_action" value="_addanother" class="btn btn-ghost btn-sm">
+      Save and add another
+    </button>
+    {% endif %}
+
+    {% if not is_add and ma.can_delete %}
+    <div class="save-row-right">
+      <a href="/admin/{{ app_label }}/{{ model_name }}/{{ obj.get('id') }}/delete/"
+         class="btn btn-ghost btn-sm text-error">
+        Delete
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="mt-3">
+    <a href="/admin/{{ app_label }}/{{ model_name }}/"
+       class="text-neutral text-sm no-underline">
+      ← Back to list
+    </a>
+  </div>
+
+</form>
+{% endblock %}

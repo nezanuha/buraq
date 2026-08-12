@@ -68,3 +68,39 @@ class StdDev(Aggregate):
 
 class Variance(Aggregate):
     sa_func = func.variance
+
+
+class BitAnd(Aggregate):
+    """Bitwise AND of all non-NULL integer values."""
+    sa_func = func.bit_and
+
+
+class BitOr(Aggregate):
+    """Bitwise OR of all non-NULL integer values."""
+    sa_func = func.bit_or
+
+
+class BitXor(Aggregate):
+    """Bitwise XOR of all non-NULL integer values."""
+    sa_func = func.bit_xor
+
+
+class AnyValue(Aggregate):
+    """
+    Return an arbitrary non-NULL value from the group.
+
+    Useful in ``GROUP BY`` queries when a column is functionally dependent on
+    the group key but is not itself in the ``GROUP BY`` clause.  Avoids the
+    need to wrap the column in ``MAX()`` or ``MIN()`` when any value would do.
+
+    Database support: MySQL 8.0.2+, Oracle, MariaDB 10.3+.
+    PostgreSQL users should use ``Max`` or ``Min`` instead (no native
+    ``any_value()`` until PostgreSQL 16).
+
+    Usage::
+
+        results = await Order.objects.values("customer_id").annotate(
+            sample_note=AnyValue("note")
+        )
+    """
+    sa_func = func.any_value

@@ -248,6 +248,134 @@ def user_passes_test(test_func, login_url: str = "/auth/login"):
     return decorator
 
 
+def condition(etag_func=None, last_modified_func=None):
+    """
+    Conditional view decorator — returns 304 Not Modified when the client's
+    ``If-None-Match`` / ``If-Modified-Since`` headers match the values computed
+    by the supplied callables.
+
+    Usage::
+
+        def my_etag(request, pk):
+            obj = ...
+            return f'"{obj.updated_at.isoformat()}"'
+
+        @condition(etag_func=my_etag)
+        async def detail(request, pk: int):
+            ...
+
+    ``etag_func`` receives the same positional and keyword arguments as the
+    view.  It should return an ETag string (with surrounding quotes) or
+    ``None`` to skip ETag matching.
+
+    ``last_modified_func`` should return a ``datetime`` or ``None``.
+    """
+    def decorator(view_func):
+        @functools.wraps(view_func)
+        async def wrapper(request, *args, **kwargs):
+            import inspect
+            from datetime import datetime as _dt
+            from email.utils import format_datetime, parsedate_to_datetime
+
+            etag = None
+            last_modified = None
+
+            if etag_func is not None:
+                result = etag_func(request, *args, **kwargs)
+                if inspect.isawaitable(result):
+                    result = await result
+                etag = result
+
+            if last_modified_func is not None:
+                result = last_modified_func(request, *args, **kwargs)
+                if inspect.isawaitable(result):
+                    result = await result
+                last_modified = result
+
+            req_headers = dict(request.headers)
+
+            # ETag check
+            if etag is not None:
+                client_etag = req_headers.get("if-none-match", "")
+                if client_etag and etag.strip('"') in client_etag:
+                    from starlette.responses import Response
+                    return Response(status_code=304)
+
+            # Last-Modified check
+            if last_modified is not None:
+                ims_header = req_headers.get("if-modified-since")
+                if ims_header:
+                    try:
+                        client_dt = parsedate_to_datetime(ims_header)
+                        if isinstance(last_modified, _dt):
+                            if last_modified <= client_dt:
+                                from starlette.responses import Response
+                                return Response(status_code=304)
+                    except Exception:
+                        pass
+
+            response = await view_func(request, *args, **kwargs)
+
+            if hasattr(response, "headers"):
+                if etag is not None:
+                    response.headers.setdefault("ETag", etag)
+                if last_modified is not None and isinstance(last_modified, _dt):
+                    response.headers.setdefault(
+                        "Last-Modified", format_datetime(last_modified, usegmt=True)
+                    )
+
+            return response
+        return wrapper
+    return decorator
+
+
+def conditional_page(view_func=None):
+    """
+    Decorator that automatically handles ``ETag`` and ``Last-Modified`` based
+    on the response body — a zero-config alternative to :func:`condition`.
+
+    Usage::
+
+        @conditional_page
+        async def article(request, pk: int):
+            ...
+
+    The decorator computes an ETag from the MD5 of the response body and
+    returns 304 when the client already has the current version.
+    """
+    import hashlib as _hashlib
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(request, *args, **kwargs):
+            response = await func(request, *args, **kwargs)
+
+            if getattr(response, "status_code", 200) != 200:
+                return response
+
+            body = b""
+            if hasattr(response, "body"):
+                body = response.body
+            elif hasattr(response, "render"):
+                body = await response.render()
+
+            etag = f'"{_hashlib.md5(body).hexdigest()}"'
+            client_etag = request.headers.get("if-none-match", "")
+            if client_etag and _hashlib.md5(body).hexdigest() in client_etag:
+                from starlette.responses import Response
+                return Response(status_code=304)
+
+            if hasattr(response, "headers"):
+                response.headers.setdefault("ETag", etag)
+
+            return response
+        return wrapper
+
+    if view_func is not None:
+        return decorator(view_func)
+    return decorator
+
+
 def cache_page(timeout: int, *, cache: str = "default", key_prefix: str = ""):
     """
     Cache the full view response for ``timeout`` seconds.

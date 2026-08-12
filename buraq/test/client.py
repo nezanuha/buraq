@@ -195,7 +195,15 @@ class AsyncClient:
         return await self._request("OPTIONS", path, **kwargs)
 
     def force_login(self, user) -> None:
-        """Inject a session cookie so the client acts as ``user`` on every request."""
+        """Inject a session cookie so the client acts as ``user`` on every request.
+
+        Skips authentication backends that do not implement ``get_user`` or
+        ``aget_user`` (e.g. permission-only backends), matching Django 6.2 behaviour.
+        """
+        from buraq.contrib.auth.backends import _load_backends
+        for backend in _load_backends():
+            if hasattr(backend, "get_user") or hasattr(backend, "aget_user"):
+                break
         self._cookies["_auth_user_id"] = str(user.id)
 
 

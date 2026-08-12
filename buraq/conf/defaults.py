@@ -25,6 +25,8 @@ class BuraqSettings(BaseSettings):
     # Auth
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     ALGORITHM: str = "HS256"
+    AUTH_USER_MODEL: str = "buraq.contrib.auth.models.User"
+    PASSWORD_RESET_TIMEOUT: int = 259200  # 3 days in seconds
     AUTHENTICATION_BACKENDS: list[str] = ["buraq.contrib.auth.backends.ModelBackend"]
     AUTH_PASSWORD_VALIDATORS: list[dict] = [
         {"NAME": "buraq.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -43,7 +45,13 @@ class BuraqSettings(BaseSettings):
 
     # Static & templates
     STATIC_URL: str = "/static/"
-    STATIC_DIR: str | None = None
+    STATIC_DIR: str | None = None          # single source dir (legacy; prefer STATICFILES_DIRS)
+    STATICFILES_DIRS: list[str] = []       # additional static source directories
+    STATICFILES_FINDERS: list[str] = [
+        "buraq.contrib.staticfiles.finders.FileSystemFinder",
+        "buraq.contrib.staticfiles.finders.AppDirectoriesFinder",
+    ]
+    STATICFILES_STORAGE: str = "buraq.contrib.staticfiles.storage.StaticFilesStorage"
     TEMPLATES_DIR: str | None = None
     MEDIA_URL: str = "/media/"
     MEDIA_DIR: str | None = None
@@ -64,7 +72,7 @@ class BuraqSettings(BaseSettings):
     MAILERS: dict = {}
 
     # Cache
-    CACHE_BACKEND: str = "buraq.contrib.cache.backends.memory.MemoryCache"
+    CACHE_BACKEND: str = "buraq.contrib.cache.backends.memory.MemoryCacheBackend"
     CACHE_REDIS_URL: str | None = None
     CACHE_KEY_PREFIX: str = ""
     CACHE_FILE_PATH: str | None = None

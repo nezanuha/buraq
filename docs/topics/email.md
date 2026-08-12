@@ -142,6 +142,82 @@ messages = [
 count = await send_mass_mail(messages)   # → number of emails sent
 ```
 
+## EmailMultiAlternatives — HTML + plain text
+
+`EmailMultiAlternatives` lets you attach multiple body formats (MIME `multipart/alternative`). Mail clients display the richest version they support:
+
+```python
+from buraq.contrib.email.message import EmailMultiAlternatives
+
+msg = EmailMultiAlternatives(
+    subject   = "Your order #1234 is confirmed",
+    body      = "Plain text body for older clients.",
+    from_email= "orders@example.com",
+    to        = ["customer@example.com"],
+)
+msg.attach_alternative("<h1>Order confirmed</h1><p>Thank you!</p>", "text/html")
+await msg.send()
+```
+
+## send_template_mail
+
+Render a Jinja2 template and send it as an email in one call:
+
+```python
+from buraq.contrib.email import send_template_mail
+
+await send_template_mail(
+    template_name = "emails/welcome.html",
+    context       = {"user": user, "site_name": "My Blog"},
+    subject       = "Welcome to My Blog!",
+    to            = [user.email],
+)
+```
+
+The template renders to HTML. A plain-text fallback is derived automatically by stripping tags. Pass `from_email=` to override the default sender.
+
+## Email backends
+
+| Backend class | Setting string | Description |
+|---|---|---|
+| `SMTPEmailBackend` | `buraq.contrib.email.backends.smtp.SMTPEmailBackend` | Production SMTP delivery |
+| `FileEmailBackend` | `buraq.contrib.email.backends.file.FileEmailBackend` | Writes `.eml` files to disk (development) |
+| `ConsoleEmailBackend` | `buraq.contrib.email.backends.console.ConsoleEmailBackend` | Prints emails to stdout (development) |
+| `DummyEmailBackend` | `buraq.contrib.email.backends.dummy.DummyEmailBackend` | Silently discards every message |
+| `EmailBackend` (locmem) | `buraq.contrib.email.backends.locmem.EmailBackend` | Stores messages in a list; preferred for tests |
+
+```python title="config/settings.py"
+# Development — prints every email to the terminal
+EMAIL_BACKEND = "buraq.contrib.email.backends.console.ConsoleEmailBackend"
+
+# CI — silently drops all email
+EMAIL_BACKEND = "buraq.contrib.email.backends.dummy.DummyEmailBackend"
+```
+
+## In-memory email backend (tests)
+
+Use the locmem backend in tests so no email is actually delivered:
+
+```python title="config/settings.py"
+EMAIL_BACKEND = "buraq.contrib.email.backends.locmem.EmailBackend"
+```
+
+```python
+from buraq.contrib.email.backends.locmem import outbox, clear_outbox
+from buraq.contrib.email import send_mail
+
+# Clear state between tests
+clear_outbox()
+
+await send_mail("Hi", "Hello!", ["to@example.com"])
+
+assert len(outbox) == 1
+assert outbox[0].subject == "Hi"
+assert "Hello!" in outbox[0].body
+```
+
+`outbox` is a module-level list; all sent `EmailMessage` instances are appended to it. `clear_outbox()` empties it — call it in `setUp` / `asyncSetUp`.
+
 ## Mail admins / managers
 
 Quickly notify your site administrators or managers. Configure the recipients in settings:

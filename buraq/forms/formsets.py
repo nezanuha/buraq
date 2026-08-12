@@ -140,6 +140,25 @@ class BaseFormSet:
             initial=form_initial or {},
             prefix=form_prefix,
         )
+
+        # Inject ORDER and DELETE pseudo-fields so templates can render them
+        if self.can_order:
+            from buraq.forms.fields import IntegerField
+            order_field = IntegerField(required=False, label="Order")
+            form.declared_fields = dict(form.declared_fields)
+            form.declared_fields[ORDERING_FIELD_NAME] = order_field
+            if form_data is not None:
+                order_value = form_data.get(ORDERING_FIELD_NAME)
+                form._order_value = int(order_value) if order_value is not None else index
+            else:
+                form._order_value = index
+
+        if self.can_delete:
+            from buraq.forms.fields import BooleanField
+            delete_field = BooleanField(required=False, label="Delete")
+            form.declared_fields = dict(form.declared_fields)
+            form.declared_fields[DELETION_FIELD_NAME] = delete_field
+
         return form
 
     @property
@@ -223,10 +242,33 @@ class BaseFormSet:
 
     @property
     def cleaned_data(self) -> list[dict]:
-        return [
-            f.cleaned_data for f in self.forms
-            if f.cleaned_data and not self._is_form_empty(f)
-        ]
+        result = []
+        for f in self.forms:
+            if not f.cleaned_data or self._is_form_empty(f):
+                continue
+            data = dict(f.cleaned_data)
+            if self.can_delete and data.get(DELETION_FIELD_NAME):
+                continue  # omit deleted forms from cleaned_data
+            result.append(data)
+        return result
+
+    @property
+    def deleted_forms(self) -> list:
+        """Forms marked for deletion (only when can_delete=True)."""
+        if not self.can_delete:
+            return []
+        deleted = []
+        for f in self.forms:
+            if f.cleaned_data and f.cleaned_data.get(DELETION_FIELD_NAME):
+                deleted.append(f)
+        return deleted
+
+    @property
+    def ordered_forms(self) -> list:
+        """Forms sorted by their ORDER field value (only when can_order=True)."""
+        if not self.can_order:
+            return list(self.forms)
+        return sorted(self.forms, key=lambda f: getattr(f, "_order_value", 0))
 
     # ── HTML helpers ─────────────────────────────────────────────────────────
 

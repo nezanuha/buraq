@@ -48,6 +48,7 @@ buraq manage seed_posts --count 50 --published
 ```python
 class Command(BaseCommand):
     help = "Description shown in --help"
+    requires_settings = True   # set False if your command can run without settings loaded
 
     def add_arguments(self, parser):
         # Standard argparse — add arguments here
@@ -62,3 +63,5 @@ class Command(BaseCommand):
 ```
 
 The `handle()` method is always `async def` — you can `await` anything inside it.
+
+`requires_settings = True` (default) means an `ImportError` from the settings module propagates normally. Set it to `False` on commands that should work even when the settings cannot be imported (e.g. a `startproject` scaffold command).

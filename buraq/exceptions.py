@@ -25,6 +25,10 @@ class SuspiciousFileOperation(SuspiciousOperation):
     pass
 
 
+class SuspiciousMultipartForm(SuspiciousOperation):
+    pass
+
+
 class ImproperlyConfigured(BuraqException):
     pass
 
@@ -38,6 +42,70 @@ class MultipleObjectsReturned(BuraqException):
 
 
 class FieldError(BuraqException):
+    pass
+
+
+class FieldDoesNotExist(BuraqException):
+    pass
+
+
+class NoReverseMatch(BuraqException):
+    pass
+
+
+class Resolver404(BuraqException):
+    pass
+
+
+class ViewDoesNotExist(BuraqException):
+    pass
+
+
+class MiddlewareNotUsed(BuraqException):
+    pass
+
+
+class AppRegistryNotReady(BuraqException):
+    pass
+
+
+class EmptyResultSet(BuraqException):
+    pass
+
+
+class FullResultSet(BuraqException):
+    pass
+
+
+class BadRequest(BuraqException):
+    pass
+
+
+class DisallowedHost(SuspiciousOperation):
+    pass
+
+
+class DisallowedRedirect(SuspiciousOperation):
+    pass
+
+
+class RequestAborted(BuraqException):
+    pass
+
+
+class TooManyFieldsSent(SuspiciousOperation):
+    pass
+
+
+class RequestDataTooBig(SuspiciousOperation):
+    pass
+
+
+class InvalidSessionKey(SuspiciousOperation):
+    pass
+
+
+class TooManyFilesSent(SuspiciousOperation):
     pass
 
 

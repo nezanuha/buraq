@@ -34,9 +34,37 @@ Buraq is intentionally designed to mirror Django's patterns. If you know Django,
 | `python manage.py makemigrations` | `buraq makemigrations` |
 | `python manage.py migrate` | `buraq migrate` |
 | `python manage.py startapp name` | `buraq startapp name` |
+| `python manage.py startproject name` | `buraq startproject name` |
 | `python manage.py createsuperuser` | `buraq createsuperuser` |
 | `python manage.py collectstatic` | `buraq collectstatic` |
+| `python manage.py findstatic file` | `buraq findstatic file` |
 | `python manage.py shell` | `buraq shell` |
+| `python manage.py check` | `buraq check` |
+| `python manage.py check --deploy` | `buraq check --deploy` |
+| `python manage.py dbshell` | `buraq dbshell` |
+| `python manage.py dumpdata` | `buraq dumpdata` |
+| `python manage.py loaddata fixture` | `buraq loaddata fixture` |
+| `python manage.py flush` | `buraq flush` |
+| `python manage.py changepassword` | `buraq changepassword` |
+| `python manage.py inspectdb` | `buraq inspectdb` |
+| `python manage.py diffsettings` | `buraq diffsettings` |
+| `python manage.py sendtestemail` | `buraq sendtestemail` |
+| `python manage.py makemessages -l ar` | `buraq makemessages -l ar` |
+| `python manage.py compilemessages` | `buraq compilemessages` |
+| `python manage.py sqlmigrate abc123` | `buraq sqlmigrate abc123` |
+| `python manage.py squashmigrations` | `buraq squashmigrations` |
+| `python manage.py optimizemigration` | `buraq optimizemigration` |
+| `python manage.py sqlflush` | `buraq sqlflush` |
+| `python manage.py sqlsequencereset` | `buraq sqlsequencereset` |
+| `python manage.py testserver fixtures/` | `buraq testserver fixtures/` |
+| `python manage.py test` | `buraq test` |
+| `python manage.py showmigrations` | `buraq showmigrations` |
+| `python manage.py clearsessions` | `buraq clearsessions` |
+| `python manage.py createcachetable` | `buraq createcachetable` |
+| `python manage.py remove_stale_contenttypes` | `buraq remove_stale_contenttypes` |
+| `python manage.py version` | `buraq version` |
+| `python manage.py worker` | `buraq worker` |
+| `django-admin` | `buraq` (same CLI, no separate admin tool) |
 
 ---
 
@@ -47,6 +75,8 @@ Buraq is intentionally designed to mirror Django's patterns. If you know Django,
 | `from django.urls import path, include` | `from buraq.urls import path, include` |
 | `from django.shortcuts import render, redirect` | `from buraq.shortcuts import render, redirect` |
 | `from django.shortcuts import get_object_or_404` | `from buraq.shortcuts import get_object_or_404` |
+| `from django.shortcuts import get_list_or_404` | `from buraq.shortcuts import get_list_or_404` |
+| `from django.urls import reverse_lazy` | `from buraq.urls import reverse_lazy` |
 | `from django.db import models` | `from buraq import models` |
 | `from django.views.generic import ListView` | `from buraq.views.generic import ListView` |
 | `from django.views.generic import DetailView` | `from buraq.views.generic import DetailView` |
@@ -266,6 +296,63 @@ Buraq uses Jinja2 instead of Django's template engine. The syntax is nearly iden
 
 ---
 
+## Static Files
+
+### Settings
+
+| Django | Buraq |
+|---|---|
+| `STATIC_URL = "/static/"` | `STATIC_URL = "/static/"` |
+| `STATIC_ROOT = str(BASE_DIR / "staticfiles")` | `STATIC_ROOT = str(BASE_DIR / "staticfiles")` |
+| `STATICFILES_DIRS = [str(BASE_DIR / "static")]` | `STATICFILES_DIRS = [str(BASE_DIR / "static")]` |
+| `STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"` | `STATICFILES_STORAGE = "buraq.contrib.staticfiles.storage.ManifestStaticFilesStorage"` |
+| `STATICFILES_FINDERS = [...]` | `STATICFILES_FINDERS = [...]` |
+| `MEDIA_ROOT = str(BASE_DIR / "media")` | `MEDIA_DIR = str(BASE_DIR / "media")` |
+| `MEDIA_URL = "/media/"` | `MEDIA_URL = "/media/"` |
+
+### Template tags
+
+Django requires `{% load static %}` before using `{% static %}`. Buraq registers the tag automatically — no load needed:
+
+=== "Django"
+
+    ```html+django
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <img src="{% static 'images/logo.png' %}">
+    ```
+
+=== "Buraq (Django-style tag)"
+
+    ```html+jinja
+    {# No {% load %} needed #}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <img src="{% static 'images/logo.png' %}">
+    ```
+
+=== "Buraq (function-call style)"
+
+    ```html+jinja
+    <link rel="stylesheet" href="{{ static('css/style.css') }}">
+    <img src="{{ static('images/logo.png') }}">
+    ```
+
+### Finders
+
+| Django | Buraq |
+|---|---|
+| `django.contrib.staticfiles.finders.FileSystemFinder` | `buraq.contrib.staticfiles.finders.FileSystemFinder` |
+| `django.contrib.staticfiles.finders.AppDirectoriesFinder` | `buraq.contrib.staticfiles.finders.AppDirectoriesFinder` |
+
+### Storage backends
+
+| Django | Buraq |
+|---|---|
+| `django.contrib.staticfiles.storage.StaticFilesStorage` | `buraq.contrib.staticfiles.storage.StaticFilesStorage` |
+| `django.contrib.staticfiles.storage.ManifestStaticFilesStorage` | `buraq.contrib.staticfiles.storage.ManifestStaticFilesStorage` |
+
+---
+
 ## Flash Messages
 
 === "Django"
@@ -343,6 +430,92 @@ Most settings follow the same naming convention. Key differences:
 | `SECRET_KEY` | `SECRET_KEY` |
 | `DEBUG` | `DEBUG` |
 | `ALLOWED_HOSTS` | `ALLOWED_HOSTS` |
+
+---
+
+## Background Tasks
+
+| Django | Buraq |
+|---|---|
+| `from django.tasks import background_task` | `from buraq.contrib.tasks import background_task` |
+| `@background_task` | `@background_task` |
+| `@background_task(queue="q", priority=5)` | `@background_task(queue="q", priority=5)` |
+| `await task.aenqueue(...)` | `await task.aenqueue(...)` |
+| `BaseTaskBackend` | `buraq.contrib.tasks.backends.base.BaseTaskBackend` |
+| `TaskResult.arefresh()` | `result.arefresh()` |
+| `TASKS = {"default": {"BACKEND": "..."}}` | `TASKS = {"default": {"BACKEND": "..."}}` |
+
+Both frameworks use an identical API. The only difference is the import path.
+
+---
+
+## Content Security Policy
+
+| Django | Buraq |
+|---|---|
+| `django.middleware.csp.ContentSecurityPolicyMiddleware` | `buraq.middleware.csp.ContentSecurityPolicyMiddleware` |
+| `CONTENT_SECURITY_POLICY = {...}` | `CONTENT_SECURITY_POLICY = {...}` |
+| `CONTENT_SECURITY_POLICY_REPORT_ONLY = {...}` | `CONTENT_SECURITY_POLICY_REPORT_ONLY = {...}` |
+| `CONTENT_SECURITY_POLICY_NONCE_DIRECTIVES` | `CONTENT_SECURITY_POLICY_NONCE_DIRECTIVES` |
+| `from django.views.decorators.csp import csp_override` | `from buraq.views.decorators.csp import csp_override` |
+| `from django.views.decorators.csp import csp_report_only_override` | `from buraq.views.decorators.csp import csp_report_only_override` |
+| `from django.utils.csp import CSP` | `from buraq.utils.csp import CSP` |
+
+---
+
+## Authentication Backends
+
+| Django | Buraq |
+|---|---|
+| `django.contrib.auth.backends.ModelBackend` | `buraq.contrib.auth.backends.ModelBackend` |
+| `django.contrib.auth.backends.AllowAllUsersModelBackend` | `buraq.contrib.auth.backends.AllowAllUsersModelBackend` |
+| `django.contrib.auth.backends.AllowAllUsersRemoteUserBackend` | `buraq.contrib.auth.backends.AllowAllUsersRemoteUserBackend` |
+
+---
+
+## Model Fields
+
+| Django | Buraq |
+|---|---|
+| `models.GeneratedField(expression=..., output_field=..., db_persist=True)` | `models.GeneratedField(expression=..., output_field=..., db_persist=True)` |
+| `models.CompositePrimaryKey("field1", "field2")` in `Meta.primary_key` | `models.CompositePrimaryKey("field1", "field2")` in `Meta.primary_key` |
+
+---
+
+## Aggregates
+
+| Django | Buraq |
+|---|---|
+| `from django.db.models import AnyValue` | `from buraq.orm.aggregates import AnyValue` |
+
+---
+
+## Test Utilities
+
+| Django | Buraq |
+|---|---|
+| `from django.test import TestCase` | `from buraq.test import TestCase` |
+| `self.captureOnCommitCallbacks()` | `captureOnCommitCallbacks()` context manager from `buraq.test` |
+| `MessagesTestMixin` + `assertMessages()` | `from buraq.test import MessagesTestMixin` |
+| `InMemoryStorage` | `from buraq.contrib.staticfiles.storage import InMemoryStorage` |
+
+---
+
+## Cryptographic Signing
+
+Both frameworks sign data the same way — HMAC-SHA256 keyed with `SECRET_KEY`:
+
+| Django | Buraq |
+|---|---|
+| `from django.core import signing` | `from buraq.utils import signing` |
+| `signing.dumps(obj)` | `signing.dumps(obj)` |
+| `signing.loads(token, max_age=3600)` | `signing.loads(token, max_age=3600)` |
+| `signing.Signer()` | `signing.Signer()` |
+| `signing.TimestampSigner()` | `signing.TimestampSigner()` |
+| `BadSignature` | `signing.BadSignature` |
+| `SignatureExpired` | `signing.SignatureExpired` |
+
+The API is identical — only the import path differs.
 
 ---
 

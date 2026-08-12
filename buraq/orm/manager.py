@@ -10,6 +10,16 @@ from buraq.orm.prefetch import Prefetch
 
 T = TypeVar("T")
 
+# ── Fetch mode constants (Django 6.1) ─────────────────────────────────────────
+
+FETCH_ONE   = "FETCH_ONE"    # default — fetch only for current instance
+FETCH_PEERS = "FETCH_PEERS"  # on-demand prefetch across all queryset peers
+FETCH_RAISE = "FETCH_RAISE"  # raise FieldFetchBlocked on any deferred access
+
+
+class FieldFetchBlocked(Exception):
+    """Raised when FETCH_RAISE mode is active and a deferred field is accessed."""
+
 
 class DoesNotExist(Exception):
     pass
@@ -36,6 +46,8 @@ class QuerySet:
         self._query = query if query is not None else select(model_class)
         self._values_fields: list | None = None
         self._flat: bool = False
+        self._fetch_mode: str = FETCH_ONE
+        self._peers: list | None = None  # populated after all() when FETCH_PEERS
 
     # ── Chaining methods (return new QuerySet) ──────────────────────────────
 
@@ -159,6 +171,103 @@ class QuerySet:
         q = self._query.with_for_update(nowait=nowait, skip_locked=skip_locked)
         return self._clone(q)
 
+    def union(self, *other_qs, all: bool = False) -> "QuerySet":
+        """Combine querysets with UNION (or UNION ALL)."""
+        result = self._query
+        for qs in other_qs:
+            result = result.union_all(qs._query) if all else result.union(qs._query)
+        return self._clone(result)
+
+    def intersection(self, *other_qs) -> "QuerySet":
+        """Combine querysets with INTERSECT."""
+        result = self._query
+        for qs in other_qs:
+            result = result.intersect(qs._query)
+        return self._clone(result)
+
+    def difference(self, *other_qs) -> "QuerySet":
+        """Combine querysets with EXCEPT."""
+        result = self._query
+        for qs in other_qs:
+            result = result.except_(qs._query)
+        return self._clone(result)
+
+    def fetch_mode(self, mode: str) -> "QuerySet":
+        """
+        Set the fetch mode for deferred field access on instances from this queryset.
+
+        :param mode: One of ``FETCH_ONE``, ``FETCH_PEERS``, or ``FETCH_RAISE``.
+
+        * ``FETCH_ONE`` (default) — missing fields are fetched for the current instance only.
+        * ``FETCH_PEERS`` — on first deferred access, all peers from this queryset are
+          bulk-loaded together (like an on-demand ``prefetch_related``).
+        * ``FETCH_RAISE`` — accessing an unfetched field raises ``FieldFetchBlocked``.
+
+        Usage::
+
+            books = await Book.objects.fetch_mode(FETCH_PEERS).all()
+            # Accessing any deferred field triggers a bulk load of that field
+            # across all instances — prevents the N+1 queries problem.
+
+            qs = Post.objects.fetch_mode(FETCH_RAISE)
+            # Accessing a deferred field later raises FieldFetchBlocked.
+        """
+        if mode not in (FETCH_ONE, FETCH_PEERS, FETCH_RAISE):
+            raise ValueError(
+                f"fetch_mode must be one of FETCH_ONE, FETCH_PEERS, FETCH_RAISE; got {mode!r}"
+            )
+        qs = self._clone()
+        qs._fetch_mode = mode
+        return qs
+
+    @property
+    def totally_ordered(self) -> bool:
+        """
+        Return True if this queryset has a deterministic ordering.
+
+        A queryset is totally ordered when it has at least one ``ORDER BY``
+        clause AND at least one of those clauses is on the primary key (or
+        a unique field), making the ordering unambiguous even across pages.
+
+        Usage::
+
+            qs = Post.objects.order_by("id")
+            assert qs.totally_ordered is True
+
+            qs = Post.objects.order_by("created_at")
+            assert qs.totally_ordered is False  # ties possible
+        """
+        order_by = self._query._order_by_clauses
+        if not order_by:
+            return False
+        pk_col = getattr(self._model, "id", None)
+        if pk_col is None:
+            return True  # can't inspect; assume ordered
+        pk_key = getattr(pk_col, "key", None)
+        for clause in order_by:
+            col = getattr(clause, "element", clause)
+            key = getattr(col, "key", None)
+            if key and pk_key and key == pk_key:
+                return True
+        return False
+
+    def extra(self, select=None, where=None, params=None, tables=None,
+              order_by=None, select_params=None) -> "QuerySet":
+        """
+        Add raw SQL fragments to the query.
+
+        Only `select` and `where` are implemented. `tables`, `order_by`,
+        and `select_params` are accepted for API compatibility but ignored.
+        """
+        q = self._query
+        if where:
+            for clause in (where if isinstance(where, (list, tuple)) else [where]):
+                q = q.where(sa.text(clause))
+        if select:
+            for label, expr in (select.items() if isinstance(select, dict) else select):
+                q = q.add_columns(sa.literal_column(expr).label(label))
+        return self._clone(q)
+
     def alias(self, **kwargs) -> "QuerySet":
         """
         Add named subquery aliases that can be reused in further filter/annotate calls.
@@ -203,7 +312,18 @@ class QuerySet:
                 if self._flat and len(self._values_fields) == 1:
                     return [row[0] for row in rows]
                 return [dict(zip(self._values_fields, row, strict=False)) for row in rows]
-            return list(result.scalars().all())
+            instances = list(result.scalars().all())
+
+        if self._fetch_mode == FETCH_PEERS and instances:
+            # Store peer list on each instance for on-demand bulk loading
+            for obj in instances:
+                obj._qs_peers = instances
+                obj._qs_fetch_mode = FETCH_PEERS
+        elif self._fetch_mode == FETCH_RAISE and instances:
+            for obj in instances:
+                obj._qs_fetch_mode = FETCH_RAISE
+
+        return instances
 
     async def first(self) -> Any | None:
         from buraq.core.db import SessionLocal
@@ -492,6 +612,7 @@ class QuerySet:
         qs = QuerySet(self._model, query if query is not None else self._query)
         qs._values_fields = self._values_fields
         qs._flat = self._flat
+        qs._fetch_mode = self._fetch_mode
         return qs
 
     # Allow `await Post.objects.filter(...)` directly
@@ -500,6 +621,103 @@ class QuerySet:
 
     def __aiter__(self):
         return self.iterator()
+
+
+class RelatedManager:
+    """
+    Manager returned by reverse FK accessors, e.g. ``post.comment_set``.
+
+    Automatically filters by the FK column pointing back to the parent instance.
+    """
+
+    def __init__(self, model_class: type, fk_field: str, instance):
+        self._model = model_class
+        self._fk_field = fk_field
+        self._instance = instance
+
+    def _base_qs(self) -> "QuerySet":
+        return QuerySet(self._model).filter(**{self._fk_field: self._instance.id})
+
+    def all(self) -> "QuerySet":
+        return self._base_qs()
+
+    def filter(self, *q_objs, **kwargs) -> "QuerySet":
+        return self._base_qs().filter(*q_objs, **kwargs)
+
+    def exclude(self, *q_objs, **kwargs) -> "QuerySet":
+        return self._base_qs().exclude(*q_objs, **kwargs)
+
+    def order_by(self, *fields: str) -> "QuerySet":
+        return self._base_qs().order_by(*fields)
+
+    async def count(self) -> int:
+        return await self._base_qs().count()
+
+    async def create(self, **kwargs) -> Any:
+        kwargs[self._fk_field] = self._instance.id
+        manager = Manager(self._model)
+        return await manager.create(**kwargs)
+
+    async def get(self, **kwargs) -> Any:
+        items = await self._base_qs().filter(**kwargs).limit(2).all()
+        if not items:
+            raise DoesNotExist(
+                f"{self._model.__name__} matching query does not exist."
+            )
+        if len(items) > 1:
+            raise MultipleObjectsReturned(
+                f"get() returned more than one {self._model.__name__}."
+            )
+        return items[0]
+
+    async def add(self, *objs) -> None:
+        if not objs:
+            return
+        ids = [obj.id for obj in objs]
+        await Manager(self._model).filter(id__in=ids).update(
+            **{self._fk_field: self._instance.id}
+        )
+        for obj in objs:
+            setattr(obj, self._fk_field, self._instance.id)
+
+    async def remove(self, *objs) -> None:
+        if not objs:
+            return
+        ids = [obj.id for obj in objs]
+        await Manager(self._model).filter(id__in=ids).update(
+            **{self._fk_field: None}
+        )
+        for obj in objs:
+            setattr(obj, self._fk_field, None)
+
+    async def clear(self) -> None:
+        await self._base_qs().update(**{self._fk_field: None})
+
+    async def set(self, objs) -> None:
+        await self.clear()
+        await self.add(*objs)
+
+    def __await__(self):
+        return self._base_qs().all().__await__()
+
+
+class _ReverseFKDescriptor:
+    """Descriptor set on a parent model to provide ``parent.child_set`` accessor."""
+
+    def __init__(self, child_model_getter, fk_field: str, attr_name: str):
+        self._child_model_getter = child_model_getter
+        self._fk_field = fk_field
+        self._attr_name = attr_name
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        child_model = (
+            self._child_model_getter()
+            if callable(self._child_model_getter)
+            else self._child_model_getter
+        )
+        return RelatedManager(child_model, self._fk_field, instance)
 
 
 class Manager:
@@ -580,6 +798,11 @@ class Manager:
             return obj
 
     async def get_or_create(self, defaults: dict | None = None, **kwargs) -> tuple:
+        # SELECT-first avoids triggering IntegrityError (and a full transaction rollback)
+        # on every call for an already-existing row.
+        obj = await self.get_or_none(**kwargs)
+        if obj is not None:
+            return obj, False
         from sqlalchemy.exc import IntegrityError
         try:
             obj = await self.create(**{**kwargs, **(defaults or {})})
@@ -590,6 +813,13 @@ class Manager:
             return obj, False
 
     async def update_or_create(self, defaults: dict | None = None, **kwargs) -> tuple:
+        # SELECT-first: fetch before attempting an insert.
+        obj = await self.get_or_none(**kwargs)
+        if obj is not None:
+            for key, value in (defaults or {}).items():
+                setattr(obj, key, value)
+            await obj.save()
+            return obj, False
         from sqlalchemy.exc import IntegrityError
         try:
             obj = await self.create(**{**kwargs, **(defaults or {})})
@@ -693,7 +923,18 @@ class Manager:
         return await QuerySet(self._model).aggregate(**kwargs)
 
     async def in_bulk(self, id_list: list, field_name: str = "id") -> dict:
-        items = await self.filter(**{f"{field_name}__in": id_list}).all()
+        """
+        Return a dict mapping ``{field_value: instance}`` for the given IDs.
+
+        Supports chaining after ``values()`` / ``values_list()``::
+
+            mapping = await Post.objects.values("id", "title").in_bulk([1, 2, 3])
+            # → {1: {"id": 1, "title": "..."}, ...}
+        """
+        qs = QuerySet(self._model).filter(**{f"{field_name}__in": id_list})
+        items = await qs.all()
+        if items and isinstance(items[0], dict):
+            return {item[field_name]: item for item in items}
         return {getattr(item, field_name): item for item in items}
 
     def select_for_update(self, nowait: bool = False, skip_locked: bool = False) -> QuerySet:

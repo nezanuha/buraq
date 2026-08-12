@@ -156,6 +156,11 @@ class TruncQuarter(_TruncPart):
             return func.date_trunc("quarter", col)
 
 
+class TruncTime(_DBFunc):
+    def _apply(self, col):
+        return sa.cast(col, sa.Time)
+
+
 class TruncYear(_TruncPart):
     _part = "year"
     _sqlite_fmt = "%Y-01-01 00:00:00"
@@ -291,6 +296,19 @@ class RPad(_MultiField):
     def _apply(self, col, length, fill): return func.rpad(col, length, fill)
 
 
+class Collate(_DBFunc):
+    """Order strings using a specific collation: Collate(field, "und-x-icu")"""
+
+    def __init__(self, field: str, collation: str):
+        super().__init__(field)
+        self.collation = collation
+
+    def _apply(self, col):
+        return sa.type_coerce(col, sa.String().with_variant(
+            sa.String(collation=self.collation), "postgresql"
+        ))
+
+
 # ── Math ──────────────────────────────────────────────────────────────────────
 
 class Abs(_DBFunc):
@@ -372,8 +390,24 @@ class Cos(_DBFunc):
     def _apply(self, col): return func.cos(col)
 
 
+class Cot(_DBFunc):
+    def _apply(self, col): return func.cot(col)
+
+
 class Degrees(_DBFunc):
     def _apply(self, col): return func.degrees(col)
+
+
+class Exp(_DBFunc):
+    def _apply(self, col): return func.exp(col)
+
+
+class Pi(_DBFunc):
+    def __init__(self):
+        pass
+
+    def resolve(self, model):
+        return func.pi()
 
 
 class Radians(_DBFunc):
@@ -462,24 +496,65 @@ class SHA512(_DBFunc):
     def _apply(self, col): return func.sha512(col)
 
 
+# ── UUID generation ───────────────────────────────────────────────────────────
+
+class UUID4:
+    """
+    Generate a random UUID v4.
+
+    Usage::
+
+        await Post.objects.annotate(uid=UUID4())
+    """
+
+    def resolve(self, model) -> sa.sql.ColumnElement:
+        return func.gen_random_uuid()
+
+
+class UUID7:
+    """
+    Generate a time-ordered UUID v7 (requires pgcrypto or uuid_generate_v7 extension
+    on PostgreSQL; falls back to gen_random_uuid() on other databases).
+
+    Usage::
+
+        await Post.objects.annotate(uid=UUID7())
+    """
+
+    def resolve(self, model) -> sa.sql.ColumnElement:
+        try:
+            from buraq.conf import settings
+            from sqlalchemy.engine import make_url as _make_url
+            dialect = _make_url(settings.DATABASE_URL).get_dialect().name
+        except Exception:
+            dialect = "postgresql"
+
+        if dialect == "postgresql":
+            return func.uuid_generate_v7()
+        # Fallback for non-PG databases
+        return func.gen_random_uuid()
+
+
 __all__ = [
     # Date/Time
-    "Now", "TruncDate", "TruncHour", "TruncDay", "TruncWeek",
+    "Now", "TruncDate", "TruncTime", "TruncHour", "TruncDay", "TruncWeek",
     "TruncMonth", "TruncQuarter", "TruncYear",
     "ExtractYear", "ExtractMonth", "ExtractDay", "ExtractHour",
     "ExtractMinute", "ExtractSecond", "ExtractWeek", "ExtractWeekDay", "ExtractQuarter",
     # String
     "Concat", "Length", "Upper", "Lower", "Trim", "LTrim", "RTrim",
     "Replace", "Substr", "Left", "Right", "Repeat", "Reverse",
-    "StrIndex", "Chr", "Ord", "LPad", "RPad",
+    "StrIndex", "Chr", "Ord", "LPad", "RPad", "Collate",
     # Math
     "Abs", "Ceil", "Floor", "Round", "Sign", "Sqrt", "Log", "Ln",
-    "Mod", "Power", "Random",
-    "ACos", "ASin", "ATan", "ATan2", "Cos", "Degrees", "Radians", "Sin", "Tan",
+    "Mod", "Power", "Random", "Exp", "Pi",
+    "ACos", "ASin", "ATan", "ATan2", "Cos", "Cot", "Degrees", "Radians", "Sin", "Tan",
     # NULL
     "Coalesce", "NullIf", "Greatest", "Least",
     # Type
     "Cast",
     # Hash
     "MD5", "SHA1", "SHA256", "SHA512",
+    # UUID
+    "UUID4", "UUID7",
 ]

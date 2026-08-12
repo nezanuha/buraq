@@ -50,6 +50,27 @@ register_urlpatterns(app, patterns, prefix="")
 
 Called internally by `app.load_urls()`. Recursively registers all `URLPattern` and `URLInclude` objects with the FastAPI app.
 
+## reverse
+
+```python
+from buraq.urls import reverse
+
+url = reverse("post_detail", pk=1)   # → "/posts/1"
+```
+
+Reverse a named URL pattern. Raises `NoReverseMatch` if the name is not registered or required path params are missing.
+
+## reverse_lazy
+
+```python
+from buraq.urls import reverse_lazy
+
+class MyView(View):
+    success_url = reverse_lazy("post_list")   # not evaluated until used as str
+```
+
+Lazy URL reversal — the URL is not resolved until the value is coerced to a string. Use this at class body level where the URL registry may not yet be fully populated (e.g. `success_url` on a CBV, a default argument, a module-level constant).
+
 ## URLPattern
 
 ```python

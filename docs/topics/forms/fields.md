@@ -32,6 +32,9 @@
 | `ImageField` | Image upload (validates content type) |
 | `JSONField` | JSON data |
 | `RegexField` | Text matching a regex pattern |
+| `SplitDateTimeField` | Separate date + time inputs combined into a `datetime` |
+| `MultiValueField` | Combines several fields into one; override `compress()` to merge values |
+| `ComboField` | Runs a single value through multiple validators in sequence |
 
 ## Common options
 
@@ -146,6 +149,45 @@ levels = TypedMultipleChoiceField(
     coerce  = int,
 )
 ```
+
+## SplitDateTimeField
+
+Accepts a two-element list `[date_string, time_string]` from a form that uses two separate inputs, and combines them into a single `datetime.datetime`.
+
+```python
+from buraq.forms.fields import SplitDateTimeField
+
+class EventForm(Form):
+    starts_at = SplitDateTimeField()
+```
+
+```html+jinja
+<input name="starts_at_0" type="date">
+<input name="starts_at_1" type="time">
+```
+
+The date is parsed with `DateField`'s formats and the time with `TimeField`'s formats. `compress([date, time])` returns `datetime.combine(date, time)`.
+
+## FilePathField
+
+Select a file from a directory on disk. Choices are populated at class-creation time by scanning the directory.
+
+```python
+from buraq.forms.fields import FilePathField
+
+class UploadForm(Form):
+    template = FilePathField(path="/srv/templates", match=r".*\.html$", recursive=False)
+```
+
+### set_choices()
+
+In long-running processes (e.g. ASGI servers that never restart) the directory may change after the field is instantiated. Call `set_choices()` to force a fresh scan:
+
+```python
+form_instance.fields["template"].set_choices()
+```
+
+This is also useful if you store `FilePathField` instances at module level and need to refresh them per request.
 
 ## Custom validators
 
