@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1526,6 +1526,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="RedirectView">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#preserve_request" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        preserve_request
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -3026,6 +3043,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3652,6 +3781,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="RedirectView">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#preserve_request" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        preserve_request
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3946,122 +4092,166 @@
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/old-url/&quot;</span><span class="p">,</span> <span class="n">RedirectView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;/new-url/&quot;</span><span class="p">,</span> <span class="n">permanent</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">]</span>
 </span></code></pre></div>
+<h3 id="preserve_request">preserve_request<a class="headerlink" href="#preserve_request" title="Permanent link">&para;</a></h3>
+<p>By default a redirect responds with <code>302 Found</code> (or <code>301 Moved Permanently</code>), which instructs the browser to repeat the request as <code>GET</code> regardless of the original method. Set <code>preserve_request = True</code> to return <code>307 Temporary Redirect</code> (or <code>308 Permanent Redirect</code>) instead, preserving the original HTTP method:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">post</span><span class="p">(</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>        <span class="s2">&quot;/submit/&quot;</span><span class="p">,</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>        <span class="n">RedirectView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>            <span class="n">url</span><span class="o">=</span><span class="s2">&quot;/new-submit/&quot;</span><span class="p">,</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>            <span class="n">preserve_request</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>   <span class="c1"># 307 — client repeats the POST</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="p">),</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="p">),</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="p">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th><code>permanent</code></th>
+<th><code>preserve_request</code></th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>False</code> (default)</td>
+<td><code>False</code> (default)</td>
+<td><code>302 Found</code></td>
+</tr>
+<tr>
+<td><code>True</code></td>
+<td><code>False</code></td>
+<td><code>301 Moved Permanently</code></td>
+</tr>
+<tr>
+<td><code>False</code></td>
+<td><code>True</code></td>
+<td><code>307 Temporary Redirect</code></td>
+</tr>
+<tr>
+<td><code>True</code></td>
+<td><code>True</code></td>
+<td><code>308 Permanent Redirect</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>put()</code>, <code>patch()</code>, and <code>delete()</code> handlers are also supported so that non-GET verbs receive the correct redirect response.</p>
 <h2 id="formview">FormView<a class="headerlink" href="#formview" title="Permanent link">&para;</a></h2>
 <p>Handle a form's GET/POST cycle without tying it to a model. See <a href="../form-view">FormView</a> for the full reference.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.views.generic</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormView</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">ContactView</span><span class="p">(</span><span class="n">FormView</span><span class="p">):</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;contact.html&quot;</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">form_class</span>    <span class="o">=</span> <span class="n">ContactForm</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">success_url</span>   <span class="o">=</span> <span class="s2">&quot;/thanks/&quot;</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="k">await</span> <span class="n">send_contact_email</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">)</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">success_url</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.views.generic</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormView</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">ContactView</span><span class="p">(</span><span class="n">FormView</span><span class="p">):</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;contact.html&quot;</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">form_class</span>    <span class="o">=</span> <span class="n">ContactForm</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    <span class="n">success_url</span>   <span class="o">=</span> <span class="s2">&quot;/thanks/&quot;</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>        <span class="k">await</span> <span class="n">send_contact_email</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">)</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">success_url</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="date-archive-views">Date archive views<a class="headerlink" href="#date-archive-views" title="Permanent link">&para;</a></h2>
 <p>Filter objects by date field. All archive views share <code>date_field</code> (default <code>"created_at"</code>) and <code>allow_future</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.views.generic</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">YearArchiveView</span><span class="p">,</span> <span class="n">MonthArchiveView</span><span class="p">,</span> <span class="n">WeekArchiveView</span><span class="p">,</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">DayArchiveView</span><span class="p">,</span> <span class="n">TodayArchiveView</span><span class="p">,</span> <span class="n">ArchiveIndexView</span><span class="p">,</span> <span class="n">DateDetailView</span><span class="p">,</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.views.generic</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">YearArchiveView</span><span class="p">,</span> <span class="n">MonthArchiveView</span><span class="p">,</span> <span class="n">WeekArchiveView</span><span class="p">,</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">DayArchiveView</span><span class="p">,</span> <span class="n">TodayArchiveView</span><span class="p">,</span> <span class="n">ArchiveIndexView</span><span class="p">,</span> <span class="n">DateDetailView</span><span class="p">,</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="yeararchiveview-montharchiveview">YearArchiveView / MonthArchiveView<a class="headerlink" href="#yeararchiveview-montharchiveview" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostYearView</span><span class="p">(</span><span class="n">YearArchiveView</span><span class="p">):</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostMonthView</span><span class="p">(</span><span class="n">MonthArchiveView</span><span class="p">):</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;&quot;</span><span class="p">,</span>         <span class="n">PostYearView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
-</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;/&lt;int:month&gt;&quot;</span><span class="p">,</span> <span class="n">PostMonthView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
-</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="p">]</span>
-</span></code></pre></div>
-<h3 id="weekarchiveview">WeekArchiveView<a class="headerlink" href="#weekarchiveview" title="Permanent link">&para;</a></h3>
-<p>List objects for an ISO week number.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostWeekView</span><span class="p">(</span><span class="n">WeekArchiveView</span><span class="p">):</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostYearView</span><span class="p">(</span><span class="n">YearArchiveView</span><span class="p">):</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1"># URL: /2024/week/12</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;/week/&lt;int:week&gt;&quot;</span><span class="p">,</span> <span class="n">PostWeekView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostMonthView</span><span class="p">(</span><span class="n">MonthArchiveView</span><span class="p">):</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;&quot;</span><span class="p">,</span>         <span class="n">PostYearView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;/&lt;int:month&gt;&quot;</span><span class="p">,</span> <span class="n">PostMonthView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="p">]</span>
 </span></code></pre></div>
-<h3 id="dayarchiveview">DayArchiveView<a class="headerlink" href="#dayarchiveview" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostDayView</span><span class="p">(</span><span class="n">DayArchiveView</span><span class="p">):</span>
+<h3 id="weekarchiveview">WeekArchiveView<a class="headerlink" href="#weekarchiveview" title="Permanent link">&para;</a></h3>
+<p>List objects for an ISO week number.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostWeekView</span><span class="p">(</span><span class="n">WeekArchiveView</span><span class="p">):</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># URL: /2024/3/15</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;/&lt;int:month&gt;/&lt;int:day&gt;&quot;</span><span class="p">,</span> <span class="n">PostDayView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># URL: /2024/week/12</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;/week/&lt;int:week&gt;&quot;</span><span class="p">,</span> <span class="n">PostWeekView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
 </span></code></pre></div>
-<h3 id="todayarchiveview">TodayArchiveView<a class="headerlink" href="#todayarchiveview" title="Permanent link">&para;</a></h3>
-<p>No URL parameters needed — always uses today's date.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TodayPostsView</span><span class="p">(</span><span class="n">TodayArchiveView</span><span class="p">):</span>
+<h3 id="dayarchiveview">DayArchiveView<a class="headerlink" href="#dayarchiveview" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostDayView</span><span class="p">(</span><span class="n">DayArchiveView</span><span class="p">):</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/today&quot;</span><span class="p">,</span> <span class="n">TodayPostsView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># URL: /2024/3/15</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;/&lt;int:month&gt;/&lt;int:day&gt;&quot;</span><span class="p">,</span> <span class="n">PostDayView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
+</span></code></pre></div>
+<h3 id="todayarchiveview">TodayArchiveView<a class="headerlink" href="#todayarchiveview" title="Permanent link">&para;</a></h3>
+<p>No URL parameters needed — always uses today's date.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TodayPostsView</span><span class="p">(</span><span class="n">TodayArchiveView</span><span class="p">):</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/today&quot;</span><span class="p">,</span> <span class="n">TodayPostsView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
 </span></code></pre></div>
 <h3 id="archiveindexview">ArchiveIndexView<a class="headerlink" href="#archiveindexview" title="Permanent link">&para;</a></h3>
 <p>Top-level archive — provides a list of all distinct years in <code>date_list</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostArchiveView</span><span class="p">(</span><span class="n">ArchiveIndexView</span><span class="p">):</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;posts/archive.html&quot;</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="c1"># context: date_list (list of year dates)</span>
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/archive&quot;</span><span class="p">,</span> <span class="n">PostArchiveView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostArchiveView</span><span class="p">(</span><span class="n">ArchiveIndexView</span><span class="p">):</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;posts/archive.html&quot;</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    <span class="c1"># context: date_list (list of year dates)</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/archive&quot;</span><span class="p">,</span> <span class="n">PostArchiveView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
 </span></code></pre></div>
 <h3 id="datedetailview">DateDetailView<a class="headerlink" href="#datedetailview" title="Permanent link">&para;</a></h3>
 <p>Retrieve a single object by year/month/day + pk or slug.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostDateDetailView</span><span class="p">(</span><span class="n">DateDetailView</span><span class="p">):</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;posts/detail.html&quot;</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;/&lt;int:month&gt;/&lt;int:day&gt;/&lt;int:pk&gt;&quot;</span><span class="p">,</span> <span class="n">PostDateDetailView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostDateDetailView</span><span class="p">(</span><span class="n">DateDetailView</span><span class="p">):</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">date_field</span> <span class="o">=</span> <span class="s2">&quot;published_on&quot;</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;posts/detail.html&quot;</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:year&gt;/&lt;int:month&gt;/&lt;int:day&gt;/&lt;int:pk&gt;&quot;</span><span class="p">,</span> <span class="n">PostDateDetailView</span><span class="o">.</span><span class="n">as_view</span><span class="p">())</span>
 </span></code></pre></div>
 <hr />
 <h2 id="auth-mixins">Auth mixins<a class="headerlink" href="#auth-mixins" title="Permanent link">&para;</a></h2>
 <p>Add access control to any CBV by mixing in before the view class. See <a href="../mixins">Auth Mixins</a> for the full reference.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.views.mixins</span><span class="w"> </span><span class="kn">import</span> <span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">PermissionRequiredMixin</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostCreateView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">CreateView</span><span class="p">):</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="n">form_class</span> <span class="o">=</span> <span class="n">PostForm</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>    <span class="n">success_url</span> <span class="o">=</span> <span class="s2">&quot;/posts/&quot;</span>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostPublishView</span><span class="p">(</span><span class="n">PermissionRequiredMixin</span><span class="p">,</span> <span class="n">UpdateView</span><span class="p">):</span>
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="n">model</span>               <span class="o">=</span> <span class="n">Post</span>
-</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>    <span class="n">permission_required</span> <span class="o">=</span> <span class="s2">&quot;blog.publish_post&quot;</span>
-</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>    <span class="n">success_url</span>         <span class="o">=</span> <span class="s2">&quot;/posts/&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.views.mixins</span><span class="w"> </span><span class="kn">import</span> <span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">PermissionRequiredMixin</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostCreateView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">CreateView</span><span class="p">):</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="n">model</span>      <span class="o">=</span> <span class="n">Post</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="n">form_class</span> <span class="o">=</span> <span class="n">PostForm</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="n">success_url</span> <span class="o">=</span> <span class="s2">&quot;/posts/&quot;</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostPublishView</span><span class="p">(</span><span class="n">PermissionRequiredMixin</span><span class="p">,</span> <span class="n">UpdateView</span><span class="p">):</span>
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>    <span class="n">model</span>               <span class="o">=</span> <span class="n">Post</span>
+</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>    <span class="n">permission_required</span> <span class="o">=</span> <span class="s2">&quot;blog.publish_post&quot;</span>
+</span><span id="__span-17-11"><a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>    <span class="n">success_url</span>         <span class="o">=</span> <span class="s2">&quot;/posts/&quot;</span>
 </span></code></pre></div>
 <hr />
 <h2 id="overriding-context">Overriding context<a class="headerlink" href="#overriding-context" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostDetailView</span><span class="p">(</span><span class="n">DetailView</span><span class="p">):</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    <span class="n">model</span>         <span class="o">=</span> <span class="n">Post</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;posts/detail.html&quot;</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>        <span class="n">ctx</span>      <span class="o">=</span> <span class="k">await</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>        <span class="n">ctx</span><span class="p">[</span><span class="s2">&quot;related&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">is_published</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>        <span class="k">return</span> <span class="n">ctx</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostDetailView</span><span class="p">(</span><span class="n">DetailView</span><span class="p">):</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="n">model</span>         <span class="o">=</span> <span class="n">Post</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;posts/detail.html&quot;</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>        <span class="n">ctx</span>      <span class="o">=</span> <span class="k">await</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>        <span class="n">ctx</span><span class="p">[</span><span class="s2">&quot;related&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">is_published</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>        <span class="k">return</span> <span class="n">ctx</span>
 </span></code></pre></div>
 <h2 id="url-registration">URL registration<a class="headerlink" href="#url-registration" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span>                 <span class="n">PostListView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>   <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_list&quot;</span><span class="p">),</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;str:slug&gt;&quot;</span><span class="p">,</span>       <span class="n">PostDetailView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_detail&quot;</span><span class="p">),</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/new&quot;</span><span class="p">,</span>              <span class="n">PostCreateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_create&quot;</span><span class="p">),</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>    <span class="n">post</span><span class="p">(</span><span class="s2">&quot;/new&quot;</span><span class="p">,</span>             <span class="n">PostCreateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:pk&gt;/edit&quot;</span><span class="p">,</span>    <span class="n">PostUpdateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_update&quot;</span><span class="p">),</span>
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>    <span class="n">post</span><span class="p">(</span><span class="s2">&quot;/&lt;int:pk&gt;/edit&quot;</span><span class="p">,</span>   <span class="n">PostUpdateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
-</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:pk&gt;/delete&quot;</span><span class="p">,</span>  <span class="n">PostDeleteView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_delete&quot;</span><span class="p">),</span>
-</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>    <span class="n">post</span><span class="p">(</span><span class="s2">&quot;/&lt;int:pk&gt;/delete&quot;</span><span class="p">,</span> <span class="n">PostDeleteView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
-</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="p">]</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span>                 <span class="n">PostListView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>   <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_list&quot;</span><span class="p">),</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;str:slug&gt;&quot;</span><span class="p">,</span>       <span class="n">PostDetailView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_detail&quot;</span><span class="p">),</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/new&quot;</span><span class="p">,</span>              <span class="n">PostCreateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_create&quot;</span><span class="p">),</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">post</span><span class="p">(</span><span class="s2">&quot;/new&quot;</span><span class="p">,</span>             <span class="n">PostCreateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:pk&gt;/edit&quot;</span><span class="p">,</span>    <span class="n">PostUpdateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_update&quot;</span><span class="p">),</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>    <span class="n">post</span><span class="p">(</span><span class="s2">&quot;/&lt;int:pk&gt;/edit&quot;</span><span class="p">,</span>   <span class="n">PostUpdateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>    <span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&lt;int:pk&gt;/delete&quot;</span><span class="p">,</span>  <span class="n">PostDeleteView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;post_delete&quot;</span><span class="p">),</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>    <span class="n">post</span><span class="p">(</span><span class="s2">&quot;/&lt;int:pk&gt;/delete&quot;</span><span class="p">,</span> <span class="n">PostDeleteView</span><span class="o">.</span><span class="n">as_view</span><span class="p">()),</span>
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="p">]</span>
 </span></code></pre></div>
 
 
@@ -4148,7 +4338,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

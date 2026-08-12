@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2761,6 +2761,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3204,6 +3316,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#class-attributes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instance attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#instance-methods" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3503,6 +3637,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#class-attributes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instance attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#instance-methods" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3695,6 +3851,52 @@
 </tr>
 </tbody>
 </table>
+<h3 id="class-attributes_1">Class attributes<a class="headerlink" href="#class-attributes_1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>objects</code></td>
+<td>The default <code>Manager</code> for this model</td>
+</tr>
+<tr>
+<td><code>__table__</code></td>
+<td>The underlying SQLAlchemy <code>Table</code></td>
+</tr>
+<tr>
+<td><code>__tablename__</code></td>
+<td>The database table name</td>
+</tr>
+<tr>
+<td><code>pk</code></td>
+<td>Alias for the primary key field (usually <code>id</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="instance-attributes">Instance attributes<a class="headerlink" href="#instance-attributes" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>instance._state.adding</code></td>
+<td><code>True</code> if the instance has never been saved; <code>False</code> after the first <code>save()</code></td>
+</tr>
+<tr>
+<td><code>instance.pk</code></td>
+<td>Value of the primary key field</td>
+</tr>
+</tbody>
+</table>
 <h3 id="instance-methods">Instance methods<a class="headerlink" href="#instance-methods" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -3711,6 +3913,22 @@
 <tr>
 <td><code>await instance.delete()</code></td>
 <td>Delete this instance</td>
+</tr>
+<tr>
+<td><code>await instance.refresh_from_db(fields=None)</code></td>
+<td>Reload field values from the database</td>
+</tr>
+<tr>
+<td><code>await instance.full_clean(exclude=None)</code></td>
+<td>Run all validation steps in order</td>
+</tr>
+<tr>
+<td><code>instance.get_absolute_url()</code></td>
+<td>Return canonical URL (override in subclass; raises <code>NotImplementedError</code> by default)</td>
+</tr>
+<tr>
+<td><code>instance.natural_key()</code></td>
+<td>Return a tuple uniquely identifying the instance (override in subclass; raises <code>NotImplementedError</code> by default)</td>
 </tr>
 </tbody>
 </table>
@@ -3747,7 +3965,9 @@
 </span></code></pre></div>
 <h3 id="supported-lookups">Supported lookups<a class="headerlink" href="#supported-lookups" title="Permanent link">&para;</a></h3>
 <p><code>eq</code>, <code>ne</code>, <code>lt</code>, <code>lte</code>, <code>gt</code>, <code>gte</code>, <code>contains</code>, <code>icontains</code>, <code>startswith</code>,
-<code>istartswith</code>, <code>endswith</code>, <code>iendswith</code>, <code>in</code>, <code>isnull</code>, <code>year</code>, <code>month</code>, <code>day</code></p>
+<code>istartswith</code>, <code>endswith</code>, <code>iendswith</code>, <code>in</code>, <code>isnull</code>, <code>range</code>,
+<code>year</code>, <code>month</code>, <code>day</code>, <code>iso_year</code>, <code>iso_week_day</code>,
+<code>contained_by</code>, <code>has_key</code>, <code>has_keys</code>, <code>has_any_keys</code>, <code>overlap</code></p>
 <hr />
 <h2 id="f-field-references">F — Field references<a class="headerlink" href="#f-field-references" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm.query</span><span class="w"> </span><span class="kn">import</span> <span class="n">F</span>
@@ -3859,7 +4079,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

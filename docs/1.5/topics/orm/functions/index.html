@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1246,6 +1246,45 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#uuid-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UUID generation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UUID generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#uuid4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UUID4
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uuid7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UUID7
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#date-time" class="md-nav__link">
@@ -2927,6 +2966,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3479,6 +3630,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#uuid-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UUID generation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UUID generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#uuid4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UUID4
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uuid7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UUID7
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#date-time" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3682,57 +3872,98 @@
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">Fn</span>
 </span></code></pre></div>
 <hr />
+<h2 id="uuid-generation">UUID generation<a class="headerlink" href="#uuid-generation" title="Permanent link">&para;</a></h2>
+<p>Generate UUIDs at the database level — useful as default values or in bulk INSERT operations.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm.functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">UUID4</span><span class="p">,</span> <span class="n">UUID7</span>
+</span></code></pre></div>
+<h3 id="uuid4">UUID4<a class="headerlink" href="#uuid4" title="Permanent link">&para;</a></h3>
+<p>Generates a random version-4 UUID using <code>gen_random_uuid()</code> (PostgreSQL) or the database equivalent.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Annotate rows with a random UUID</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">rows</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">token</span><span class="o">=</span><span class="n">UUID4</span><span class="p">())</span>
+</span></code></pre></div>
+<h3 id="uuid7">UUID7<a class="headerlink" href="#uuid7" title="Permanent link">&para;</a></h3>
+<p>Generates a time-ordered version-7 UUID. UUID7 values sort lexicographically in creation order, making them B-tree friendly as primary keys.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">rows</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">token</span><span class="o">=</span><span class="n">UUID7</span><span class="p">())</span>
+</span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Database support</p>
+<p><code>UUID7</code> uses <code>uuid_generate_v7()</code> on PostgreSQL (requires the <code>pg_uuidv7</code> extension). On other databases it falls back to <code>gen_random_uuid()</code> (version 4).</p>
+</div>
+<hr />
 <h2 id="date-time">Date / Time<a class="headerlink" href="#date-time" title="Permanent link">&para;</a></h2>
 <h3 id="truncation">Truncation<a class="headerlink" href="#truncation" title="Permanent link">&para;</a></h3>
 <p>Round a datetime down to the nearest unit.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">Fn</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Group posts by month</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="s2">&quot;author_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">month</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">TruncMonth</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">)</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">Fn</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Group posts by month</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="s2">&quot;author_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">month</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">TruncMonth</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">)</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">)</span>
 </span></code></pre></div>
+<p>All truncation functions are <strong>cross-database</strong> — they detect the configured dialect automatically and emit the correct SQL for each backend.</p>
 <table>
 <thead>
 <tr>
 <th>Function</th>
-<th>SQL equivalent</th>
+<th>SQLite</th>
+<th>MySQL/MariaDB</th>
+<th>PostgreSQL</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>TruncDate(field)</code></td>
 <td><code>CAST(col AS DATE)</code></td>
+<td><code>CAST(col AS DATE)</code></td>
+<td><code>CAST(col AS DATE)</code></td>
+</tr>
+<tr>
+<td><code>TruncTime(field)</code></td>
+<td><code>CAST(col AS TIME)</code></td>
+<td><code>CAST(col AS TIME)</code></td>
+<td><code>CAST(col AS TIME)</code></td>
 </tr>
 <tr>
 <td><code>TruncHour(field)</code></td>
-<td><code>DATE_TRUNC('hour', col)</code></td>
+<td><code>strftime('%Y-%m-%d %H:00:00', col)</code></td>
+<td><code>date_format(col, '%Y-%m-%d %H:00:00')</code></td>
+<td><code>date_trunc('hour', col)</code></td>
 </tr>
 <tr>
 <td><code>TruncDay(field)</code></td>
-<td><code>DATE_TRUNC('day', col)</code></td>
+<td><code>strftime('%Y-%m-%d', col)</code></td>
+<td><code>date_format(col, '%Y-%m-%d')</code></td>
+<td><code>date_trunc('day', col)</code></td>
 </tr>
 <tr>
 <td><code>TruncWeek(field)</code></td>
-<td><code>DATE_TRUNC('week', col)</code></td>
+<td>weekday arithmetic</td>
+<td><code>date_format(…)</code></td>
+<td><code>date_trunc('week', col)</code></td>
 </tr>
 <tr>
 <td><code>TruncMonth(field)</code></td>
-<td><code>DATE_TRUNC('month', col)</code></td>
+<td><code>strftime('%Y-%m-01', col)</code></td>
+<td><code>date_format(col, '%Y-%m-01')</code></td>
+<td><code>date_trunc('month', col)</code></td>
 </tr>
 <tr>
 <td><code>TruncQuarter(field)</code></td>
-<td><code>DATE_TRUNC('quarter', col)</code></td>
+<td>quarter arithmetic</td>
+<td>quarter arithmetic</td>
+<td><code>date_trunc('quarter', col)</code></td>
 </tr>
 <tr>
 <td><code>TruncYear(field)</code></td>
-<td><code>DATE_TRUNC('year', col)</code></td>
+<td><code>strftime('%Y-01-01', col)</code></td>
+<td><code>date_format(col, '%Y-01-01')</code></td>
+<td><code>date_trunc('year', col)</code></td>
 </tr>
 </tbody>
 </table>
 <h3 id="extraction">Extraction<a class="headerlink" href="#extraction" title="Permanent link">&para;</a></h3>
 <p>Extract a numeric component from a datetime.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">year</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">ExtractYear</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">year</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">ExtractYear</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">))</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -3781,23 +4012,23 @@
 </tbody>
 </table>
 <h3 id="now">Now<a class="headerlink" href="#now" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Filter rows created before the current database time</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">scheduled_at__lt</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Now</span><span class="p">())</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Filter rows created before the current database time</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">scheduled_at__lt</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Now</span><span class="p">())</span>
 </span></code></pre></div>
 <hr />
 <h2 id="string">String<a class="headerlink" href="#string" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">Fn</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Uppercase</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">upper_title</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Upper</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">))</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># Concatenate two columns</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">full_name</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Concat</span><span class="p">(</span><span class="s2">&quot;first_name&quot;</span><span class="p">,</span> <span class="s2">&quot;last_name&quot;</span><span class="p">)</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">)</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1"># String length</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">title_len</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Length</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">Fn</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># Uppercase</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">upper_title</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Upper</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">))</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Concatenate two columns</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">full_name</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Concat</span><span class="p">(</span><span class="s2">&quot;first_name&quot;</span><span class="p">,</span> <span class="s2">&quot;last_name&quot;</span><span class="p">)</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">)</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="c1"># String length</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">title_len</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Length</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">))</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -3879,12 +4110,16 @@
 <td><code>Ord(field)</code></td>
 <td>ASCII code of first character</td>
 </tr>
+<tr>
+<td><code>Collate(field, collation)</code></td>
+<td>Apply a named collation for sorting</td>
+</tr>
 </tbody>
 </table>
 <hr />
 <h2 id="math">Math<a class="headerlink" href="#math" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">rounded</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Round</span><span class="p">(</span><span class="s2">&quot;score&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">abs_val</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Abs</span><span class="p">(</span><span class="s2">&quot;balance&quot;</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">rounded</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Round</span><span class="p">(</span><span class="s2">&quot;score&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">abs_val</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Abs</span><span class="p">(</span><span class="s2">&quot;balance&quot;</span><span class="p">))</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -3939,6 +4174,14 @@
 <td>Random float 0–1</td>
 </tr>
 <tr>
+<td><code>Exp(field)</code></td>
+<td>e raised to the power</td>
+</tr>
+<tr>
+<td><code>Pi()</code></td>
+<td>π constant</td>
+</tr>
+<tr>
 <td><code>ACos</code>, <code>ASin</code>, <code>ATan</code></td>
 <td>Inverse trig</td>
 </tr>
@@ -3947,7 +4190,7 @@
 <td>Two-argument arctangent</td>
 </tr>
 <tr>
-<td><code>Cos</code>, <code>Sin</code>, <code>Tan</code></td>
+<td><code>Cos</code>, <code>Cot</code>, <code>Sin</code>, <code>Tan</code></td>
 <td>Trig</td>
 </tr>
 <tr>
@@ -3958,13 +4201,13 @@
 </table>
 <hr />
 <h2 id="null-handling">NULL handling<a class="headerlink" href="#null-handling" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Return first non-NULL value</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">display_name</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Coalesce</span><span class="p">(</span><span class="s2">&quot;nickname&quot;</span><span class="p">,</span> <span class="s2">&quot;username&quot;</span><span class="p">)</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p">)</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># Greatest / Least across columns</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">rows</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Product</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">best</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Greatest</span><span class="p">(</span><span class="s2">&quot;price&quot;</span><span class="p">,</span> <span class="s2">&quot;min_price&quot;</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Return first non-NULL value</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">display_name</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Coalesce</span><span class="p">(</span><span class="s2">&quot;nickname&quot;</span><span class="p">,</span> <span class="s2">&quot;username&quot;</span><span class="p">)</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="p">)</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># Greatest / Least across columns</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="n">rows</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Product</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">best</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Greatest</span><span class="p">(</span><span class="s2">&quot;price&quot;</span><span class="p">,</span> <span class="s2">&quot;min_price&quot;</span><span class="p">))</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -3994,24 +4237,24 @@
 </table>
 <hr />
 <h2 id="type-casting">Type casting<a class="headerlink" href="#type-casting" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">Fn</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">int_score</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Cast</span><span class="p">(</span><span class="s2">&quot;score&quot;</span><span class="p">,</span> <span class="s2">&quot;int&quot;</span><span class="p">)</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">Fn</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">int_score</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Cast</span><span class="p">(</span><span class="s2">&quot;score&quot;</span><span class="p">,</span> <span class="s2">&quot;int&quot;</span><span class="p">)</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>Supported type names: <code>int</code>, <code>float</code>, <code>decimal</code>, <code>text</code>, <code>bool</code>, <code>date</code>, <code>datetime</code>, <code>time</code>, <code>uuid</code>, <code>json</code>.</p>
 <p>You can also pass a SQLAlchemy type directly:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sa</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">score_decimal</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Cast</span><span class="p">(</span><span class="s2">&quot;score&quot;</span><span class="p">,</span> <span class="n">sa</span><span class="o">.</span><span class="n">Numeric</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sa</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">score_decimal</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">Cast</span><span class="p">(</span><span class="s2">&quot;score&quot;</span><span class="p">,</span> <span class="n">sa</span><span class="o">.</span><span class="n">Numeric</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="hash">Hash<a class="headerlink" href="#hash" title="Permanent link">&para;</a></h2>
 <p>PostgreSQL only. Requires the <code>pgcrypto</code> extension.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">users</span> <span class="o">=</span> <span class="k">await</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">pw_hash</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">MD5</span><span class="p">(</span><span class="s2">&quot;email&quot;</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">users</span> <span class="o">=</span> <span class="k">await</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">pw_hash</span><span class="o">=</span><span class="n">Fn</span><span class="o">.</span><span class="n">MD5</span><span class="p">(</span><span class="s2">&quot;email&quot;</span><span class="p">))</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -4124,7 +4367,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

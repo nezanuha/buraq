@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2404,6 +2404,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#emailmultialternatives-html-plain-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EmailMultiAlternatives — HTML + plain text
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#send_template_mail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        send_template_mail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#email-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Email backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-memory-email-backend-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-memory email backend (tests)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mail-admins-managers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2914,6 +2958,118 @@
     
   
     PostgreSQL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
   
 
     
@@ -3573,6 +3729,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#emailmultialternatives-html-plain-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EmailMultiAlternatives — HTML + plain text
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#send_template_mail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        send_template_mail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#email-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Email backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-memory-email-backend-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-memory email backend (tests)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mail-admins-managers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3766,21 +3966,106 @@
 </span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="p">]</span>
 </span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">send_mass_mail</span><span class="p">(</span><span class="n">messages</span><span class="p">)</span>   <span class="c1"># → number of emails sent</span>
 </span></code></pre></div>
+<h2 id="emailmultialternatives-html-plain-text">EmailMultiAlternatives — HTML + plain text<a class="headerlink" href="#emailmultialternatives-html-plain-text" title="Permanent link">&para;</a></h2>
+<p><code>EmailMultiAlternatives</code> lets you attach multiple body formats (MIME <code>multipart/alternative</code>). Mail clients display the richest version they support:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.contrib.email.message</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmailMultiAlternatives</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">msg</span> <span class="o">=</span> <span class="n">EmailMultiAlternatives</span><span class="p">(</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">subject</span>   <span class="o">=</span> <span class="s2">&quot;Your order #1234 is confirmed&quot;</span><span class="p">,</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">body</span>      <span class="o">=</span> <span class="s2">&quot;Plain text body for older clients.&quot;</span><span class="p">,</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">from_email</span><span class="o">=</span> <span class="s2">&quot;orders@example.com&quot;</span><span class="p">,</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">to</span>        <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;customer@example.com&quot;</span><span class="p">],</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="p">)</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">msg</span><span class="o">.</span><span class="n">attach_alternative</span><span class="p">(</span><span class="s2">&quot;&lt;h1&gt;Order confirmed&lt;/h1&gt;&lt;p&gt;Thank you!&lt;/p&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;text/html&quot;</span><span class="p">)</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="k">await</span> <span class="n">msg</span><span class="o">.</span><span class="n">send</span><span class="p">()</span>
+</span></code></pre></div>
+<h2 id="send_template_mail">send_template_mail<a class="headerlink" href="#send_template_mail" title="Permanent link">&para;</a></h2>
+<p>Render a Jinja2 template and send it as an email in one call:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.contrib.email</span><span class="w"> </span><span class="kn">import</span> <span class="n">send_template_mail</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="k">await</span> <span class="n">send_template_mail</span><span class="p">(</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">template_name</span> <span class="o">=</span> <span class="s2">&quot;emails/welcome.html&quot;</span><span class="p">,</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    <span class="n">context</span>       <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;user&quot;</span><span class="p">:</span> <span class="n">user</span><span class="p">,</span> <span class="s2">&quot;site_name&quot;</span><span class="p">:</span> <span class="s2">&quot;My Blog&quot;</span><span class="p">},</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="n">subject</span>       <span class="o">=</span> <span class="s2">&quot;Welcome to My Blog!&quot;</span><span class="p">,</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    <span class="n">to</span>            <span class="o">=</span> <span class="p">[</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">],</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>The template renders to HTML. A plain-text fallback is derived automatically by stripping tags. Pass <code>from_email=</code> to override the default sender.</p>
+<h2 id="email-backends">Email backends<a class="headerlink" href="#email-backends" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Backend class</th>
+<th>Setting string</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SMTPEmailBackend</code></td>
+<td><code>buraq.contrib.email.backends.smtp.SMTPEmailBackend</code></td>
+<td>Production SMTP delivery</td>
+</tr>
+<tr>
+<td><code>FileEmailBackend</code></td>
+<td><code>buraq.contrib.email.backends.file.FileEmailBackend</code></td>
+<td>Writes <code>.eml</code> files to disk (development)</td>
+</tr>
+<tr>
+<td><code>ConsoleEmailBackend</code></td>
+<td><code>buraq.contrib.email.backends.console.ConsoleEmailBackend</code></td>
+<td>Prints emails to stdout (development)</td>
+</tr>
+<tr>
+<td><code>DummyEmailBackend</code></td>
+<td><code>buraq.contrib.email.backends.dummy.DummyEmailBackend</code></td>
+<td>Silently discards every message</td>
+</tr>
+<tr>
+<td><code>EmailBackend</code> (locmem)</td>
+<td><code>buraq.contrib.email.backends.locmem.EmailBackend</code></td>
+<td>Stores messages in a list; preferred for tests</td>
+</tr>
+</tbody>
+</table>
+<div class="language-python highlight"><span class="filename">config/settings.py</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Development — prints every email to the terminal</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">EMAIL_BACKEND</span> <span class="o">=</span> <span class="s2">&quot;buraq.contrib.email.backends.console.ConsoleEmailBackend&quot;</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># CI — silently drops all email</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">EMAIL_BACKEND</span> <span class="o">=</span> <span class="s2">&quot;buraq.contrib.email.backends.dummy.DummyEmailBackend&quot;</span>
+</span></code></pre></div>
+<h2 id="in-memory-email-backend-tests">In-memory email backend (tests)<a class="headerlink" href="#in-memory-email-backend-tests" title="Permanent link">&para;</a></h2>
+<p>Use the locmem backend in tests so no email is actually delivered:</p>
+<div class="language-python highlight"><span class="filename">config/settings.py</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">EMAIL_BACKEND</span> <span class="o">=</span> <span class="s2">&quot;buraq.contrib.email.backends.locmem.EmailBackend&quot;</span>
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.contrib.email.backends.locmem</span><span class="w"> </span><span class="kn">import</span> <span class="n">outbox</span><span class="p">,</span> <span class="n">clear_outbox</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.contrib.email</span><span class="w"> </span><span class="kn">import</span> <span class="n">send_mail</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Clear state between tests</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">clear_outbox</span><span class="p">()</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="k">await</span> <span class="n">send_mail</span><span class="p">(</span><span class="s2">&quot;Hi&quot;</span><span class="p">,</span> <span class="s2">&quot;Hello!&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;to@example.com&quot;</span><span class="p">])</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">outbox</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="k">assert</span> <span class="n">outbox</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">subject</span> <span class="o">==</span> <span class="s2">&quot;Hi&quot;</span>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="k">assert</span> <span class="s2">&quot;Hello!&quot;</span> <span class="ow">in</span> <span class="n">outbox</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">body</span>
+</span></code></pre></div>
+<p><code>outbox</code> is a module-level list; all sent <code>EmailMessage</code> instances are appended to it. <code>clear_outbox()</code> empties it — call it in <code>setUp</code> / <code>asyncSetUp</code>.</p>
 <h2 id="mail-admins-managers">Mail admins / managers<a class="headerlink" href="#mail-admins-managers" title="Permanent link">&para;</a></h2>
 <p>Quickly notify your site administrators or managers. Configure the recipients in settings:</p>
-<div class="language-python highlight"><span class="filename">config/settings.py</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">ADMINS</span>   <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="s2">&quot;alice@example.com&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;Bob&quot;</span><span class="p">,</span> <span class="s2">&quot;bob@example.com&quot;</span><span class="p">)]</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">MANAGERS</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;Carol&quot;</span><span class="p">,</span> <span class="s2">&quot;carol@example.com&quot;</span><span class="p">)]</span>
+<div class="language-python highlight"><span class="filename">config/settings.py</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">ADMINS</span>   <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="s2">&quot;alice@example.com&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;Bob&quot;</span><span class="p">,</span> <span class="s2">&quot;bob@example.com&quot;</span><span class="p">)]</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">MANAGERS</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;Carol&quot;</span><span class="p">,</span> <span class="s2">&quot;carol@example.com&quot;</span><span class="p">)]</span>
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.contrib.email</span><span class="w"> </span><span class="kn">import</span> <span class="n">mail_admins</span><span class="p">,</span> <span class="n">mail_managers</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># Notify all ADMINS</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="k">await</span> <span class="n">mail_admins</span><span class="p">(</span><span class="s2">&quot;Server error&quot;</span><span class="p">,</span> <span class="s2">&quot;Traceback:</span><span class="se">\n</span><span class="s2">...&quot;</span><span class="p">)</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="c1"># Notify all MANAGERS</span>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="k">await</span> <span class="n">mail_managers</span><span class="p">(</span><span class="s2">&quot;New signup&quot;</span><span class="p">,</span> <span class="s2">&quot;User alice@example.com just registered.&quot;</span><span class="p">)</span>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="c1"># With HTML body</span>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="k">await</span> <span class="n">mail_admins</span><span class="p">(</span><span class="s2">&quot;Alert&quot;</span><span class="p">,</span> <span class="s2">&quot;Plain text.&quot;</span><span class="p">,</span> <span class="n">html_message</span><span class="o">=</span><span class="s2">&quot;&lt;b&gt;Alert&lt;/b&gt;&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.contrib.email</span><span class="w"> </span><span class="kn">import</span> <span class="n">mail_admins</span><span class="p">,</span> <span class="n">mail_managers</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># Notify all ADMINS</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="k">await</span> <span class="n">mail_admins</span><span class="p">(</span><span class="s2">&quot;Server error&quot;</span><span class="p">,</span> <span class="s2">&quot;Traceback:</span><span class="se">\n</span><span class="s2">...&quot;</span><span class="p">)</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="c1"># Notify all MANAGERS</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="k">await</span> <span class="n">mail_managers</span><span class="p">(</span><span class="s2">&quot;New signup&quot;</span><span class="p">,</span> <span class="s2">&quot;User alice@example.com just registered.&quot;</span><span class="p">)</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="c1"># With HTML body</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="k">await</span> <span class="n">mail_admins</span><span class="p">(</span><span class="s2">&quot;Alert&quot;</span><span class="p">,</span> <span class="s2">&quot;Plain text.&quot;</span><span class="p">,</span> <span class="n">html_message</span><span class="o">=</span><span class="s2">&quot;&lt;b&gt;Alert&lt;/b&gt;&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 
 
@@ -3867,7 +4152,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -2,330 +2,346 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://buraqproject.com/docs/1.5</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/migrating-from-django</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/deployment/docker</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/deployment/overview</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/deployment/postgresql</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/getting-started/installation</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/getting-started/project-structure</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/getting-started/quickstart</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/getting-started/settings</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/management/commands</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/management/custom-commands</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/reference/exceptions</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/reference/forms</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/reference/orm</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/reference/shortcuts</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/reference/urls</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/reference/views</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/admin</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/apps</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/authentication</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/cache</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/checks</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/choices</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/contenttypes</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/context-processors</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
+    </url>
+    <url>
+         <loc>https://buraqproject.com/docs/1.5/topics/csp</loc>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/csrf</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
+    </url>
+    <url>
+         <loc>https://buraqproject.com/docs/1.5/topics/debugging</loc>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/email</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/feeds</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/file-storage</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/flatpages</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/http-responses</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/humanize</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/i18n</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/middleware</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/permissions</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/postgres</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/redirects</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/security-middleware</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/serialization</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/sessions</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/signals</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
+    </url>
+    <url>
+         <loc>https://buraqproject.com/docs/1.5/topics/signing</loc>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/sitemaps</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/sites</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/static-files</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
+    </url>
+    <url>
+         <loc>https://buraqproject.com/docs/1.5/topics/tasks</loc>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/template-loader</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/template-tags</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/templates</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/testing</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/text</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/timezone</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/transactions</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/translatable-models</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/urls</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/utils</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/validators</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/forms/fields</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/forms/formsets</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/forms/modelform</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/forms/overview</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/forms/validation</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/forms/widgets</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/advanced-querying</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/aggregates</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/expressions</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/functions</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/migrations</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/models</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/pagination</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/querying</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/relationships</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/orm/window-functions</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/views/class-based</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/views/form-view</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/views/function-based</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/views/generic</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/topics/views/mixins</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/tutorial</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/tutorial/authentication</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/tutorial/forms</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/tutorial/models</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/tutorial/templates</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
     <url>
          <loc>https://buraqproject.com/docs/1.5/tutorial/views-urls</loc>
-         <lastmod>2026-08-06</lastmod>
+         <lastmod>2026-08-12</lastmod>
     </url>
 </urlset>

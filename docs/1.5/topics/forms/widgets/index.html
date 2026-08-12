@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2866,6 +2866,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3593,6 +3705,16 @@
 <td><code>&lt;input type="date"&gt;</code></td>
 </tr>
 <tr>
+<td><code>DateTimeInput</code></td>
+<td><code>DateTimeField</code></td>
+<td><code>&lt;input type="datetime-local"&gt;</code></td>
+</tr>
+<tr>
+<td><code>TimeInput</code></td>
+<td><code>TimeField</code></td>
+<td><code>&lt;input type="time"&gt;</code></td>
+</tr>
+<tr>
 <td><code>CheckboxInput</code></td>
 <td><code>BooleanField</code></td>
 <td><code>&lt;input type="checkbox"&gt;</code></td>
@@ -3603,14 +3725,59 @@
 <td><code>&lt;select&gt;</code></td>
 </tr>
 <tr>
+<td><code>RadioSelect</code></td>
+<td>—</td>
+<td><code>&lt;ul&gt;</code> of <code>&lt;input type="radio"&gt;</code> buttons</td>
+</tr>
+<tr>
+<td><code>NullBooleanSelect</code></td>
+<td><code>NullBooleanField</code></td>
+<td><code>&lt;select&gt;</code> with Unknown/Yes/No options</td>
+</tr>
+<tr>
+<td><code>CheckboxSelectMultiple</code></td>
+<td><code>MultipleChoiceField</code></td>
+<td><code>&lt;ul&gt;</code> of <code>&lt;input type="checkbox"&gt;</code></td>
+</tr>
+<tr>
+<td><code>MultipleHiddenInput</code></td>
+<td>—</td>
+<td>Multiple <code>&lt;input type="hidden"&gt;</code> for multi-value fields</td>
+</tr>
+<tr>
 <td><code>FileInput</code></td>
 <td><code>FileField</code></td>
 <td><code>&lt;input type="file"&gt;</code></td>
 </tr>
 <tr>
+<td><code>ClearableFileInput</code></td>
+<td><code>FileField</code> (model forms)</td>
+<td>File input with a "Clear" checkbox for clearing existing files</td>
+</tr>
+<tr>
 <td><code>HiddenInput</code></td>
 <td><code>HiddenField</code></td>
 <td><code>&lt;input type="hidden"&gt;</code></td>
+</tr>
+<tr>
+<td><code>MultiWidget</code></td>
+<td><code>SplitDateTimeField</code></td>
+<td>Combines multiple sub-widgets into one field</td>
+</tr>
+<tr>
+<td><code>SplitDateTimeWidget</code></td>
+<td><code>SplitDateTimeField</code></td>
+<td>Separate <code>DateInput</code> + <code>TimeInput</code> combined into a <code>datetime</code></td>
+</tr>
+<tr>
+<td><code>SplitHiddenDateTimeWidget</code></td>
+<td>—</td>
+<td>Hidden version of <code>SplitDateTimeWidget</code></td>
+</tr>
+<tr>
+<td><code>SelectDateWidget</code></td>
+<td>—</td>
+<td>Three <code>&lt;select&gt;</code> dropdowns for year, month, day</td>
 </tr>
 </tbody>
 </table>
@@ -3722,7 +3889,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

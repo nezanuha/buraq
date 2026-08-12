@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1932,6 +1932,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#built-in-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in filters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Built-in filters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#date-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date &amp; time
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#html-marked-safe-output-not-auto-escaped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTML (marked safe — output not auto-escaped)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2921,6 +2971,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3571,6 +3733,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#built-in-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in filters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Built-in filters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#date-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date &amp; time
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#html-marked-safe-output-not-auto-escaped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTML (marked safe — output not auto-escaped)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3860,6 +4072,130 @@
 </tr>
 </tbody>
 </table>
+<hr />
+<h2 id="built-in-filters">Built-in filters<a class="headerlink" href="#built-in-filters" title="Permanent link">&para;</a></h2>
+<p>Buraq registers 21 filters automatically — no <code>{% load %}</code> needed. They live in <code>buraq/template/builtins.py</code> and are installed via <code>register_builtins(env)</code> at startup.</p>
+<h3 id="date-time">Date &amp; time<a class="headerlink" href="#date-time" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>date</code></td>
+<td><code>{{ dt\|date("Y-m-d") }}</code> — full Django format-code set</td>
+</tr>
+<tr>
+<td><code>time</code></td>
+<td><code>{{ dt\|time("H:i:s") }}</code></td>
+</tr>
+<tr>
+<td><code>timesince</code></td>
+<td><code>{{ dt\|timesince }}</code> → <code>"2 hours, 5 minutes"</code></td>
+</tr>
+<tr>
+<td><code>timeuntil</code></td>
+<td><code>{{ dt\|timeuntil }}</code> → <code>"3 days"</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="text">Text<a class="headerlink" href="#text" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>truncatechars(n)</code></td>
+<td><code>{{ text\|truncatechars(50) }}</code></td>
+</tr>
+<tr>
+<td><code>truncatewords(n)</code></td>
+<td><code>{{ text\|truncatewords(10) }}</code></td>
+</tr>
+<tr>
+<td><code>wordcount</code></td>
+<td><code>{{ body\|wordcount }}</code></td>
+</tr>
+<tr>
+<td><code>capfirst</code></td>
+<td><code>{{ name\|capfirst }}</code></td>
+</tr>
+<tr>
+<td><code>addslashes</code></td>
+<td><code>{{ val\|addslashes }}</code></td>
+</tr>
+<tr>
+<td><code>slugify</code></td>
+<td><code>{{ title\|slugify }}</code></td>
+</tr>
+<tr>
+<td><code>linenumbers</code></td>
+<td><code>{{ code\|linenumbers }}</code></td>
+</tr>
+<tr>
+<td><code>pluralize</code></td>
+<td><code>{{ n\|pluralize }}</code> or <code>{{ n\|pluralize("y,ies") }}</code></td>
+</tr>
+<tr>
+<td><code>yesno</code></td>
+<td><code>{{ flag\|yesno("yes,no,maybe") }}</code></td>
+</tr>
+<tr>
+<td><code>default_if_none</code></td>
+<td><code>{{ val\|default_if_none("—") }}</code></td>
+</tr>
+<tr>
+<td><code>phone2numeric</code></td>
+<td><code>{{ "HELLO"\|phone2numeric }}</code> → <code>"43556"</code></td>
+</tr>
+<tr>
+<td><code>floatformat(n)</code></td>
+<td><code>{{ 3.14159\|floatformat(2) }}</code> → <code>"3.14"</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="html-marked-safe-output-not-auto-escaped">HTML (marked safe — output not auto-escaped)<a class="headerlink" href="#html-marked-safe-output-not-auto-escaped" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linebreaks</code></td>
+<td><code>{{ body\|linebreaks }}</code></td>
+</tr>
+<tr>
+<td><code>linebreaksbr</code></td>
+<td><code>{{ body\|linebreaksbr }}</code></td>
+</tr>
+<tr>
+<td><code>urlize</code></td>
+<td><code>{{ text\|urlize }}</code></td>
+</tr>
+<tr>
+<td><code>escapejs</code></td>
+<td><code>var x = "{{ val\|escapejs }}"</code></td>
+</tr>
+<tr>
+<td><code>json_script(id)</code></td>
+<td><code>{{ data\|json_script("app-data") }}</code></td>
+</tr>
+<tr>
+<td><code>filesizeformat</code></td>
+<td><code>{{ size\|filesizeformat }}</code> → <code>"1.2 MB"</code></td>
+</tr>
+</tbody>
+</table>
 
 
 
@@ -3945,7 +4281,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

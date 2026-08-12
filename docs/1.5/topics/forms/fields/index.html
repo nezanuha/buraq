@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1740,6 +1740,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#splitdatetimefield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SplitDateTimeField
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filepathfield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FilePathField
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="FilePathField">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#set_choices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_choices()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#custom-validators" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2943,6 +2982,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3605,6 +3756,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#splitdatetimefield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SplitDateTimeField
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filepathfield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FilePathField
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="FilePathField">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#set_choices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_choices()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#custom-validators" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3831,6 +4021,18 @@
 <td><code>RegexField</code></td>
 <td>Text matching a regex pattern</td>
 </tr>
+<tr>
+<td><code>SplitDateTimeField</code></td>
+<td>Separate date + time inputs combined into a <code>datetime</code></td>
+</tr>
+<tr>
+<td><code>MultiValueField</code></td>
+<td>Combines several fields into one; override <code>compress()</code> to merge values</td>
+</tr>
+<tr>
+<td><code>ComboField</code></td>
+<td>Runs a single value through multiple validators in sequence</td>
+</tr>
 </tbody>
 </table>
 <h2 id="common-options">Common options<a class="headerlink" href="#common-options" title="Permanent link">&para;</a></h2>
@@ -3915,16 +4117,39 @@
 </span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="n">coerce</span>  <span class="o">=</span> <span class="nb">int</span><span class="p">,</span>
 </span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="p">)</span>
 </span></code></pre></div>
-<h2 id="custom-validators">Custom validators<a class="headerlink" href="#custom-validators" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationError</span>
+<h2 id="splitdatetimefield">SplitDateTimeField<a class="headerlink" href="#splitdatetimefield" title="Permanent link">&para;</a></h2>
+<p>Accepts a two-element list <code>[date_string, time_string]</code> from a form that uses two separate inputs, and combines them into a single <code>datetime.datetime</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.forms.fields</span><span class="w"> </span><span class="kn">import</span> <span class="n">SplitDateTimeField</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_no_profanity</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="k">if</span> <span class="s2">&quot;badword&quot;</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Profanity is not allowed.&quot;</span><span class="p">)</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="n">name</span> <span class="o">=</span> <span class="n">CharField</span><span class="p">(</span><span class="n">validators</span><span class="o">=</span><span class="p">[</span><span class="n">validate_no_profanity</span><span class="p">])</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">EventForm</span><span class="p">(</span><span class="n">Form</span><span class="p">):</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">starts_at</span> <span class="o">=</span> <span class="n">SplitDateTimeField</span><span class="p">()</span>
+</span></code></pre></div>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">&lt;</span><span class="nt">input</span> <span class="na">name</span><span class="o">=</span><span class="s">&quot;starts_at_0&quot;</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;date&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="p">&lt;</span><span class="nt">input</span> <span class="na">name</span><span class="o">=</span><span class="s">&quot;starts_at_1&quot;</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;time&quot;</span><span class="p">&gt;</span>
+</span></code></pre></div>
+<p>The date is parsed with <code>DateField</code>'s formats and the time with <code>TimeField</code>'s formats. <code>compress([date, time])</code> returns <code>datetime.combine(date, time)</code>.</p>
+<h2 id="filepathfield">FilePathField<a class="headerlink" href="#filepathfield" title="Permanent link">&para;</a></h2>
+<p>Select a file from a directory on disk. Choices are populated at class-creation time by scanning the directory.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.forms.fields</span><span class="w"> </span><span class="kn">import</span> <span class="n">FilePathField</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">UploadForm</span><span class="p">(</span><span class="n">Form</span><span class="p">):</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">template</span> <span class="o">=</span> <span class="n">FilePathField</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;/srv/templates&quot;</span><span class="p">,</span> <span class="n">match</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;.*\.html$&quot;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="set_choices">set_choices()<a class="headerlink" href="#set_choices" title="Permanent link">&para;</a></h3>
+<p>In long-running processes (e.g. ASGI servers that never restart) the directory may change after the field is instantiated. Call <code>set_choices()</code> to force a fresh scan:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">form_instance</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s2">&quot;template&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_choices</span><span class="p">()</span>
+</span></code></pre></div>
+<p>This is also useful if you store <code>FilePathField</code> instances at module level and need to refresh them per request.</p>
+<h2 id="custom-validators">Custom validators<a class="headerlink" href="#custom-validators" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationError</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_no_profanity</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="k">if</span> <span class="s2">&quot;badword&quot;</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Profanity is not allowed.&quot;</span><span class="p">)</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="n">name</span> <span class="o">=</span> <span class="n">CharField</span><span class="p">(</span><span class="n">validators</span><span class="o">=</span><span class="p">[</span><span class="n">validate_no_profanity</span><span class="p">])</span>
 </span></code></pre></div>
 
 
@@ -4011,7 +4236,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

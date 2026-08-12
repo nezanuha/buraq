@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://buraqproject.com/docs/1.5/management/commands">
       
       
-        <link rel="prev" href="../../topics/postgres">
+        <link rel="prev" href="../../topics/debugging">
       
       
         <link rel="next" href="../custom-commands">
@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2761,6 +2761,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2892,6 +3004,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#global-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#server" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2907,6 +3030,105 @@
     <span class="md-ellipsis">
       
         Database
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interactive-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive shell
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System checks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database shell
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-import-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data import / export
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flush" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flush
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change password
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inspect-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inspect database
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diff-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diff settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#send-test-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Send test email
       
     </span>
   </a>
@@ -2958,6 +3180,61 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#internationalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internationalization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migrations-advanced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migrations (advanced)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test runner
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commanderror-systemcheckerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CommandError / SystemCheckError
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#execute_from_command_line" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2973,6 +3250,50 @@
     <span class="md-ellipsis">
       
         URL inspection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#content-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#background-task-worker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Background task worker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version
       
     </span>
   </a>
@@ -3462,6 +3783,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#global-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#server" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3477,6 +3809,105 @@
     <span class="md-ellipsis">
       
         Database
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interactive-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive shell
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System checks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database shell
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-import-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data import / export
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flush" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flush
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change password
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inspect-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inspect database
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diff-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diff settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#send-test-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Send test email
       
     </span>
   </a>
@@ -3528,6 +3959,61 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#internationalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internationalization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migrations-advanced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migrations (advanced)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test runner
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commanderror-systemcheckerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CommandError / SystemCheckError
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#execute_from_command_line" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3543,6 +4029,50 @@
     <span class="md-ellipsis">
       
         URL inspection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#content-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#background-task-worker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Background task worker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version
       
     </span>
   </a>
@@ -3630,102 +4160,339 @@
 
 <h1 id="built-in-management-commands">Built-in Management Commands<a class="headerlink" href="#built-in-management-commands" title="Permanent link">&para;</a></h1>
 <p>All commands run via <code>buraq &lt;command&gt;</code>.</p>
-<h2 id="server">Server<a class="headerlink" href="#server" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Start development server (default: main:app on 127.0.0.1:8000)</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>buraq<span class="w"> </span>runserver
+<h2 id="global-options">Global options<a class="headerlink" href="#global-options" title="Permanent link">&para;</a></h2>
+<p>These options are accepted by every command:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Env var</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--settings MODULE</code></td>
+<td><code>BURAQ_SETTINGS_MODULE</code></td>
+<td>Dotted path to the settings module to use</td>
+</tr>
+</tbody>
+</table>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Use production settings for a single command</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>buraq<span class="w"> </span>migrate<span class="w"> </span>--settings<span class="w"> </span>config.prod_settings
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Custom port (Django-style)</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>buraq<span class="w"> </span>runserver<span class="w"> </span><span class="m">8080</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Custom host:port</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>buraq<span class="w"> </span>runserver<span class="w"> </span><span class="m">0</span>.0.0.0:8080
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Custom app path</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>buraq<span class="w"> </span>runserver<span class="w"> </span>config.urls:app
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Options</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>buraq<span class="w"> </span>runserver<span class="w"> </span>--no-reload<span class="w">      </span><span class="c1"># disable auto-reload</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>buraq<span class="w"> </span>runserver<span class="w"> </span>--workers<span class="w"> </span><span class="m">4</span><span class="w">      </span><span class="c1"># multiple workers (disables reload)</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Or set the env var once for the whole shell session</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">BURAQ_SETTINGS_MODULE</span><span class="o">=</span>config.prod_settings
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>buraq<span class="w"> </span>migrate
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>buraq<span class="w"> </span>createsuperuser
+</span></code></pre></div>
+<p>When <code>--settings</code> is given, Buraq imports the named module and applies every upper-case attribute to the live settings object before the command runs. This lets you keep separate settings files for development, staging, and production without changing <code>manage.py</code>.</p>
+<h2 id="server">Server<a class="headerlink" href="#server" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Start development server (default: main:app on 127.0.0.1:8000)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>buraq<span class="w"> </span>runserver
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Custom port (Django-style)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>buraq<span class="w"> </span>runserver<span class="w"> </span><span class="m">8080</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Custom host:port</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>buraq<span class="w"> </span>runserver<span class="w"> </span><span class="m">0</span>.0.0.0:8080
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Custom app path</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>buraq<span class="w"> </span>runserver<span class="w"> </span>config.urls:app
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Options</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>buraq<span class="w"> </span>runserver<span class="w"> </span>--no-reload<span class="w">      </span><span class="c1"># disable auto-reload</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>buraq<span class="w"> </span>runserver<span class="w"> </span>--workers<span class="w"> </span><span class="m">4</span><span class="w">      </span><span class="c1"># multiple workers (disables reload)</span>
 </span></code></pre></div>
 <h2 id="database">Database<a class="headerlink" href="#database" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Generate migration from model changes</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>buraq<span class="w"> </span>makemigrations
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>buraq<span class="w"> </span>makemigrations<span class="w"> </span><span class="s2">&quot;add slug to post&quot;</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Apply all pending migrations</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>buraq<span class="w"> </span>migrate
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Migrate to a specific revision</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>buraq<span class="w"> </span>migrate<span class="w"> </span>abc1234
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># Roll back migrations</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>buraq<span class="w"> </span>rollback<span class="w">          </span><span class="c1"># 1 migration</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>buraq<span class="w"> </span>rollback<span class="w"> </span><span class="m">3</span><span class="w">        </span><span class="c1"># 3 migrations</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># View migration history</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>buraq<span class="w"> </span>showmigrations
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Generate migration from model changes</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>buraq<span class="w"> </span>makemigrations
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>buraq<span class="w"> </span>makemigrations<span class="w"> </span><span class="s2">&quot;add slug to post&quot;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Apply all pending migrations</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>buraq<span class="w"> </span>migrate
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># Migrate to a specific revision</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>buraq<span class="w"> </span>migrate<span class="w"> </span>abc1234
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># Roll back migrations</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>buraq<span class="w"> </span>rollback<span class="w">          </span><span class="c1"># 1 migration</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>buraq<span class="w"> </span>rollback<span class="w"> </span><span class="m">3</span><span class="w">        </span><span class="c1"># 3 migrations</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="c1"># View migration history</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>buraq<span class="w"> </span>showmigrations
 </span></code></pre></div>
-<h2 id="users">Users<a class="headerlink" href="#users" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Create a superuser interactively</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>buraq<span class="w"> </span>createsuperuser
-</span></code></pre></div>
-<h2 id="apps-projects">Apps &amp; Projects<a class="headerlink" href="#apps-projects" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Scaffold a new app</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>buraq<span class="w"> </span>startapp<span class="w"> </span>posts
+<h2 id="interactive-shell">Interactive shell<a class="headerlink" href="#interactive-shell" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Open an interactive Python shell with models pre-imported</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>buraq<span class="w"> </span>shell
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Scaffold a new project</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>buraq<span class="w"> </span>startproject<span class="w"> </span>myproject
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>buraq<span class="w"> </span>startproject<span class="w"> </span>myproject<span class="w"> </span>--postgres<span class="w">    </span><span class="c1"># with PostgreSQL config</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Run a single expression and exit</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>buraq<span class="w"> </span>shell<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;print(await Post.objects.count())&quot;</span>
+</span></code></pre></div>
+<p>All model classes from <code>INSTALLED_APPS</code> and <code>SessionLocal</code> are auto-imported so you can query the database immediately.</p>
+<h2 id="system-checks">System checks<a class="headerlink" href="#system-checks" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Run all registered system checks</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>buraq<span class="w"> </span>check
+</span></code></pre></div>
+<p>Prints results grouped by severity (<code>INFO</code>, <code>WARNING</code>, <code>ERROR</code>, <code>CRITICAL</code>). Exits with code <code>1</code> if any <code>ERROR</code>-level check fails.</p>
+<h2 id="database-shell">Database shell<a class="headerlink" href="#database-shell" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Open the native CLI for the configured database</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>buraq<span class="w"> </span>dbshell
+</span></code></pre></div>
+<p>Detects the dialect from <code>DATABASE_URL</code> and launches <code>sqlite3</code>, <code>psql</code>, or <code>mysql</code> with the correct connection arguments. Requires the database CLI to be installed on <code>PATH</code>.</p>
+<h2 id="data-import-export">Data import / export<a class="headerlink" href="#data-import-export" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Dump all tables to JSON</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>buraq<span class="w"> </span>dumpdata
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>buraq<span class="w"> </span>dumpdata<span class="w"> </span>--output<span class="w"> </span>fixtures/initial.json
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>buraq<span class="w"> </span>dumpdata<span class="w"> </span>--indent<span class="w"> </span><span class="m">2</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>buraq<span class="w"> </span>dumpdata<span class="w"> </span>--exclude<span class="w"> </span>auth_user<span class="w"> </span>--exclude<span class="w"> </span>buraq_sessions
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Load a JSON fixture</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>buraq<span class="w"> </span>loaddata<span class="w"> </span>fixtures/initial.json
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>buraq<span class="w"> </span>loaddata<span class="w"> </span>fixtures/initial.json<span class="w"> </span>--table<span class="w"> </span>posts_post
+</span></code></pre></div>
+<p><code>dumpdata</code> serialises every SQLAlchemy table to a JSON list. <code>loaddata</code> bulk-inserts rows; use <code>--table</code> to restrict which tables are loaded.</p>
+<h2 id="flush">Flush<a class="headerlink" href="#flush" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Delete all rows from every table (schema is kept)</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>buraq<span class="w"> </span>flush
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Skip the confirmation prompt</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>buraq<span class="w"> </span>flush<span class="w"> </span>--no-input
+</span></code></pre></div>
+<p>Tables are truncated in reverse dependency order to avoid FK violations. Prompts for confirmation unless <code>--no-input</code> is passed.</p>
+<h2 id="change-password">Change password<a class="headerlink" href="#change-password" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>buraq<span class="w"> </span>changepassword<span class="w"> </span>alice
+</span></code></pre></div>
+<p>Prompts for a new password (with confirmation) and updates <code>hashed_password</code> for the named user via <code>hash_password()</code>.</p>
+<h2 id="inspect-database">Inspect database<a class="headerlink" href="#inspect-database" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Print model class stubs inferred from the live schema</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>buraq<span class="w"> </span>inspectdb
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Inspect a specific table</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>buraq<span class="w"> </span>inspectdb<span class="w"> </span>--table<span class="w"> </span>posts_post
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Redirect to a file</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>buraq<span class="w"> </span>inspectdb<span class="w"> </span>&gt;<span class="w"> </span>myapp/models.py
+</span></code></pre></div>
+<p>Uses SQLAlchemy's <code>inspect()</code> to read table names, column types, and constraints, then maps them to Buraq field strings.</p>
+<h2 id="diff-settings">Diff settings<a class="headerlink" href="#diff-settings" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Show settings that differ from defaults</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>buraq<span class="w"> </span>diffsettings
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Show every setting (including defaults)</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>buraq<span class="w"> </span>diffsettings<span class="w"> </span>--all
+</span></code></pre></div>
+<p>Changed settings are marked with <code>###</code> so they're easy to spot.</p>
+<h2 id="send-test-email">Send test email<a class="headerlink" href="#send-test-email" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Verify email configuration</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>buraq<span class="w"> </span>sendtestemail<span class="w"> </span>alice@example.com
+</span></code></pre></div>
+<p>Sends a plain-text test message using the configured email backend (<code>EMAIL_HOST</code>, <code>EMAIL_PORT</code>, credentials). Use this to confirm SMTP settings before deploying.</p>
+<h2 id="users">Users<a class="headerlink" href="#users" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Create a superuser (interactive — prompts for username, email, password)</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>buraq<span class="w"> </span>createsuperuser
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Pass values directly (password is still prompted if omitted)</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>buraq<span class="w"> </span>createsuperuser<span class="w"> </span>--username<span class="w"> </span>admin<span class="w"> </span>--email<span class="w"> </span>admin@example.com
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Fully non-interactive (for scripts / CI)</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>buraq<span class="w"> </span>createsuperuser<span class="w"> </span>--username<span class="w"> </span>admin<span class="w"> </span>--email<span class="w"> </span>admin@example.com<span class="w"> </span>--password<span class="w"> </span>secret<span class="w"> </span>--no-input
+</span></code></pre></div>
+<p>The interactive flow asks for username, email, and password (with a confirmation prompt). It rejects empty passwords and mismatched confirmation attempts. Exits with an error if the username or email is already taken.</p>
+<h2 id="apps-projects">Apps &amp; Projects<a class="headerlink" href="#apps-projects" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Scaffold a new app</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>buraq<span class="w"> </span>startapp<span class="w"> </span>posts
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Scaffold a new project</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>buraq<span class="w"> </span>startproject<span class="w"> </span>myproject
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>buraq<span class="w"> </span>startproject<span class="w"> </span>myproject<span class="w"> </span>--postgres<span class="w">    </span><span class="c1"># with PostgreSQL config</span>
 </span></code></pre></div>
 <h2 id="static-files">Static files<a class="headerlink" href="#static-files" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>buraq<span class="w"> </span>collectstatic
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>buraq<span class="w"> </span>collectstatic<span class="w"> </span>--dest<span class="w"> </span>/var/www/static
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>buraq<span class="w"> </span>collectstatic<span class="w"> </span>--clear<span class="w">       </span><span class="c1"># wipe destination first</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Collect all static files into STATIC_ROOT</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>buraq<span class="w"> </span>collectstatic
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Custom destination (overrides STATIC_ROOT)</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>buraq<span class="w"> </span>collectstatic<span class="w"> </span>--dest<span class="w"> </span>/var/www/static
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># Wipe destination before collecting</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>buraq<span class="w"> </span>collectstatic<span class="w"> </span>--clear
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="c1"># Find where a static file lives (searches STATICFILES_FINDERS)</span>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>buraq<span class="w"> </span>findstatic<span class="w"> </span>css/style.css
+</span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>buraq<span class="w"> </span>findstatic<span class="w"> </span>images/logo.png<span class="w"> </span>--first<span class="w">   </span><span class="c1"># stop at first match</span>
+</span></code></pre></div>
+<p>Files are discovered via <code>STATICFILES_FINDERS</code> (searches <code>STATICFILES_DIRS</code> and each installed app's <code>static/</code> directory) and saved via <code>STATICFILES_STORAGE</code>. When <code>ManifestStaticFilesStorage</code> is active, content-hashed copies are written and <code>staticfiles.json</code> is generated.</p>
+<p>Output:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>Collecting static files into /app/staticfiles ...
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>Done. Copied: 24, Skipped (unchanged): 8, Post-processed: 24
+</span></code></pre></div>
+<p><code>findstatic</code> prints the absolute path for each match across all finders:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>/app/static/css/style.css
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>/app/myapp/static/css/style.css
 </span></code></pre></div>
 <h2 id="cache">Cache<a class="headerlink" href="#cache" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>buraq<span class="w"> </span>clearcache
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Clear all cached data</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>buraq<span class="w"> </span>clearcache
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># Create the database cache table (DatabaseCache backend)</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>buraq<span class="w"> </span>createcachetable
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>buraq<span class="w"> </span>createcachetable<span class="w"> </span>--table<span class="w"> </span>my_cache_table
 </span></code></pre></div>
+<h2 id="sessions">Sessions<a class="headerlink" href="#sessions" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Delete all expired sessions from the database session table</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>buraq<span class="w"> </span>clearsessions
+</span></code></pre></div>
+<p>Only relevant when using <code>DatabaseSessionBackend</code>. Cookie-based sessions need no cleanup.</p>
+<h2 id="internationalization">Internationalization<a class="headerlink" href="#internationalization" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Extract translatable strings into .po files</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>buraq<span class="w"> </span>makemessages<span class="w"> </span>-l<span class="w"> </span>ar
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>buraq<span class="w"> </span>makemessages<span class="w"> </span>-l<span class="w"> </span>ar<span class="w"> </span>-l<span class="w"> </span>fr<span class="w"> </span>-l<span class="w"> </span>es<span class="w">          </span><span class="c1"># multiple locales at once</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>buraq<span class="w"> </span>makemessages<span class="w"> </span>-l<span class="w"> </span>ar<span class="w"> </span>--domain<span class="w"> </span>django<span class="w">       </span><span class="c1"># custom domain</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="c1"># Compile .po files into binary .mo files</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>buraq<span class="w"> </span>compilemessages
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="c1"># Custom domain</span>
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>buraq<span class="w"> </span>compilemessages<span class="w"> </span>--domain<span class="w"> </span>django
+</span></code></pre></div>
+<p>Requires <code>babel</code> (<code>buraq install babel</code>). Strings are extracted from <code>.py</code> and <code>.html</code> files by default. Compiled <code>.mo</code> files are written next to the <code>.po</code> files in <code>locale/&lt;lang&gt;/LC_MESSAGES/</code>.</p>
+<p>See <a href="../../topics/i18n">Internationalization</a> for full usage.</p>
+<h2 id="migrations-advanced">Migrations (advanced)<a class="headerlink" href="#migrations-advanced" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Print the SQL a migration would run without executing it</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>buraq<span class="w"> </span>sqlmigrate<span class="w"> </span>abc1234
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>buraq<span class="w"> </span>sqlmigrate<span class="w"> </span>abc1234<span class="w"> </span>--backwards<span class="w">   </span><span class="c1"># downgrade SQL</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="c1"># Squash a range of migrations into one</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>buraq<span class="w"> </span>squashmigrations<span class="w"> </span>abc1234<span class="w"> </span>head
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>buraq<span class="w"> </span>squashmigrations<span class="w"> </span>abc1234<span class="w"> </span>head<span class="w"> </span>--name<span class="w"> </span>squashed_v2
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="c1"># Merge two divergent migration heads into one</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>buraq<span class="w"> </span>optimizemigration<span class="w"> </span>abc1234<span class="w"> </span>def5678
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>buraq<span class="w"> </span>optimizemigration<span class="w"> </span>abc1234<span class="w"> </span>def5678<span class="w"> </span>--name<span class="w"> </span>merge_branches
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="c1"># Print the SQL that flush would run (without executing it)</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>buraq<span class="w"> </span>sqlflush
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>
+</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="c1"># Print SQL to reset PostgreSQL autoincrement sequences</span>
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>buraq<span class="w"> </span>sqlsequencereset
+</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>buraq<span class="w"> </span>sqlsequencereset<span class="w"> </span>posts<span class="w"> </span>auth<span class="w">   </span><span class="c1"># specific apps only</span>
+</span></code></pre></div>
+<p><code>sqlflush</code> is useful for auditing or generating a manual reset script. <code>sqlsequencereset</code> is only needed for PostgreSQL after bulk data imports that bypass the ORM.</p>
+<h2 id="test-runner">Test runner<a class="headerlink" href="#test-runner" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># Run the test suite via pytest</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>buraq<span class="w"> </span><span class="nb">test</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>buraq<span class="w"> </span><span class="nb">test</span><span class="w"> </span>tests/
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>buraq<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--failfast
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>buraq<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--verbosity<span class="w"> </span><span class="m">2</span>
+</span></code></pre></div>
+<p><code>BURAQ_ENV=test</code> is set automatically so settings can branch on it.</p>
+<h2 id="commanderror-systemcheckerror">CommandError / SystemCheckError<a class="headerlink" href="#commanderror-systemcheckerror" title="Permanent link">&para;</a></h2>
+<p>Custom management commands raise <code>CommandError</code> to print an error message and exit with a non-zero code without a Python traceback:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.management.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">CommandError</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">Command</span><span class="p">(</span><span class="n">BaseCommand</span><span class="p">):</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">options</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]:</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>            <span class="k">raise</span> <span class="n">CommandError</span><span class="p">(</span><span class="s2">&quot;--name is required.&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p><code>SystemCheckError</code> is a subclass raised automatically by the <code>check</code> command when one or more registered system checks report an <code>ERROR</code>-level issue. You do not normally raise it directly.</p>
 <h2 id="execute_from_command_line">execute_from_command_line<a class="headerlink" href="#execute_from_command_line" title="Permanent link">&para;</a></h2>
 <p><code>execute_from_command_line</code> is the entry point used by <code>manage.py</code>:</p>
-<div class="language-python highlight"><span class="filename">manage.py</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="ch">#!/usr/bin/env python</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="sd">&quot;&quot;&quot;Run: python manage.py &lt;command&gt;&quot;&quot;&quot;</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="o">,</span><span class="w"> </span><span class="nn">sys</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.venv/bin/python&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">os</span><span class="o">.</span><span class="n">execv</span><span class="p">(</span><span class="s2">&quot;.venv/bin/python&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;.venv/bin/python&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.management.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">execute_from_command_line</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">execute_from_command_line</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span>
+<div class="language-python highlight"><span class="filename">manage.py</span><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="ch">#!/usr/bin/env python</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="sd">&quot;&quot;&quot;Run: python manage.py &lt;command&gt;&quot;&quot;&quot;</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="o">,</span><span class="w"> </span><span class="nn">sys</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.venv/bin/python&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>    <span class="n">os</span><span class="o">.</span><span class="n">execv</span><span class="p">(</span><span class="s2">&quot;.venv/bin/python&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;.venv/bin/python&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.management.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">execute_from_command_line</span>
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="n">execute_from_command_line</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span>
 </span></code></pre></div>
 <p>This is generated automatically when you run <code>buraq startproject</code>.</p>
 <h2 id="url-inspection">URL inspection<a class="headerlink" href="#url-inspection" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># List all registered routes</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>buraq<span class="w"> </span>listurls
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Inspect a non-default app</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>buraq<span class="w"> </span>listurls<span class="w"> </span>--app<span class="w"> </span>config.urls:app
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># List all registered routes (default app: main:app)</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>buraq<span class="w"> </span>listurls
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="c1"># Use a specific app</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>buraq<span class="w"> </span>listurls<span class="w"> </span>--app<span class="w"> </span>config.urls:app
 </span></code></pre></div>
 <p>Output:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Path                  Methods          Name
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>----------------------------------------------
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>/                     GET              home
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>/posts                GET              post_list
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>/posts                POST             post_create
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>/posts/{pk}           GET              post_detail
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>/posts/{pk}           PUT,PATCH        post_update
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>/posts/{pk}           DELETE           post_delete
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>/api/docs             GET,HEAD
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>7 route(s) total.
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>Path                           View                                      Name
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>------------------------------------------------------------------------
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>/                              myapp.views.home                          home
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>/posts                         myapp.views.post_list                     post_list
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>/posts/{pk}                    myapp.views.post_detail                   post_detail
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>/auth/login                    buraq.contrib.auth.views.LoginView        login
 </span></code></pre></div>
-<p>Named routes are highlighted. Unnamed routes (e.g. FastAPI auto-generated docs) appear without a name.</p>
+<p>Named routes appear in the <code>Name</code> column. Unnamed routes show an empty name.</p>
+<h2 id="content-types">Content types<a class="headerlink" href="#content-types" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Remove ContentType records for models that no longer exist</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>buraq<span class="w"> </span>remove_stale_contenttypes
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>buraq<span class="w"> </span>remove_stale_contenttypes<span class="w"> </span>--no-input<span class="w">          </span><span class="c1"># skip confirmation</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>buraq<span class="w"> </span>remove_stale_contenttypes<span class="w"> </span>--include-stale-apps<span class="w">  </span><span class="c1"># also check still-installed apps</span>
+</span></code></pre></div>
+<p>Run this after removing an app or model from <code>INSTALLED_APPS</code> to clean up orphaned rows in the <code>contenttypes</code> table. See <a href="../../topics/contenttypes">Content Types</a>.</p>
+<h2 id="test-server">Test server<a class="headerlink" href="#test-server" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># Load fixtures then start the development server</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>buraq<span class="w"> </span>testserver<span class="w"> </span>fixtures/posts.json<span class="w"> </span>fixtures/users.json
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>buraq<span class="w"> </span>testserver<span class="w"> </span>fixtures/initial.json<span class="w"> </span>--port<span class="w"> </span><span class="m">8001</span>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>buraq<span class="w"> </span>testserver<span class="w"> </span>fixtures/initial.json<span class="w"> </span>--no-input<span class="w">        </span><span class="c1"># skip confirmation</span>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>buraq<span class="w"> </span>testserver<span class="w"> </span>fixtures/initial.json<span class="w"> </span>--app<span class="w"> </span>config.urls:app<span class="w">  </span><span class="c1"># custom app path</span>
+</span></code></pre></div>
+<p>Clears the database, loads the given fixture files, then starts the dev server. Useful for manual QA sessions with realistic data without touching the production database.</p>
+<h2 id="background-task-worker">Background task worker<a class="headerlink" href="#background-task-worker" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>buraq<span class="w"> </span>worker
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>buraq<span class="w"> </span>worker<span class="w"> </span>--queue<span class="w"> </span>high-priority<span class="w"> </span>--concurrency<span class="w"> </span><span class="m">4</span>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>buraq<span class="w"> </span>worker<span class="w"> </span>--queue<span class="w"> </span>email<span class="w"> </span>--poll-interval<span class="w"> </span><span class="m">0</span>.5<span class="w"> </span>--max-tasks<span class="w"> </span><span class="m">100</span>
+</span></code></pre></div>
+<p>Polls the task backend for pending tasks and executes them. Requires <code>DatabaseBackend</code> — the <code>DummyBackend</code> executes tasks in-process and needs no worker.</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--queue</code>, <code>-q</code></td>
+<td><code>default</code></td>
+<td>Queue name to consume</td>
+</tr>
+<tr>
+<td><code>--concurrency</code>, <code>-c</code></td>
+<td><code>1</code></td>
+<td>Concurrent task coroutines</td>
+</tr>
+<tr>
+<td><code>--poll-interval</code></td>
+<td><code>1.0</code></td>
+<td>Seconds between database polls</td>
+</tr>
+<tr>
+<td><code>--max-tasks</code></td>
+<td><code>0</code> (∞)</td>
+<td>Stop after processing N tasks</td>
+</tr>
+</tbody>
+</table>
+<p>The worker exits cleanly on <code>SIGINT</code> / <code>SIGTERM</code>. See <a href="../../topics/tasks">Background Tasks</a>.</p>
+<h2 id="version">Version<a class="headerlink" href="#version" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>buraq<span class="w"> </span>version
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="c1"># Buraq 0.1.0</span>
+</span></code></pre></div>
 <h2 id="package-management-uv-wrappers">Package management (uv wrappers)<a class="headerlink" href="#package-management-uv-wrappers" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>buraq<span class="w"> </span>install<span class="w"> </span>requests<span class="w"> </span>httpx
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>buraq<span class="w"> </span>install<span class="w"> </span>--dev<span class="w"> </span>pytest
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>buraq<span class="w"> </span>uninstall<span class="w"> </span>requests
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>buraq<span class="w"> </span>sync
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>buraq<span class="w"> </span>pip<span class="w"> </span>freeze
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>buraq<span class="w"> </span>install<span class="w"> </span>requests<span class="w"> </span>httpx
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>buraq<span class="w"> </span>install<span class="w"> </span>--dev<span class="w"> </span>pytest
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>buraq<span class="w"> </span>uninstall<span class="w"> </span>requests
+</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>buraq<span class="w"> </span>sync
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>buraq<span class="w"> </span>pip<span class="w"> </span>freeze
+</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>
+</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="c1"># Run any command inside the uv virtual environment</span>
+</span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a>buraq<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest
+</span><span id="__span-30-9"><a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a>buraq<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span><span class="nb">history</span>
 </span></code></pre></div>
 
 
@@ -3812,7 +4579,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

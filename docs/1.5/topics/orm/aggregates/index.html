@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1180,10 +1180,43 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#default-coalesce-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        default= — COALESCE fallback
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bitwise-aggregates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bitwise aggregates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reference" class="md-nav__link">
     <span class="md-ellipsis">
       
         Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anyvalue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AnyValue
       
     </span>
   </a>
@@ -2877,6 +2910,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3473,10 +3618,43 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#default-coalesce-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        default= — COALESCE fallback
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bitwise-aggregates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bitwise aggregates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reference" class="md-nav__link">
     <span class="md-ellipsis">
       
         Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anyvalue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AnyValue
       
     </span>
   </a>
@@ -3638,6 +3816,30 @@
 <p class="admonition-title">Database support</p>
 <p><code>StdDev</code> and <code>Variance</code> require PostgreSQL or MySQL. SQLite does not support them natively.</p>
 </div>
+<h2 id="default-coalesce-fallback">default= — COALESCE fallback<a class="headerlink" href="#default-coalesce-fallback" title="Permanent link">&para;</a></h2>
+<p>Pass <code>default=</code> to any aggregate to get a defined value instead of <code>NULL</code> when the result set is empty:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">is_published</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">total</span><span class="o">=</span><span class="n">Count</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>      <span class="c1"># → 0, not None</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">avg_views</span><span class="o">=</span><span class="n">Avg</span><span class="p">(</span><span class="s2">&quot;views&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0</span><span class="p">),</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>The ORM wraps the aggregate in <code>COALESCE(agg, default)</code>. Without <code>default=</code>, aggregating an empty set returns <code>None</code> in Python.</p>
+<h2 id="bitwise-aggregates">Bitwise aggregates<a class="headerlink" href="#bitwise-aggregates" title="Permanent link">&para;</a></h2>
+<p><code>BitAnd</code>, <code>BitOr</code>, and <code>BitXor</code> compute bitwise aggregates across all rows in the group. They are available on any database that exposes <code>bit_and()</code>, <code>bit_or()</code>, and <code>bit_xor()</code> aggregate functions (PostgreSQL, MariaDB 10.3+, MySQL 8+).</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm.aggregates</span><span class="w"> </span><span class="kn">import</span> <span class="n">BitAnd</span><span class="p">,</span> <span class="n">BitOr</span><span class="p">,</span> <span class="n">BitXor</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># Effective permissions bitmap across all active users</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">is_active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">all_perms</span><span class="o">=</span><span class="n">BitAnd</span><span class="p">(</span><span class="s2">&quot;permission_bits&quot;</span><span class="p">),</span>   <span class="c1"># bits set in ALL users</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">any_perm</span><span class="o">=</span><span class="n">BitOr</span><span class="p">(</span><span class="s2">&quot;permission_bits&quot;</span><span class="p">),</span>     <span class="c1"># bits set in ANY user</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="n">exclusive</span><span class="o">=</span><span class="n">BitXor</span><span class="p">(</span><span class="s2">&quot;permission_bits&quot;</span><span class="p">),</span>   <span class="c1"># bits set in an odd number of users</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>Use in <code>annotate()</code> to compute bitwise aggregates per group:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">rows</span> <span class="o">=</span> <span class="k">await</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="s2">&quot;team_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">team_perms</span><span class="o">=</span><span class="n">BitOr</span><span class="p">(</span><span class="s2">&quot;permission_bits&quot;</span><span class="p">)</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="p">)</span>
+</span></code></pre></div>
 <h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3649,42 +3851,77 @@
 </thead>
 <tbody>
 <tr>
-<td><code>Count(field="*", distinct=False)</code></td>
+<td><code>Count(field="*", distinct=False, default=None)</code></td>
 <td><code>COUNT(field)</code></td>
 <td>Counts rows; <code>distinct=True</code> deduplicates</td>
 </tr>
 <tr>
-<td><code>Sum(field)</code></td>
+<td><code>Sum(field, default=None)</code></td>
 <td><code>SUM(field)</code></td>
 <td></td>
 </tr>
 <tr>
-<td><code>Avg(field)</code></td>
+<td><code>Avg(field, default=None)</code></td>
 <td><code>AVG(field)</code></td>
 <td></td>
 </tr>
 <tr>
-<td><code>Min(field)</code></td>
+<td><code>Min(field, default=None)</code></td>
 <td><code>MIN(field)</code></td>
 <td></td>
 </tr>
 <tr>
-<td><code>Max(field)</code></td>
+<td><code>Max(field, default=None)</code></td>
 <td><code>MAX(field)</code></td>
 <td></td>
 </tr>
 <tr>
-<td><code>StdDev(field)</code></td>
+<td><code>StdDev(field, default=None)</code></td>
 <td><code>STDDEV(field)</code></td>
 <td>PostgreSQL / MySQL only</td>
 </tr>
 <tr>
-<td><code>Variance(field)</code></td>
+<td><code>Variance(field, default=None)</code></td>
 <td><code>VARIANCE(field)</code></td>
 <td>PostgreSQL / MySQL only</td>
 </tr>
+<tr>
+<td><code>BitAnd(field)</code></td>
+<td><code>bit_and(field)</code></td>
+<td>PostgreSQL, MariaDB 10.3+, MySQL 8+</td>
+</tr>
+<tr>
+<td><code>BitOr(field)</code></td>
+<td><code>bit_or(field)</code></td>
+<td>PostgreSQL, MariaDB 10.3+, MySQL 8+</td>
+</tr>
+<tr>
+<td><code>BitXor(field)</code></td>
+<td><code>bit_xor(field)</code></td>
+<td>PostgreSQL, MariaDB 10.3+, MySQL 8+</td>
+</tr>
+<tr>
+<td><code>AnyValue(field)</code></td>
+<td><code>any_value(field)</code></td>
+<td>MySQL 8.0.2+, MariaDB 10.3+</td>
+</tr>
 </tbody>
 </table>
+<h2 id="anyvalue">AnyValue<a class="headerlink" href="#anyvalue" title="Permanent link">&para;</a></h2>
+<p>Returns an arbitrary non-NULL value from the group. Useful in <code>GROUP BY</code> queries where a column is functionally dependent on the group key but not listed in <code>GROUP BY</code> — avoids wrapping in <code>MAX()</code> or <code>MIN()</code> when any value will do.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.orm.aggregates</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnyValue</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="c1"># Each customer&#39;s arbitrary sample order note — we don&#39;t care which one</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="n">rows</span> <span class="o">=</span> <span class="k">await</span> <span class="n">Order</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="s2">&quot;customer_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">sample_note</span><span class="o">=</span><span class="n">AnyValue</span><span class="p">(</span><span class="s2">&quot;note&quot;</span><span class="p">)</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">)</span>
+</span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Database support</p>
+<p><code>AnyValue</code> maps to the native <code>any_value()</code> SQL aggregate, available on
+<strong>MySQL 8.0.2+</strong> and <strong>MariaDB 10.3+</strong>. On PostgreSQL (which has no
+<code>any_value()</code> until PG 16) use <code>Max</code> or <code>Min</code> as a portable substitute.</p>
+</div>
 
 
 
@@ -3770,7 +4007,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

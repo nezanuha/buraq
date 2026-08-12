@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2759,6 +2759,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topics/debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3458,8 +3570,41 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#suspiciousfileoperation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SuspiciousFileOperation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#request-security-exceptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request / security exceptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#orm-framework-exceptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ORM / framework exceptions
+      
+    </span>
+  </a>
   
 </li>
       
@@ -3656,8 +3801,41 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#suspiciousfileoperation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SuspiciousFileOperation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#request-security-exceptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request / security exceptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#orm-framework-exceptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ORM / framework exceptions
+      
+    </span>
+  </a>
   
 </li>
       
@@ -3804,6 +3982,121 @@
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">url_has_allowed_host_and_scheme</span><span class="p">(</span><span class="n">next_url</span><span class="p">,</span> <span class="n">allowed_hosts</span><span class="o">=</span><span class="n">ALLOWED_HOSTS</span><span class="p">):</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="k">raise</span> <span class="n">SuspiciousOperation</span><span class="p">(</span><span class="s2">&quot;Unsafe redirect target.&quot;</span><span class="p">)</span>
 </span></code></pre></div>
+<h3 id="suspiciousfileoperation">SuspiciousFileOperation<a class="headerlink" href="#suspiciousfileoperation" title="Permanent link">&para;</a></h3>
+<p>Subclass of <code>SuspiciousOperation</code>. Raised by <code>FileSystemStorage</code> when a file
+name resolves outside the configured storage root (path traversal attempt):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">SuspiciousFileOperation</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">try</span><span class="p">:</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="k">await</span> <span class="n">storage</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;../../etc/passwd&quot;</span><span class="p">)</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">except</span> <span class="n">SuspiciousFileOperation</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Path traversal blocked: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+</span></code></pre></div>
+<p>You do not normally raise this yourself — <code>FileSystemStorage</code> raises it
+automatically before any disk access occurs.</p>
+<h2 id="request-security-exceptions">Request / security exceptions<a class="headerlink" href="#request-security-exceptions" title="Permanent link">&para;</a></h2>
+<p>These are raised internally by Buraq and result in specific HTTP error responses. You rarely raise them yourself, but you may need to catch them in middleware or custom exception handlers.</p>
+<table>
+<thead>
+<tr>
+<th>Exception</th>
+<th>HTTP status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DisallowedHost</code></td>
+<td>400</td>
+<td><code>Host</code> header not in <code>ALLOWED_HOSTS</code></td>
+</tr>
+<tr>
+<td><code>DisallowedRedirect</code></td>
+<td>400</td>
+<td>Redirect target is not a safe URL</td>
+</tr>
+<tr>
+<td><code>SuspiciousMultipartForm</code></td>
+<td>400</td>
+<td>Malformed multipart upload</td>
+</tr>
+<tr>
+<td><code>TooManyFieldsSent</code></td>
+<td>400</td>
+<td>Form POST exceeds <code>DATA_UPLOAD_MAX_NUMBER_FIELDS</code></td>
+</tr>
+<tr>
+<td><code>TooManyFilesSent</code></td>
+<td>400</td>
+<td>Multipart upload exceeds <code>DATA_UPLOAD_MAX_NUMBER_FILES</code></td>
+</tr>
+<tr>
+<td><code>RequestDataTooBig</code></td>
+<td>400</td>
+<td>Request body exceeds <code>DATA_UPLOAD_MAX_MEMORY_SIZE</code></td>
+</tr>
+<tr>
+<td><code>RequestAborted</code></td>
+<td>—</td>
+<td>Client disconnected before the response was sent</td>
+</tr>
+<tr>
+<td><code>InvalidSessionKey</code></td>
+<td>—</td>
+<td>Session key contains illegal characters</td>
+</tr>
+</tbody>
+</table>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">DisallowedHost</span><span class="p">,</span> <span class="n">DisallowedRedirect</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># Catch in an exception handler middleware:</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">try</span><span class="p">:</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">call_next</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="k">except</span> <span class="n">DisallowedHost</span><span class="p">:</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="k">return</span> <span class="n">PlainTextResponse</span><span class="p">(</span><span class="s2">&quot;Bad request&quot;</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="orm-framework-exceptions">ORM / framework exceptions<a class="headerlink" href="#orm-framework-exceptions" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Exception</th>
+<th>When raised</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FieldDoesNotExist</code></td>
+<td>Accessing a field name that doesn't exist on a model</td>
+</tr>
+<tr>
+<td><code>ViewDoesNotExist</code></td>
+<td>URL resolver cannot find the named view</td>
+</tr>
+<tr>
+<td><code>EmptyResultSet</code></td>
+<td>A queryset optimisation path produces an empty set</td>
+</tr>
+<tr>
+<td><code>FullResultSet</code></td>
+<td>A queryset optimisation path matches all rows</td>
+</tr>
+<tr>
+<td><code>AppRegistryNotReady</code></td>
+<td>App models accessed before <code>AppConfig.ready()</code></td>
+</tr>
+<tr>
+<td><code>MiddlewareNotUsed</code></td>
+<td>Raised by middleware <code>__init__</code> to remove itself from the stack</td>
+</tr>
+</tbody>
+</table>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">FieldDoesNotExist</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">try</span><span class="p">:</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">field</span> <span class="o">=</span> <span class="n">MyModel</span><span class="o">.</span><span class="n">_meta</span><span class="o">.</span><span class="n">get_field</span><span class="p">(</span><span class="s2">&quot;nonexistent&quot;</span><span class="p">)</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">except</span> <span class="n">FieldDoesNotExist</span><span class="p">:</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="o">...</span>
+</span></code></pre></div>
 <h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3835,6 +4128,11 @@
 <td>Invalid field names in queries</td>
 </tr>
 <tr>
+<td><code>FieldDoesNotExist</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Non-existent model field</td>
+</tr>
+<tr>
 <td><code>PermissionDenied</code></td>
 <td><code>buraq.exceptions</code></td>
 <td>Access control → 403</td>
@@ -3848,6 +4146,76 @@
 <td><code>SuspiciousOperation</code></td>
 <td><code>buraq.exceptions</code></td>
 <td>Malicious / malformed input</td>
+</tr>
+<tr>
+<td><code>SuspiciousFileOperation</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>File name escapes storage root</td>
+</tr>
+<tr>
+<td><code>SuspiciousMultipartForm</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Malformed multipart body</td>
+</tr>
+<tr>
+<td><code>DisallowedHost</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Invalid Host header</td>
+</tr>
+<tr>
+<td><code>DisallowedRedirect</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Unsafe redirect URL</td>
+</tr>
+<tr>
+<td><code>RequestAborted</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Client disconnected</td>
+</tr>
+<tr>
+<td><code>TooManyFieldsSent</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>POST field limit exceeded</td>
+</tr>
+<tr>
+<td><code>TooManyFilesSent</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>File upload count exceeded</td>
+</tr>
+<tr>
+<td><code>RequestDataTooBig</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Body size limit exceeded</td>
+</tr>
+<tr>
+<td><code>InvalidSessionKey</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Illegal characters in session key</td>
+</tr>
+<tr>
+<td><code>ViewDoesNotExist</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Named view not found</td>
+</tr>
+<tr>
+<td><code>EmptyResultSet</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>ORM optimisation — empty set</td>
+</tr>
+<tr>
+<td><code>FullResultSet</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>ORM optimisation — full set</td>
+</tr>
+<tr>
+<td><code>AppRegistryNotReady</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Models accessed too early</td>
+</tr>
+<tr>
+<td><code>MiddlewareNotUsed</code></td>
+<td><code>buraq.exceptions</code></td>
+<td>Middleware self-removal</td>
 </tr>
 <tr>
 <td><code>Http404</code></td>
@@ -3941,7 +4309,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

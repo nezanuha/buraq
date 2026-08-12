@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2605,6 +2605,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#class-based-feed-syndication-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class-based Feed (syndication framework)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class-based Feed (syndication framework)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#customisation-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customisation hooks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feed-level-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feed-level attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2853,6 +2892,118 @@
     
   
     PostgreSQL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../signing" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cryptographic Signing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tasks" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../csp" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Security Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../debugging" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
   
 
     
@@ -3461,6 +3612,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#class-based-feed-syndication-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class-based Feed (syndication framework)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class-based Feed (syndication framework)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#customisation-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customisation hooks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feed-level-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feed-level attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3656,6 +3846,106 @@
 </tr>
 </tbody>
 </table>
+<hr />
+<h2 id="class-based-feed-syndication-framework">Class-based <code>Feed</code> (syndication framework)<a class="headerlink" href="#class-based-feed-syndication-framework" title="Permanent link">&para;</a></h2>
+<p><code>buraq.contrib.syndication</code> provides a higher-level <code>Feed</code> class that works like a view:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.contrib.syndication</span><span class="w"> </span><span class="kn">import</span> <span class="n">Feed</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">LatestPostsFeed</span><span class="p">(</span><span class="n">Feed</span><span class="p">):</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;My Blog&quot;</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">link</span> <span class="o">=</span> <span class="s2">&quot;/posts/&quot;</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Latest posts from my blog.&quot;</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="k">return</span> <span class="k">await</span> <span class="n">Post</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;-created_at&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">item_title</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>        <span class="k">return</span> <span class="n">item</span><span class="o">.</span><span class="n">title</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">item_description</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>        <span class="k">return</span> <span class="n">item</span><span class="o">.</span><span class="n">body</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">item_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;/posts/</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">/&quot;</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">item_pubdate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>        <span class="k">return</span> <span class="n">item</span><span class="o">.</span><span class="n">created_at</span>
+</span></code></pre></div>
+<p>Wire it up as a view:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buraq.urls</span><span class="w"> </span><span class="kn">import</span> <span class="n">get</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/feed/rss/&quot;</span><span class="p">,</span>  <span class="n">LatestPostsFeed</span><span class="o">.</span><span class="n">as_feed</span><span class="p">(</span><span class="s2">&quot;rss&quot;</span><span class="p">))</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/feed/atom/&quot;</span><span class="p">,</span> <span class="n">LatestPostsFeed</span><span class="o">.</span><span class="n">as_feed</span><span class="p">(</span><span class="s2">&quot;atom&quot;</span><span class="p">))</span>
+</span></code></pre></div>
+<p><code>as_feed("rss")</code> instantiates an <code>RssFeed</code> renderer; <code>as_feed("atom")</code> uses <code>Atom1Feed</code>. Both return a <code>Response</code> with the correct <code>Content-Type</code> header.</p>
+<h3 id="customisation-hooks">Customisation hooks<a class="headerlink" href="#customisation-hooks" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Return type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>items()</code></td>
+<td><code>list</code></td>
+<td>Items to include in the feed</td>
+</tr>
+<tr>
+<td><code>item_title(item)</code></td>
+<td><code>str</code></td>
+<td>Title for one item</td>
+</tr>
+<tr>
+<td><code>item_description(item)</code></td>
+<td><code>str</code></td>
+<td>Body/summary for one item</td>
+</tr>
+<tr>
+<td><code>item_link(item)</code></td>
+<td><code>str</code></td>
+<td>Permalink for one item</td>
+</tr>
+<tr>
+<td><code>item_pubdate(item)</code></td>
+<td><code>datetime \| None</code></td>
+<td>Publication date</td>
+</tr>
+<tr>
+<td><code>item_updateddate(item)</code></td>
+<td><code>datetime \| None</code></td>
+<td>Last-updated date (Atom only)</td>
+</tr>
+<tr>
+<td><code>item_author(item)</code></td>
+<td><code>str \| None</code></td>
+<td>Author name</td>
+</tr>
+<tr>
+<td><code>item_categories(item)</code></td>
+<td><code>list[str]</code></td>
+<td>Category strings</td>
+</tr>
+<tr>
+<td><code>item_guid(item)</code></td>
+<td><code>str</code></td>
+<td>Unique ID (defaults to <code>item_link</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="feed-level-attributes">Feed-level attributes<a class="headerlink" href="#feed-level-attributes" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyFeed</span><span class="p">(</span><span class="n">Feed</span><span class="p">):</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;Site News&quot;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">link</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Updates from our site.&quot;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">language</span> <span class="o">=</span> <span class="s2">&quot;en&quot;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">author_name</span> <span class="o">=</span> <span class="s2">&quot;Editorial Team&quot;</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">categories</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;news&quot;</span><span class="p">,</span> <span class="s2">&quot;updates&quot;</span><span class="p">]</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">feed_copyright</span> <span class="o">=</span> <span class="s2">&quot;© 2026 My Site&quot;</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">ttl</span> <span class="o">=</span> <span class="mi">600</span>   <span class="c1"># RSS only — time-to-live in seconds</span>
+</span></code></pre></div>
 
 
 
@@ -3741,7 +4031,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": 1.0, "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
