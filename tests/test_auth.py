@@ -12,6 +12,9 @@ async def app():
     settings.SECRET_KEY = "test-secret-key-for-auth-tests"
     settings.INSTALLED_APPS = ["buraq.contrib.auth"]
 
+    import buraq.core.templating as _tmpl
+    _tmpl._templates = None  # force re-discovery with current INSTALLED_APPS
+
     from buraq.core.application import Buraq as BuraqApp
     _app = BuraqApp()
 
