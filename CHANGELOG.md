@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-08-12
+
+### Fixed
+
+- **`contrib/auth/urls.py` — `AttributeError` at startup** — URL patterns still referenced `views.obtain_auth_token` and `views.get_me` which were removed in 1.5.0; any app with `buraq.contrib.auth` in `INSTALLED_APPS` crashed at startup with `AttributeError`; replaced with `LoginView.as_view()` and `LogoutView.as_view()`
+- **CBV routes without path parameters returned 422** — `_patch_cbv_signature()` in `buraq/urls.py` returned early when a route had no path parameters, leaving `**kwargs` visible in the function signature; FastAPI treated `kwargs` as a required body field and rejected all requests with 422; the patch now always runs for CBV views
+- **`registration/login.html` missing from package** — `LoginView` renders this template on failed authentication but it was never shipped; users got `TemplateNotFound` on any wrong-password login attempt; the template is now included in `buraq/contrib/auth/templates/`
+
 ## [1.5.1] - 2026-08-12
 
 ### Fixed
@@ -736,7 +744,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Argon2 password hashing via argon2-cffi
 - orjson for high-performance JSON serialization
 
-[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.5.2...HEAD
+[1.5.2]: https://github.com/nezanuha/buraq/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/nezanuha/buraq/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/nezanuha/buraq/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/nezanuha/buraq/compare/v1.3.0...v1.4.0
