@@ -11,7 +11,6 @@ async def app():
     settings.DEBUG = True
     settings.SECRET_KEY = "test-secret-key-for-auth-tests"
     settings.INSTALLED_APPS = ["buraq.contrib.auth"]
-    settings.SESSION_BACKEND = "buraq.contrib.sessions.backends.cache.CachedSessionBackend"
 
     from buraq.core.application import Buraq as BuraqApp
     _app = BuraqApp()
