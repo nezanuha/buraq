@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from buraq.contrib.auth import check_password, make_password
 
@@ -55,7 +55,7 @@ class LoginView:
     def as_view(cls, **initkwargs):
         view = cls(**initkwargs)
 
-        async def _view(request, **kwargs):
+        async def _view(request: Request, **kwargs):
             return await view.dispatch(request, **kwargs)
 
         _view.view_class = cls
@@ -114,7 +114,7 @@ class LogoutView:
     def as_view(cls, **initkwargs):
         view = cls(**initkwargs)
 
-        async def _view(request, **kwargs):
+        async def _view(request: Request, **kwargs):
             return await view.dispatch(request, **kwargs)
 
         _view.view_class = cls
@@ -149,7 +149,7 @@ class PasswordChangeView:
     def as_view(cls, **initkwargs):
         view = cls(**initkwargs)
 
-        async def _view(request, **kwargs):
+        async def _view(request: Request, **kwargs):
             return await view.dispatch(request, **kwargs)
 
         _view.view_class = cls
@@ -211,7 +211,7 @@ class PasswordResetView:
     def as_view(cls, **initkwargs):
         view = cls(**initkwargs)
 
-        async def _view(request, **kwargs):
+        async def _view(request: Request, **kwargs):
             return await view.dispatch(request, **kwargs)
 
         _view.view_class = cls
@@ -291,7 +291,7 @@ class PasswordResetConfirmView:
     def as_view(cls, **initkwargs):
         view = cls(**initkwargs)
 
-        async def _view(request, **kwargs):
+        async def _view(request: Request, **kwargs):
             return await view.dispatch(request, **kwargs)
 
         _view.view_class = cls
@@ -394,7 +394,7 @@ class PasswordResetDoneView:
     def as_view(cls, **initkwargs):
         view = cls(**initkwargs)
 
-        async def _view(request, **kwargs):
+        async def _view(request: Request, **kwargs):
             from buraq.shortcuts import render
             return render(request, view.template_name, {})
 
@@ -419,7 +419,7 @@ class PasswordChangeDoneView:
     def as_view(cls, **initkwargs):
         view = cls(**initkwargs)
 
-        async def _view(request, **kwargs):
+        async def _view(request: Request, **kwargs):
             from buraq.shortcuts import render
             return render(request, view.template_name, {})
 
@@ -444,7 +444,7 @@ class PasswordResetCompleteView:
     def as_view(cls, **initkwargs):
         view = cls(**initkwargs)
 
-        async def _view(request, **kwargs):
+        async def _view(request: Request, **kwargs):
             from buraq.shortcuts import render
             return render(request, view.template_name, {})
 
