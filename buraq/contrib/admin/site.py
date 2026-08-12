@@ -1,11 +1,18 @@
+from __future__ import annotations
+
+import contextlib
 import importlib
+from typing import TYPE_CHECKING
 
 from buraq.conf import settings
+
+if TYPE_CHECKING:
+    from buraq.contrib.admin.options import ModelAdmin
 
 
 class AdminSite:
     def __init__(self):
-        self._registry: dict[type, "ModelAdmin"] = {}
+        self._registry: dict[type, ModelAdmin] = {}
         self.site_header = "Buraq Administration"
         self.site_title = "Buraq Admin"
         self.index_title = "Dashboard"
@@ -26,10 +33,8 @@ class AdminSite:
 
     def autodiscover(self):
         for app_name in getattr(settings, "INSTALLED_APPS", []):
-            try:
+            with contextlib.suppress(ModuleNotFoundError):
                 importlib.import_module(f"{app_name}.admin")
-            except ModuleNotFoundError:
-                pass
 
 
 site = AdminSite()

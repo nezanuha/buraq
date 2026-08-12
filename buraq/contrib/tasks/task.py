@@ -6,7 +6,7 @@ that submits the function to the configured backend for background execution.
 """
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
 
 from buraq.contrib.tasks.result import TaskResult
 

@@ -53,13 +53,13 @@ The nonce is available in templates as ``{{ csp_nonce }}``.
 from __future__ import annotations
 
 import secrets
-from typing import Callable
-
-_UNSET = object()  # sentinel: decorator was not applied to this view
+from collections.abc import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+
+_UNSET = object()  # sentinel: decorator was not applied to this view
 
 
 def _build_header(policy: dict, nonce: str | None = None) -> str:
@@ -140,7 +140,9 @@ class ContentSecurityPolicyMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         if effective_csp:
-            policy = _inject_nonce(effective_csp, nonce_directives, nonce) if nonce else effective_csp
+            policy = (
+                _inject_nonce(effective_csp, nonce_directives, nonce) if nonce else effective_csp
+            )
             response.headers["Content-Security-Policy"] = _build_header(policy, nonce)
 
         if effective_ro:

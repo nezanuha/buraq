@@ -23,19 +23,19 @@ Usage:
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.utils import format_datetime
 
 
 def _rfc2822(dt: datetime) -> str:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return format_datetime(dt)
 
 
 def _iso8601(dt: datetime) -> str:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.isoformat()
 
 
@@ -132,7 +132,7 @@ class Atom1Feed(SyndicationFeed):
         if self.feed.get("subtitle"):
             ET.SubElement(root, t("subtitle")).text = self.feed["subtitle"]
         latest = self.latest_post_date()
-        ET.SubElement(root, t("updated")).text = _iso8601(latest or datetime.now(timezone.utc))
+        ET.SubElement(root, t("updated")).text = _iso8601(latest or datetime.now(UTC))
         if self.feed.get("author_name"):
             author = ET.SubElement(root, t("author"))
             ET.SubElement(author, t("name")).text = self.feed["author_name"]
@@ -144,7 +144,7 @@ class Atom1Feed(SyndicationFeed):
             ET.SubElement(entry, t("link"), href=item["link"], rel="alternate")
             ET.SubElement(entry, t("id")).text = item.get("unique_id") or item["link"]
             ET.SubElement(entry, t("updated")).text = _iso8601(
-                item["pubdate"] if item.get("pubdate") else datetime.now(timezone.utc)
+                item["pubdate"] if item.get("pubdate") else datetime.now(UTC)
             )
             ET.SubElement(entry, t("summary")).text = item["description"]
             if item.get("author_name"):

@@ -6,7 +6,6 @@ exposes the same async interface so backends are interchangeable.
 """
 from __future__ import annotations
 
-import hashlib
 import secrets
 import time
 from abc import ABC, abstractmethod

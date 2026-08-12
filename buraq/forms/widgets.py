@@ -88,7 +88,9 @@ class RadioSelect(Widget):
         items = ""
         for val, label in (choices or []):
             checked = ' checked' if str(val) == str(value) else ''
-            items += f'<label><input type="radio" name="{name}" value="{val}"{checked}> {label}</label>'
+            items += (
+                f'<label><input type="radio" name="{name}" value="{val}"{checked}> {label}</label>'
+            )
         return f'<div class="radio-select">{items}</div>'
 
 
@@ -100,7 +102,10 @@ class CheckboxSelectMultiple(Widget):
         items = ""
         for val, label in (choices or []):
             checked = ' checked' if str(val) in selected else ''
-            items += f'<label><input type="checkbox" name="{name}" value="{val}"{checked}> {label}</label>'
+            items += (
+                f'<label><input type="checkbox" name="{name}"'
+                f' value="{val}"{checked}> {label}</label>'
+            )
         return f'<div class="checkbox-select">{items}</div>'
 
 
@@ -196,7 +201,8 @@ class SelectDateWidget(Widget):
             for y in self.years
         )
         month_opts = "".join(
-            f'<option value="{m}"{"  selected" if str(m) == str(month_val) else ""}>{label}</option>'
+            f'<option value="{m}"'
+            f'{"  selected" if str(m) == str(month_val) else ""}>{label}</option>'
             for m, label in self.months.items()
         )
         day_opts = "".join(

@@ -63,7 +63,7 @@ class RedisCacheBackend(BaseCacheBackend):
         prefixed = [self._make_key(k) for k in keys]
         values = await client.mget(*prefixed)
         result = {}
-        for k, raw in zip(keys, values):
+        for k, raw in zip(keys, values, strict=False):
             result[k] = json.loads(raw) if raw is not None else None
         return result
 

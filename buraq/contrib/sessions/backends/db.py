@@ -28,16 +28,18 @@ class DatabaseSessionBackend(SessionBase):
     """Stores session data in the database."""
 
     async def _execute(self, sql: str, params: dict):
-        from buraq.core.db import SessionLocal
         import sqlalchemy as sa
+
+        from buraq.core.db import SessionLocal
         async with SessionLocal() as db:
             result = await db.execute(sa.text(sql), params)
             await db.commit()
             return result
 
     async def _fetch_one(self, sql: str, params: dict):
-        from buraq.core.db import SessionLocal
         import sqlalchemy as sa
+
+        from buraq.core.db import SessionLocal
         async with SessionLocal() as db:
             result = await db.execute(sa.text(sql), params)
             return result.fetchone()

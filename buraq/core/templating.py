@@ -2,7 +2,6 @@ import importlib
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 
 from buraq.conf import settings

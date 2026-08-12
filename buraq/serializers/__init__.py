@@ -34,9 +34,11 @@ except Exception:
 def get_serializer(format: str):
     try:
         return _REGISTRY[format]()
-    except KeyError:
-        raise SerializationError(f"Unknown serialization format: {format!r}. "
-                                 f"Available: {list(_REGISTRY)}")
+    except KeyError as err:
+        raise SerializationError(
+            f"Unknown serialization format: {format!r}. "
+            f"Available: {list(_REGISTRY)}"
+        ) from err
 
 
 def register_serializer(format: str, serializer_class) -> None:

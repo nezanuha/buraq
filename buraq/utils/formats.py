@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import datetime
 
-
 # Default format strings (ASCII-safe)
 DATE_FORMAT = "N j, Y"
 TIME_FORMAT = "P"

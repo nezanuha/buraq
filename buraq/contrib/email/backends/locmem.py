@@ -29,7 +29,7 @@ _log = logging.getLogger("buraq.email")
 _OUTBOX_WARN_THRESHOLD = 500
 
 # Global in-memory inbox — accessible as `from buraq.contrib.email.backends.locmem import outbox`
-outbox: list["EmailMessage"] = []
+outbox: list[EmailMessage] = []
 _lock = threading.Lock()
 
 
@@ -51,7 +51,7 @@ class EmailBackend(BaseEmailBackend):
         EMAIL_BACKEND = "buraq.contrib.email.backends.locmem.EmailBackend"
     """
 
-    async def send(self, message: "EmailMessage") -> bool:
+    async def send(self, message: EmailMessage) -> bool:
         with _lock:
             outbox.append(message)
             size = len(outbox)
@@ -63,7 +63,7 @@ class EmailBackend(BaseEmailBackend):
             )
         return True
 
-    async def send_many(self, messages: list["EmailMessage"]) -> int:
+    async def send_many(self, messages: list[EmailMessage]) -> int:
         with _lock:
             outbox.extend(messages)
             size = len(outbox)

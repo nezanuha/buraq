@@ -221,7 +221,10 @@ class ResolverMatch:
         self.view_name = f"{namespace}:{url_name}" if namespace else url_name
 
     def __repr__(self):
-        return f"ResolverMatch(func={self.func!r}, kwargs={self.kwargs!r}, url_name={self.url_name!r})"
+        return (
+            f"ResolverMatch(func={self.func!r}, kwargs={self.kwargs!r},"
+            f" url_name={self.url_name!r})"
+        )
 
 
 def resolve(path_str: str) -> ResolverMatch:

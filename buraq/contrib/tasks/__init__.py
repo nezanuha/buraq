@@ -45,7 +45,7 @@ Custom backends can be created by subclassing
 """
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from buraq.contrib.tasks.backends.base import BaseTaskBackend
 from buraq.contrib.tasks.result import TaskResult, TaskStatus
@@ -57,7 +57,7 @@ def background_task(
     *,
     queue: str = "default",
     priority: int = 0,
-) -> "Task | Callable[[Callable], Task]":
+) -> Task | Callable[[Callable], Task]:
     """
     Decorator that marks a function as a background task.
 

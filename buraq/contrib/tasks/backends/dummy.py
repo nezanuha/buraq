@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import uuid
-from typing import Any, Callable
+from collections.abc import Callable
 
 from buraq.contrib.tasks.backends.base import BaseTaskBackend
 from buraq.contrib.tasks.result import TaskResult, TaskStatus
@@ -31,7 +31,9 @@ class DummyBackend(BaseTaskBackend):
 
     Usage in tests::
 
-        with override_settings(TASKS={"default": {"BACKEND": "buraq.contrib.tasks.backends.dummy.DummyBackend"}}):
+        with override_settings(
+            TASKS={"default": {"BACKEND": "buraq.contrib.tasks.backends.dummy.DummyBackend"}}
+        ):
             result = await my_task.aenqueue(user_id=1)
             assert result.status == TaskStatus.SUCCEEDED
     """

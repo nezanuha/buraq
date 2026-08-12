@@ -58,7 +58,7 @@ class ChoicesMeta(enum.EnumMeta):
         return [m.name for m in cls]
 
 
-class TextChoices(str, enum.Enum, metaclass=ChoicesMeta):
+class TextChoices(enum.StrEnum, metaclass=ChoicesMeta):
     """String-valued enum with .choices support."""
 
     @staticmethod

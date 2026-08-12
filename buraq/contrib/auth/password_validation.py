@@ -3,7 +3,8 @@ Password validators — enforce password strength policies.
 
 Usage in settings:
     AUTH_PASSWORD_VALIDATORS = [
-        {"NAME": "buraq.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+        {"NAME": "buraq.contrib.auth.password_validation.MinimumLengthValidator",
+         "OPTIONS": {"min_length": 8}},
         {"NAME": "buraq.contrib.auth.password_validation.CommonPasswordValidator"},
         {"NAME": "buraq.contrib.auth.password_validation.NumericPasswordValidator"},
         {"NAME": "buraq.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -61,7 +62,8 @@ class MinimumLengthValidator:
     def validate(self, password: str, user=None) -> None:
         if len(password) < self.min_length:
             raise ValidationError(
-                f"This password is too short. It must contain at least {self.min_length} characters."
+                f"This password is too short."
+                f" It must contain at least {self.min_length} characters."
             )
 
     def get_help_text(self) -> str:

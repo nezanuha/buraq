@@ -88,7 +88,7 @@ class CSP:
                 parts.append(f"{directive} {rendered}")
         return "; ".join(parts)
 
-    def update(self, **overrides: Any) -> "CSP":
+    def update(self, **overrides: Any) -> CSP:
         """Return a new ``CSP`` with the given directives merged/replaced."""
         merged = dict(self._directives)
         merged.update(overrides)

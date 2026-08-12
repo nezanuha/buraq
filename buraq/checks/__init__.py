@@ -15,6 +15,8 @@ Usage:
     for msg in messages:
         print(f"[{msg.__class__.__name__}] {msg.id}: {msg}")
 """
+# Register built-in security checks
+import buraq.checks.security  # noqa: F401, E402
 from buraq.checks.registry import (
     CheckMessage,
     Critical,
@@ -24,9 +26,6 @@ from buraq.checks.registry import (
     Warning,
     registry,
 )
-
-# Register built-in security checks
-import buraq.checks.security  # noqa: F401, E402
 
 register = registry.register
 

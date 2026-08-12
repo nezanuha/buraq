@@ -63,7 +63,7 @@ class ErrorDict(dict):
         for field, errors in self.items():
             error_list = ErrorList(errors) if not isinstance(errors, ErrorList) else errors
             parts.append(f"<li>{field}{error_list.as_ul()}</li>")
-        return f'<ul class="errorlist">' + "".join(parts) + "</ul>"
+        return '<ul class="errorlist">' + "".join(parts) + "</ul>"
 
     def as_text(self) -> str:
         return "\n".join(
@@ -116,7 +116,10 @@ class Stylesheet:
         for k, v in self.attrs.items():
             attrs_str += f' {k}="{v}"'
         used_medium = self.attrs.get("media", medium)
-        return f'<link href="{self.path}" type="text/css" media="{used_medium}" rel="stylesheet"{attrs_str}>'
+        return (
+            f'<link href="{self.path}" type="text/css"'
+            f' media="{used_medium}" rel="stylesheet"{attrs_str}>'
+        )
 
 
 class Media:
@@ -153,7 +156,9 @@ class Media:
                 if isinstance(sheet, Stylesheet):
                     lines.append(sheet.render(medium))
                 else:
-                    lines.append(f'<link href="{sheet}" type="text/css" media="{medium}" rel="stylesheet">')
+                    lines.append(
+                        f'<link href="{sheet}" type="text/css" media="{medium}" rel="stylesheet">'
+                    )
         return "\n".join(lines)
 
     def render_js(self) -> str:
@@ -312,7 +317,8 @@ class BaseForm:
             widget = f'<input type="hidden" name="{name}" value="{value or ""}">'
         elif hasattr(bf.field, "choices") and bf.field.choices:
             opts = "".join(
-                f'<option value="{k}"{"  selected" if str(k) == str(value) else ""}>{label}</option>'
+                f'<option value="{k}"'
+                f'{"  selected" if str(k) == str(value) else ""}>{label}</option>'
                 for k, label in bf.field.choices
             )
             widget = f'<select name="{name}" id="id_{name}">{opts}</select>'
@@ -665,13 +671,6 @@ class BoundField:
 
 
 # ── Formsets (canonical implementations live in forms/formsets.py) ────────────
-from buraq.forms.formsets import (  # noqa: E402
-    DELETION_FIELD_NAME,
-    ORDERING_FIELD_NAME,
-    BaseFormSet,
-    modelformset_factory,
-    inlineformset_factory,
-)
 
 
 class SuccessMessageMixin:

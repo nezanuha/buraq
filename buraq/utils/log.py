@@ -22,6 +22,7 @@ Usage::
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import traceback
 
@@ -55,10 +56,8 @@ class AdminEmailHandler(logging.Handler):
 
     async def _send(self, subject: str, body: str) -> None:
         from buraq.contrib.email.send import mail_admins
-        try:
+        with contextlib.suppress(Exception):
             await mail_admins(subject, body)
-        except Exception:
-            pass
 
 
 class RequireDebugFalse(logging.Filter):

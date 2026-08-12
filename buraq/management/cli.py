@@ -58,9 +58,8 @@ def _cli(
 
         from buraq.conf import settings as _settings
         for key, val in vars(module).items():
-            if key.isupper() and not key.startswith("_"):
-                if hasattr(_settings, key):
-                    setattr(_settings, key, val)
+            if key.isupper() and not key.startswith("_") and hasattr(_settings, key):
+                setattr(_settings, key, val)
 
     if ctx.invoked_subcommand is None:
         typer.echo(ctx.get_help())
@@ -177,7 +176,9 @@ def createsuperuser(
     username: str = typer.Option(None, help="Username for the new superuser"),
     email: str = typer.Option(None, help="Email address"),
     password: str = typer.Option(None, help="Password (prompted if omitted)", hide_input=True),
-    no_input: bool = typer.Option(False, "--no-input", help="Read all values from options, skip prompts"),
+    no_input: bool = typer.Option(
+        False, "--no-input", help="Read all values from options, skip prompts"
+    ),
 ):
     """Create a superuser account for the admin panel."""
     import asyncio
@@ -225,7 +226,9 @@ def createsuperuser(
             is_staff=True,
             is_superuser=True,
         )
-        typer.echo(typer.style(f"Superuser '{username}' created successfully.", fg=typer.colors.GREEN))
+        typer.echo(
+            typer.style(f"Superuser '{username}' created successfully.", fg=typer.colors.GREEN)
+        )
 
     asyncio.run(_create())
 
@@ -842,7 +845,7 @@ def listurls(
     w_name = max(len("Name"), *(len(r[2]) for r in rows))
 
     def _fmt(path: str, methods: str, name: str) -> str:
-        return f"{path:<{w_path}}  {methods:<{w_meth}}  {name}"
+        return f"{path:<{w_path}}  {methods:<{w_meth}}  {name:<{w_name}}"
 
     header = _fmt("Path", "Methods", "Name")
     sep = "-" * len(header)
@@ -940,13 +943,16 @@ def shell(
         pass
 
     if command:
-        import asyncio
         exec(compile(command, "<string>", "exec"), local_ns)  # noqa: S102
         return
 
+    _model_names = ", ".join(
+        k for k, v in local_ns.items()
+        if isinstance(v, type) and hasattr(v, "__tablename__")
+    )
     banner = (
         f"Buraq interactive shell\n"
-        f"Models available: {', '.join(k for k, v in local_ns.items() if isinstance(v, type) and hasattr(v, '__tablename__'))}\n"
+        f"Models available: {_model_names}\n"
         f"Type 'quit()' or Ctrl-D to exit."
     )
     code.interact(banner=banner, local=local_ns)
@@ -1005,8 +1011,9 @@ def dbshell():
     Example:
         python manage.py dbshell
     """
-    from buraq.conf import settings
     from sqlalchemy.engine import make_url as _make_url
+
+    from buraq.conf import settings
 
     url = _make_url(settings.DATABASE_URL)
     dialect = url.get_dialect().name
@@ -1038,9 +1045,13 @@ def dbshell():
 
 @app.command()
 def dumpdata(
-    output: str | None = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
+    output: str | None = typer.Option(
+        None, "--output", "-o", help="Write to file instead of stdout"
+    ),
     indent: int = typer.Option(2, "--indent", help="JSON indent level"),
-    exclude: list[str] | None = typer.Option(None, "--exclude", "-e", help="Table names to exclude"),
+    exclude: list[str] | None = typer.Option(
+        None, "--exclude", "-e", help="Table names to exclude"
+    ),
 ):
     """
     Dump all database data as JSON.
@@ -1103,7 +1114,6 @@ def loaddata(
 
     async def _load():
         async with SessionLocal() as db:
-            import sqlalchemy as sa
             for table_name, rows in fixture_data.items():
                 if table_filter and table_name not in table_filter:
                     continue
@@ -1246,7 +1256,7 @@ def inspectdb(
                 cols = inspector.get_columns(tname)
                 class_name = "".join(p.title() for p in tname.split("_"))
                 lines.append(f"\nclass {class_name}(models.Model):")
-                lines.append(f"    class Meta:")
+                lines.append("    class Meta:")
                 lines.append(f"        table_name = {tname!r}")
                 for col in cols:
                     if col["name"] == "id":
@@ -1313,7 +1323,8 @@ def sendtestemail(
         await send_mail(
             subject="Buraq test email",
             message=(
-                "If you received this email, your Buraq email configuration is working correctly.\n\n"
+                "If you received this email, your Buraq email configuration"
+                " is working correctly.\n\n"
                 "This is an automated test sent by the 'sendtestemail' management command."
             ),
             from_email=None,  # uses DEFAULT_FROM_EMAIL
@@ -1394,8 +1405,9 @@ def createcachetable(
     """
     import asyncio
 
-    from buraq.core.db import SessionLocal
     import sqlalchemy as sa
+
+    from buraq.core.db import SessionLocal
 
     DDL = f"""
     CREATE TABLE IF NOT EXISTS {table} (
@@ -1426,10 +1438,11 @@ def clearsessions():
         python manage.py clearsessions
     """
     import asyncio
+    import time
+
+    import sqlalchemy as sa
 
     from buraq.core.db import SessionLocal
-    import sqlalchemy as sa
-    import time
 
     async def _clear():
         async with SessionLocal() as db:
@@ -1460,7 +1473,9 @@ def run_tests(
     verbosity: int = typer.Option(1, "--verbosity", "-v", help="Verbosity level (0-3)"),
     failfast: bool = typer.Option(False, "--failfast", "-x", help="Stop on first failure"),
     keepdb: bool = typer.Option(False, "--keepdb", help="Preserve test database between runs"),
-    pattern: str = typer.Option("test*.py", "--pattern", "-p", help="File pattern for test discovery"),
+    pattern: str = typer.Option(
+        "test*.py", "--pattern", "-p", help="File pattern for test discovery"
+    ),
     tag: list[str] = typer.Option([], "--tag", help="Run only tests with this tag"),
     exclude_tag: list[str] = typer.Option([], "--exclude-tag", help="Exclude tests with this tag"),
 ):
@@ -1562,13 +1577,12 @@ def testserver(
 
     from buraq.core.db import Base, SessionLocal
 
-    if not no_input:
-        if not typer.confirm(
-            f"This will CLEAR the database and load {len(fixtures)} fixture(s). Continue?",
-            default=False,
-        ):
-            typer.echo("Aborted.")
-            raise typer.Exit(0)
+    if not no_input and not typer.confirm(
+        f"This will CLEAR the database and load {len(fixtures)} fixture(s). Continue?",
+        default=False,
+    ):
+        typer.echo("Aborted.")
+        raise typer.Exit(0)
 
     async def _load_fixtures():
         async with SessionLocal() as db:
@@ -1623,11 +1637,10 @@ def sqlflush():
         python manage.py sqlflush
         python manage.py sqlflush > flush.sql
     """
-    from buraq.core.db import Base
-    from sqlalchemy.schema import DropTable
-
     import sqlalchemy as sa
     from sqlalchemy.dialects import sqlite as sqlite_dialect
+
+    from buraq.core.db import Base
 
     dialect = sqlite_dialect.dialect()
 
@@ -1680,10 +1693,12 @@ def sqlsequencereset(
 
         # Find integer primary key columns
         for col in table.primary_key.columns:
-            if col.autoincrement and str(col.type).upper() in ("INTEGER", "BIGINTEGER", "BIGINT", "INT"):
+            col_type = str(col.type).upper()
+            if col.autoincrement and col_type in ("INTEGER", "BIGINTEGER", "BIGINT", "INT"):
                 seq = f"{table.name}_{col.name}_seq"
                 typer.echo(
-                    f"SELECT setval('{seq}', COALESCE((SELECT MAX({col.name}) FROM {table.name}), 1), true);"
+                    f"SELECT setval('{seq}',"
+                    f" COALESCE((SELECT MAX({col.name}) FROM {table.name}), 1), true);"
                 )
 
 
@@ -1707,7 +1722,9 @@ def optimizemigration(
         python manage.py optimizemigration abc1234 def5678 --name merge_branches
     """
     if len(revisions) < 2:
-        typer.echo("Error: optimizemigration requires at least two revision IDs to merge.", err=True)
+        typer.echo(
+            "Error: optimizemigration requires at least two revision IDs to merge.", err=True
+        )
         raise typer.Exit(1)
 
     result = subprocess.run(
@@ -1794,10 +1811,9 @@ def remove_stale_contenttypes(
         for ct in stale:
             typer.echo(f"  - {ct.app_label}.{ct.model}")
 
-        if not no_input:
-            if not typer.confirm("Delete these content types?", default=False):
-                typer.echo("Aborted.")
-                return
+        if not no_input and not typer.confirm("Delete these content types?", default=False):
+            typer.echo("Aborted.")
+            return
 
         for ct in stale:
             await ct.delete()
@@ -1809,9 +1825,15 @@ def remove_stale_contenttypes(
 @app.command()
 def worker(
     queue: str = typer.Option("default", "--queue", "-q", help="Queue name to consume."),
-    concurrency: int = typer.Option(1, "--concurrency", "-c", help="Number of concurrent task coroutines."),
-    poll_interval: float = typer.Option(1.0, "--poll-interval", help="Seconds between database polls (DatabaseBackend only)."),
-    max_tasks: int = typer.Option(0, "--max-tasks", help="Stop after processing this many tasks (0 = run forever)."),
+    concurrency: int = typer.Option(
+        1, "--concurrency", "-c", help="Number of concurrent task coroutines."
+    ),
+    poll_interval: float = typer.Option(
+        1.0, "--poll-interval", help="Seconds between database polls (DatabaseBackend only)."
+    ),
+    max_tasks: int = typer.Option(
+        0, "--max-tasks", help="Stop after processing this many tasks (0 = run forever)."
+    ),
 ):
     """
     Run the background task worker.
@@ -1841,14 +1863,18 @@ def worker(
             backend_cls = import_string(backend_path)
         except ImportError as exc:
             typer.echo(f"Error: cannot import task backend {backend_path!r}: {exc}", err=True)
-            raise typer.Exit(1)
+            raise typer.Exit(1) from exc
 
-        backend = backend_cls()
-        typer.echo(f"Worker started — queue={queue!r} concurrency={concurrency} backend={backend_path}")
+        backend_cls()  # validate the backend can be instantiated
+        typer.echo(
+            f"Worker started — queue={queue!r} concurrency={concurrency} backend={backend_path}"
+        )
 
         # DummyBackend has no pending tasks to poll — warn and exit.
         if "dummy" in backend_path.lower():
-            typer.echo("DummyBackend executes tasks immediately in-process — no worker needed.", err=True)
+            typer.echo(
+                "DummyBackend executes tasks immediately in-process — no worker needed.", err=True
+            )
             return
 
         processed = 0
@@ -1863,21 +1889,24 @@ def worker(
         signal.signal(signal.SIGTERM, _handle_signal)
 
         try:
+            from datetime import UTC, datetime
+
             import sqlalchemy as sa
-            from buraq.contrib.tasks.backends.db import buraq_task_table, _import_func
+
+            from buraq.contrib.tasks.backends.db import _import_func, buraq_task_table
             from buraq.contrib.tasks.result import TaskStatus
             from buraq.core.db import SessionLocal
-            from datetime import UTC, datetime
         except ImportError as exc:
             typer.echo(f"DatabaseBackend requires buraq database setup: {exc}", err=True)
-            raise typer.Exit(1)
+            raise typer.Exit(1) from exc
 
         semaphore = asyncio.Semaphore(concurrency)
 
         async def _execute_task(row):
             nonlocal processed
             async with semaphore:
-                import inspect, json
+                import inspect
+                import json
                 func = _import_func(row.func_path)
                 args = json.loads(row.args_json or "[]")
                 kwargs = json.loads(row.kwargs_json or "{}")
@@ -1925,7 +1954,10 @@ def worker(
                         buraq_task_table.c.queue == queue,
                         buraq_task_table.c.status == TaskStatus.PENDING.value,
                     )
-                    .order_by(buraq_task_table.c.priority.asc(), buraq_task_table.c.created_at.asc())
+                    .order_by(
+                        buraq_task_table.c.priority.asc(),
+                        buraq_task_table.c.created_at.asc(),
+                    )
                     .limit(concurrency)
                 )
                 rows = result.fetchall()

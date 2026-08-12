@@ -15,7 +15,7 @@ htmlcov/
 .coverage
 alembic/versions/*.py
 !alembic/versions/.gitkeep
-staticfiles/
+/staticfiles/
 sent_emails/
 .cache/
 media/

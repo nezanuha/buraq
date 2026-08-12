@@ -22,9 +22,9 @@ Usage:
     await my_signal.send(sender=MyClass, instance=obj)
 """
 import asyncio
+import contextlib
 import inspect
 import weakref
-from collections.abc import Callable
 
 
 class Signal:
@@ -105,10 +105,8 @@ class Signal:
             if sender_filter is None or sender_filter is sender:
                 yield live
         for entry in dead:
-            try:
+            with contextlib.suppress(ValueError):
                 self._receivers.remove(entry)
-            except ValueError:
-                pass
 
     async def send(self, sender, **kwargs) -> list:
         """Call all matching receivers. Supports both sync and async handlers.

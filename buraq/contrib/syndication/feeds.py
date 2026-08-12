@@ -33,7 +33,6 @@ import datetime
 import xml.etree.ElementTree as ET
 from typing import Any
 
-
 # ── Low-level feed renderers ──────────────────────────────────────────────────
 
 class _SyndicationFeed:

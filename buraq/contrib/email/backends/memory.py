@@ -9,6 +9,7 @@ Use in tests::
 
     from buraq.contrib.email.backends.locmem import outbox, clear_outbox
 """
-from buraq.contrib.email.backends.locmem import EmailBackend as InMemoryEmailBackend, outbox
+from buraq.contrib.email.backends.locmem import EmailBackend as InMemoryEmailBackend
+from buraq.contrib.email.backends.locmem import outbox
 
 __all__ = ["InMemoryEmailBackend", "outbox"]

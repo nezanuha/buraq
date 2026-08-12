@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import html
 import linecache
-import sys
 import traceback
 from typing import TYPE_CHECKING
 
@@ -102,7 +101,8 @@ def _frames_html(frames: list[dict]) -> str:
             trunc = v if len(v) <= 300 else v[:300] + "…"
             locals_rows += (
                 f'<tr>'
-                f'<td class="text-primary font-mono align-top pr-3 py-0.5 whitespace-nowrap text-xs">'
+                f'<td class="text-primary font-mono align-top'
+                f' pr-3 py-0.5 whitespace-nowrap text-xs">'
                 f'{html.escape(k)}</td>'
                 f'<td class="font-mono text-xs break-all py-0.5">'
                 f'{html.escape(trunc)}</td>'
@@ -139,7 +139,7 @@ def _frames_html(frames: list[dict]) -> str:
     return "\n".join(parts)
 
 
-def render_debug_page(request: "Request", exc: BaseException) -> str:
+def render_debug_page(request: Request, exc: BaseException) -> str:
     exc_chain: list[BaseException] = []
     cur: BaseException | None = exc
     while cur is not None:
@@ -157,7 +157,8 @@ def render_debug_page(request: "Request", exc: BaseException) -> str:
         chain_notice = (
             f'<div class="alert alert-soft alert-warning mb-4 text-sm">'
             f'This exception was raised while handling another exception: '
-            f'<code>{html.escape(type(exc_chain[0]).__name__)}: {html.escape(str(exc_chain[0]))}</code>'
+            f'<code>{html.escape(type(exc_chain[0]).__name__)}:'
+            f' {html.escape(str(exc_chain[0]))}</code>'
             f'</div>'
         )
 
@@ -224,12 +225,14 @@ def render_debug_page(request: "Request", exc: BaseException) -> str:
     <div class="card-content">
       <h2 class="font-bold text-base mb-4">
         Traceback
-        <span class="text-xs font-normal ml-2">most recent frame first · project frames highlighted</span>
+        <span class="text-xs font-normal ml-2">most recent frame first
+        · project frames highlighted</span>
       </h2>
       {all_frames_html}
 
       <details class="mt-4">
-        <summary class="cursor-pointer text-xs select-none font-medium">Copy full traceback</summary>
+        <summary class="cursor-pointer text-xs select-none font-medium"
+        >Copy full traceback</summary>
         <div class="surface surface-1 surface-rounded mt-2">
           <pre class="text-xs p-3 overflow-x-auto whitespace-pre-wrap">{plain_tb}</pre>
         </div>

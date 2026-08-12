@@ -48,7 +48,7 @@ class BaseCacheBackend(ABC):
 
     async def get_many(self, keys: list[str]) -> dict[str, Any]:
         values = await asyncio.gather(*(self.get(k) for k in keys))
-        return dict(zip(keys, values))
+        return dict(zip(keys, values, strict=True))
 
     async def set_many(self, mapping: dict[str, Any], timeout: int | None = None) -> None:
         await asyncio.gather(*(self.set(k, v, timeout) for k, v in mapping.items()))

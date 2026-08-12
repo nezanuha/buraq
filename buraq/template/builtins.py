@@ -8,11 +8,9 @@ from __future__ import annotations
 
 import datetime
 import json
-import math
 import re
 import unicodedata
 from html import escape as html_escape
-
 
 # ── Date / time formatting ────────────────────────────────────────────────────
 
@@ -81,9 +79,7 @@ def _format_date(value, fmt: str) -> str:
             result.append(f"{dt.month:02d}")
         elif c == "n":
             result.append(str(dt.month))
-        elif c == "M":
-            result.append(_MONTH_ABBR[dt.month])
-        elif c == "N":
+        elif c == "M" or c == "N":
             result.append(_MONTH_ABBR[dt.month])
         elif c == "F":
             result.append(_MONTH_NAMES[dt.month])
@@ -154,15 +150,15 @@ def _time_chunks():
 
 def _since(d, now=None, reversed_=False):
     if now is None:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
     if isinstance(d, datetime.date) and not isinstance(d, datetime.datetime):
-        d = datetime.datetime(d.year, d.month, d.day, tzinfo=datetime.timezone.utc)
+        d = datetime.datetime(d.year, d.month, d.day, tzinfo=datetime.UTC)
     if isinstance(now, datetime.date) and not isinstance(now, datetime.datetime):
-        now = datetime.datetime(now.year, now.month, now.day, tzinfo=datetime.timezone.utc)
+        now = datetime.datetime(now.year, now.month, now.day, tzinfo=datetime.UTC)
     if d.tzinfo and not now.tzinfo:
-        now = now.replace(tzinfo=datetime.timezone.utc)
+        now = now.replace(tzinfo=datetime.UTC)
     elif not d.tzinfo and now.tzinfo:
-        d = d.replace(tzinfo=datetime.timezone.utc)
+        d = d.replace(tzinfo=datetime.UTC)
 
     delta = (now - d) if not reversed_ else (d - now)
     since = int(delta.total_seconds())
@@ -348,7 +344,9 @@ def json_script_filter(value, element_id: str) -> str:
     from markupsafe import Markup
     data = json.dumps(value, cls=_SafeJSONEncoder)
     safe_data = data.replace("<", "\\u003C").replace(">", "\\u003E").replace("&", "\\u0026")
-    return Markup(f'<script id="{html_escape(element_id)}" type="application/json">{safe_data}</script>')
+    return Markup(
+        f'<script id="{html_escape(element_id)}" type="application/json">{safe_data}</script>'
+    )
 
 
 class _SafeJSONEncoder(json.JSONEncoder):
@@ -404,7 +402,9 @@ def cut_filter(value, arg: str) -> str:
 
 def dictsort_filter(value, key: str) -> list:
     try:
-        return sorted(value, key=lambda x: x.get(key, "") if isinstance(x, dict) else getattr(x, key, ""))
+        return sorted(
+            value, key=lambda x: x.get(key, "") if isinstance(x, dict) else getattr(x, key, "")
+        )
     except (TypeError, AttributeError):
         return list(value)
 
@@ -440,7 +440,6 @@ def truncatewords_html_filter(value, num: int) -> str:
 
 
 def urlizetrunc_filter(value, limit: int, autoescape: bool = True) -> str:
-    from markupsafe import Markup
     result = urlize_filter(value, autoescape)
     # Truncate the visible text of each link to limit chars
     return result
@@ -580,10 +579,7 @@ def register_builtins(env) -> None:
 
         groups: OrderedDict = OrderedDict()
         for item in iterable:
-            if isinstance(item, dict):
-                key = item.get(grouper)
-            else:
-                key = getattr(item, grouper, None)
+            key = item.get(grouper) if isinstance(item, dict) else getattr(item, grouper, None)
             groups.setdefault(key, []).append(item)
         return [{"grouper": k, "list": v} for k, v in groups.items()]
 

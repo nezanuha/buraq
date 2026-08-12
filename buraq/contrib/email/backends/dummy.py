@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 class DummyEmailBackend(BaseEmailBackend):
     """Accepts messages but does nothing with them."""
 
-    async def send(self, message: "EmailMessage") -> bool:
+    async def send(self, message: EmailMessage) -> bool:
         return True
 
-    async def send_many(self, messages: list["EmailMessage"]) -> int:
+    async def send_many(self, messages: list[EmailMessage]) -> int:
         return len(messages)

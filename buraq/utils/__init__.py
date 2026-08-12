@@ -1,7 +1,7 @@
 from buraq.utils import (  # noqa: F401
     choices,
-    csp,
     crypto,
+    csp,
     encoding,
     feedgenerator,
     functional,

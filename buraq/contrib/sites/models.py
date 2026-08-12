@@ -19,7 +19,7 @@ class Site(Model):
         return f"<Site {self.domain!r}>"
 
     @classmethod
-    async def get_current(cls, request=None) -> "Site | None":
+    async def get_current(cls, request=None) -> Site | None:
         """Return the Site matching the request's Host header, or the first site."""
         if request is not None:
             host = request.headers.get("host", "").split(":")[0]

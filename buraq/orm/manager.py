@@ -279,10 +279,7 @@ class QuerySet:
         """
         q = self._query
         for label, expr in kwargs.items():
-            if hasattr(expr, "resolve"):
-                col = expr.resolve(self._model)
-            else:
-                col = expr
+            col = expr.resolve(self._model) if hasattr(expr, "resolve") else expr
             q = q.add_columns(col.label(label))
         return self._clone(q)
 
@@ -504,9 +501,10 @@ class QuerySet:
 
         kind: "year" | "month" | "day"
         """
+        from sqlalchemy.engine import make_url as _make_url
+
         from buraq.conf import settings
         from buraq.core.db import SessionLocal
-        from sqlalchemy.engine import make_url as _make_url
         col = getattr(self._model, field)
         try:
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
@@ -531,9 +529,10 @@ class QuerySet:
 
         kind: "year" | "month" | "day" | "hour" | "minute" | "second"
         """
+        from sqlalchemy.engine import make_url as _make_url
+
         from buraq.conf import settings
         from buraq.core.db import SessionLocal
-        from sqlalchemy.engine import make_url as _make_url
         col = getattr(self._model, field)
         try:
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
@@ -579,9 +578,10 @@ class QuerySet:
         Example:
             plan = await Post.objects.filter(is_published=True).explain()
         """
+        from sqlalchemy.engine import make_url as _make_url
+
         from buraq.conf import settings
         from buraq.core.db import SessionLocal
-        from sqlalchemy.engine import make_url as _make_url
         try:
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
         except Exception:
@@ -863,8 +863,9 @@ class Manager:
             await db.commit()
 
     async def bulk_create(self, records: list[dict], ignore_conflicts: bool = False) -> list:
-        from buraq.core.db import SessionLocal, _current_session
         from sqlalchemy.engine import make_url as _make_url
+
+        from buraq.core.db import SessionLocal, _current_session
         col_names = {c.name for c in self._model.__table__.columns}
         clean_records = [{k: v for k, v in r.items() if k in col_names} for r in records]
         active = _current_session.get()
@@ -879,7 +880,9 @@ class Manager:
             elif dialect in ("mysql", "mariadb"):
                 from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
             else:
-                from sqlalchemy.dialects.postgresql import insert as _insert  # type: ignore[no-redef]
+                from sqlalchemy.dialects.postgresql import (
+                    insert as _insert,  # type: ignore[no-redef]
+                )
             stmt = _insert(self._model.__table__).values(clean_records).on_conflict_do_nothing()
             if active is not None:
                 await active.execute(stmt)

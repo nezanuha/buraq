@@ -156,7 +156,9 @@ class Buraq(FastAPI):
         if settings.SECURE_REFERRER_POLICY:
             response.headers["Referrer-Policy"] = settings.SECURE_REFERRER_POLICY
         if settings.SECURE_CROSS_ORIGIN_OPENER_POLICY:
-            response.headers["Cross-Origin-Opener-Policy"] = settings.SECURE_CROSS_ORIGIN_OPENER_POLICY
+            response.headers["Cross-Origin-Opener-Policy"] = (
+                settings.SECURE_CROSS_ORIGIN_OPENER_POLICY
+            )
         if settings.SECURE_HSTS_SECONDS > 0:
             hsts = f"max-age={settings.SECURE_HSTS_SECONDS}"
             if settings.SECURE_HSTS_INCLUDE_SUBDOMAINS:

@@ -7,11 +7,11 @@ for the result.
 from __future__ import annotations
 
 import enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
-class TaskStatus(str, enum.Enum):
+class TaskStatus(enum.StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     SUCCEEDED = "SUCCEEDED"
@@ -39,7 +39,7 @@ class TaskResult:
     backend: Any = None
     attempts: int = 0
 
-    async def arefresh(self) -> "TaskResult":
+    async def arefresh(self) -> TaskResult:
         """Fetch the latest status from the backend and update this result in-place."""
         if self.backend is not None:
             updated = await self.backend.aget_result(self.id)

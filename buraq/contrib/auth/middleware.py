@@ -48,7 +48,7 @@ async def _get_user(request: Request):
 
     try:
         from buraq.contrib.auth.models import User
-        from buraq.orm.manager import DoesNotExist, MultipleObjectsReturned
+        from buraq.orm.manager import DoesNotExist
         user = await User.objects.get(id=int(user_id))
         if not user.is_active:
             return AnonymousUser()

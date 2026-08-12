@@ -23,6 +23,7 @@ import logging
 _log = logging.getLogger(__name__)
 _AUTH_USER_SESSION_KEY = "_auth_user_id"
 
+from buraq.contrib.auth.password_validation import validate_password  # noqa: E402, F401
 
 # ── Password utilities ────────────────────────────────────────────────────────
 
@@ -40,9 +41,6 @@ async def check_password(password: str, hashed: str) -> bool:
 
     from buraq.contrib.auth._passwords import verify_password
     return await asyncio.to_thread(verify_password, password, hashed)
-
-
-from buraq.contrib.auth.password_validation import validate_password  # noqa: E402
 
 
 async def update_session_auth_hash(request, user) -> None:
@@ -104,7 +102,9 @@ async def login(request, user) -> None:
 
     task = asyncio.create_task(_update_last_login())
     task.add_done_callback(
-        lambda t: t.exception() and _log.debug("login(): _update_last_login failed: %r", t.exception())
+        lambda t: t.exception() and _log.debug(
+            "login(): _update_last_login failed: %r", t.exception()
+        )
     )
 
 
@@ -153,8 +153,8 @@ class PasswordResetTokenGenerator:
     algorithm = "sha256"
 
     def _hash_value(self, value: str) -> str:
-        import hashlib
         import hmac
+
         from buraq.conf import settings
         key = f"{self.key_salt}{settings.SECRET_KEY}".encode()
         return hmac.new(key, value.encode(), self.algorithm).hexdigest()

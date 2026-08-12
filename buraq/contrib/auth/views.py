@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 
-from buraq.contrib.auth import make_password
+from buraq.contrib.auth import check_password, make_password
 
 from .models import User
 from .schemas import UserCreate, UserRead
@@ -22,7 +22,9 @@ async def register(payload: UserCreate) -> UserRead:
             raise HTTPException(status_code=400, detail="Email already registered") from exc
         if "username" in msg:
             raise HTTPException(status_code=400, detail="Username already taken") from exc
-        raise HTTPException(status_code=400, detail="Registration failed due to a conflict.") from exc
+        raise HTTPException(
+            status_code=400, detail="Registration failed due to a conflict."
+        ) from exc
 
 
 # ── Class-based auth views ───────────────────────────────────────────────────
@@ -232,9 +234,10 @@ class PasswordResetView:
         import hashlib
         import hmac
         import time
+
         from buraq.conf import settings
         from buraq.contrib.email.send import send_mail
-        from buraq.shortcuts import redirect, render
+        from buraq.shortcuts import redirect
 
         form_data = dict(await request.form())
         email = form_data.get("email", "").strip().lower()
@@ -305,6 +308,7 @@ class PasswordResetConfirmView:
 
     def _verify_token(self, token: str):
         import time
+
         from buraq.conf import settings
 
         try:
@@ -330,6 +334,7 @@ class PasswordResetConfirmView:
     async def post(self, request, **kwargs):
         import hashlib
         import hmac
+
         from buraq.conf import settings
         from buraq.shortcuts import redirect, render
 

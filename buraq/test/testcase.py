@@ -31,7 +31,6 @@ from typing import Any
 
 from buraq.test.client import AsyncClient
 
-
 # ── override_settings ─────────────────────────────────────────────────────────
 
 class override_settings:
@@ -40,7 +39,10 @@ class override_settings:
 
     Can be used as a context manager or a decorator (sync and async)::
 
-        with override_settings(DEBUG=True, CACHE_BACKEND="buraq.contrib.cache.backends.memory.MemoryCacheBackend"):
+        with override_settings(
+            DEBUG=True,
+            CACHE_BACKEND="buraq.contrib.cache.backends.memory.MemoryCacheBackend",
+        ):
             ...
 
         @override_settings(DEBUG=False)
@@ -159,7 +161,11 @@ class SimpleTestCase(unittest.TestCase):
         from buraq.exceptions import NON_FIELD_ERRORS
 
         if field is None:
-            form_errors = form.non_field_errors() if hasattr(form, "non_field_errors") else form.errors.get(NON_FIELD_ERRORS, [])
+            form_errors = (
+                form.non_field_errors()
+                if hasattr(form, "non_field_errors")
+                else form.errors.get(NON_FIELD_ERRORS, [])
+            )
         else:
             form_errors = form.errors.get(field, [])
 
@@ -169,7 +175,8 @@ class SimpleTestCase(unittest.TestCase):
         for error in errors:
             self.assertIn(
                 error, form_errors,
-                f"Error '{error}' not found in form{'.' if field is None else f' field {field!r}.'} "
+                f"Error '{error}' not found in"
+                f" form{'.' if field is None else f' field {field!r}.'} "
                 f"Actual errors: {form_errors}"
             )
 
@@ -183,7 +190,9 @@ class SimpleTestCase(unittest.TestCase):
             return re.sub(r"\s+", " ", h).strip()
         self.assertEqual(_normalize(html1), _normalize(html2), msg)
 
-    def assertInHTML(self, needle: str, haystack: str, count: int = None, msg_prefix: str = "") -> None:
+    def assertInHTML(
+        self, needle: str, haystack: str, count: int = None, msg_prefix: str = ""
+    ) -> None:
         """
         Assert that an HTML fragment appears in the haystack HTML.
 
@@ -199,7 +208,8 @@ class SimpleTestCase(unittest.TestCase):
         if count is not None:
             self.assertEqual(
                 occurrences, count,
-                f"{msg_prefix}Found {occurrences} instances of {needle!r} in haystack (expected {count})."
+                f"{msg_prefix}Found {occurrences} instances of {needle!r}"
+                f" in haystack (expected {count})."
             )
         else:
             self.assertTrue(
@@ -211,16 +221,15 @@ class SimpleTestCase(unittest.TestCase):
         """Context manager that asserts exactly ``num`` SQL queries are executed."""
         return _AssertNumQueriesContext(self, num)
 
-    def assertFormsetError(self, formset, form_index: int | None, field: str | None, errors) -> None:
+    def assertFormsetError(
+        self, formset, form_index: int | None, field: str | None, errors
+    ) -> None:
         """Assert that a formset form has the given error(s)."""
         if form_index is None:
             form_errors = formset.non_form_errors()
         else:
             form = formset.forms[form_index]
-            if field is None:
-                form_errors = form.non_field_errors()
-            else:
-                form_errors = form.errors.get(field, [])
+            form_errors = form.non_field_errors() if field is None else form.errors.get(field, [])
 
         if isinstance(errors, str):
             errors = [errors]
@@ -392,20 +401,32 @@ class _AssertRaisesMessageContext(contextlib.AbstractContextManager):
 
 
 class _QueryCounter:
-    """Patches the SQLAlchemy session to count executed statements."""
+    """Counts SQL statements executed via the SQLAlchemy engine event system."""
 
     def __init__(self):
         self.count = 0
-        self._original_execute = None
+        self._listener = None
 
     def start(self):
-        from buraq.core.db import SessionLocal
-        original_execute = SessionLocal.kw.get("bind") if hasattr(SessionLocal, "kw") else None
-        # Simple count via event listener if available; otherwise approximate
+        from sqlalchemy import event
+
+        from buraq.core.db import engine
+
         self.count = 0
 
+        def _count(conn, cursor, stmt, params, context, executemany):
+            self.count += 1
+
+        event.listen(engine.sync_engine, "before_cursor_execute", _count)
+        self._listener = _count
+
     def stop(self):
-        pass
+        if self._listener is not None:
+            from sqlalchemy import event
+
+            from buraq.core.db import engine
+            event.remove(engine.sync_engine, "before_cursor_execute", self._listener)
+            self._listener = None
 
 
 class _AssertNumQueriesContext(contextlib.AbstractContextManager):
@@ -424,6 +445,7 @@ class _AssertNumQueriesContext(contextlib.AbstractContextManager):
     def __enter__(self):
         try:
             from sqlalchemy import event
+
             from buraq.core.db import engine
             @event.listens_for(engine.sync_engine, "before_cursor_execute")
             def _count(conn, cursor, stmt, params, context, executemany):
@@ -436,6 +458,7 @@ class _AssertNumQueriesContext(contextlib.AbstractContextManager):
     def __exit__(self, *args):
         try:
             from sqlalchemy import event
+
             from buraq.core.db import engine
             if self._listener:
                 event.remove(engine.sync_engine, "before_cursor_execute", self._listener)
@@ -648,6 +671,7 @@ class LiveServerTestCase(TestCase):
 
     async def _start_server(self):
         import socket
+
         import uvicorn
 
         try:
@@ -677,9 +701,7 @@ class LiveServerTestCase(TestCase):
         if self._server:
             self._server.should_exit = True
             if self._server_task:
-                try:
+                with contextlib.suppress(Exception):
                     await asyncio.wait_for(self._server_task, timeout=2.0)
-                except Exception:
-                    pass
         self._server = None
         self._server_task = None

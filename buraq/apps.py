@@ -69,8 +69,8 @@ class Apps:
     def get_app_config(self, label: str) -> AppConfig:
         try:
             return self._apps[label]
-        except KeyError:
-            raise LookupError(f"No installed app with label {label!r}.")
+        except KeyError as err:
+            raise LookupError(f"No installed app with label {label!r}.") from err
 
     def get_app_configs(self) -> list[AppConfig]:
         return list(self._apps.values())

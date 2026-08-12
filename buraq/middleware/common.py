@@ -115,7 +115,11 @@ class ConditionalGetMiddleware:
 
         headers = [h for h in initial.get("headers", []) if h[0].lower() != b"etag"]
         headers.append((b"etag", etag.encode()))
-        await send({"type": "http.response.start", "status": initial.get("status", 200), "headers": headers})
+        await send({
+            "type": "http.response.start",
+            "status": initial.get("status", 200),
+            "headers": headers,
+        })
         await send({"type": "http.response.body", "body": body})
 
 

@@ -34,7 +34,7 @@ class Prefetch:
     def __init__(
         self,
         field: str,
-        queryset: "QuerySet | None" = None,
+        queryset: QuerySet | None = None,
         to_attr: str | None = None,
     ):
         self.field = field

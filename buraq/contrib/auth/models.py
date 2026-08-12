@@ -129,6 +129,7 @@ class AbstractBaseUser(models.Model):
 
     async def get_session_auth_hash(self) -> str:
         import hashlib
+
         from buraq.conf import settings
         key = getattr(settings, "SECRET_KEY", "")
         return hashlib.sha256(f"{key}{self.hashed_password}".encode()).hexdigest()[:8]

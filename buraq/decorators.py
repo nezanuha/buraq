@@ -307,10 +307,9 @@ def condition(etag_func=None, last_modified_func=None):
                 if ims_header:
                     try:
                         client_dt = parsedate_to_datetime(ims_header)
-                        if isinstance(last_modified, _dt):
-                            if last_modified <= client_dt:
-                                from starlette.responses import Response
-                                return Response(status_code=304)
+                        if isinstance(last_modified, _dt) and last_modified <= client_dt:
+                            from starlette.responses import Response
+                            return Response(status_code=304)
                     except Exception:
                         pass
 

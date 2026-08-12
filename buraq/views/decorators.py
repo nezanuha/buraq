@@ -28,7 +28,7 @@ Pass ``None`` to disable the policy for a specific view::
 from __future__ import annotations
 
 import functools
-from typing import Callable
+from collections.abc import Callable
 
 
 def csp_override(policy: dict | None = None, **directives) -> Callable:

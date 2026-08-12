@@ -64,8 +64,9 @@ class Now(_DBFunc):
 
 def _dialect_name() -> str:
     try:
-        from buraq.conf import settings
         from sqlalchemy.engine import make_url as _make_url
+
+        from buraq.conf import settings
         return _make_url(settings.DATABASE_URL).get_dialect().name
     except Exception:
         return "postgresql"
@@ -123,7 +124,8 @@ class TruncWeek(_TruncPart):
             # SQLite: subtract weekday offset (0=Mon) to get Monday of the week
             dow = sa.cast(func.strftime("%w", col), sa.Integer)  # 0=Sun
             adjusted = sa.case((dow == 0, 6), else_=dow - 1)     # shift: Mon=0
-            return sa.func.date(col, sa.literal("-") + sa.cast(adjusted, sa.Text) + sa.literal(" days"))
+            offset = sa.literal("-") + sa.cast(adjusted, sa.Text) + sa.literal(" days")
+            return sa.func.date(col, offset)
         elif dialect in ("mysql", "mariadb"):
             return sa.cast(func.date_format(col, "%Y-%m-%d 00:00:00"), sa.DateTime)
         else:
@@ -523,8 +525,9 @@ class UUID7:
 
     def resolve(self, model) -> sa.sql.ColumnElement:
         try:
-            from buraq.conf import settings
             from sqlalchemy.engine import make_url as _make_url
+
+            from buraq.conf import settings
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
         except Exception:
             dialect = "postgresql"

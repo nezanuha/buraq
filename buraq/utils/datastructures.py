@@ -11,7 +11,8 @@ Usage:
 """
 from __future__ import annotations
 
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 
 class MultiValueDict(dict):
@@ -88,7 +89,7 @@ class MultiValueDict(dict):
         for values in super().values():
             yield values[-1] if values else None
 
-    def copy(self) -> "MultiValueDict":
+    def copy(self) -> MultiValueDict:
         result = MultiValueDict()
         for key, values in super().items():
             result.setlist(key, list(values))

@@ -33,7 +33,9 @@ DEFAULT_TABLE = "buraq_cache_table"
 class DatabaseCache(BaseCacheBackend):
     """Cache backend that persists entries in a database table."""
 
-    def __init__(self, table: str = DEFAULT_TABLE, *, cull_probability: float | None = None, **kwargs):
+    def __init__(
+        self, table: str = DEFAULT_TABLE, *, cull_probability: float | None = None, **kwargs
+    ):
         self._table = table
         if cull_probability is None:
             try:
@@ -48,16 +50,18 @@ class DatabaseCache(BaseCacheBackend):
         return {str(i): v for i, v in enumerate(params)} if params else {}
 
     async def _execute(self, sql: str, params: tuple | list = ()):
-        from buraq.core.db import SessionLocal
         import sqlalchemy as sa
+
+        from buraq.core.db import SessionLocal
         async with SessionLocal() as db:
             result = await db.execute(sa.text(sql), self._bind(params))
             await db.commit()
             return result
 
     async def _fetch(self, sql: str, params: tuple | list = ()):
-        from buraq.core.db import SessionLocal
         import sqlalchemy as sa
+
+        from buraq.core.db import SessionLocal
         async with SessionLocal() as db:
             result = await db.execute(sa.text(sql), self._bind(params))
             return result.fetchall()
@@ -83,6 +87,7 @@ class DatabaseCache(BaseCacheBackend):
 
     async def set(self, key: str, value: Any, timeout: int | None = 300) -> None:
         import random
+
         import sqlalchemy as sa
         expires = time.time() + (timeout if timeout is not None else 300)
         raw = self._serialize(value)
@@ -91,7 +96,9 @@ class DatabaseCache(BaseCacheBackend):
         async with SessionLocal() as db:
             await db.execute(sa.text(f"DELETE FROM {self._table} WHERE cache_key = :0"), {"0": key})
             await db.execute(
-                sa.text(f"INSERT INTO {self._table} (cache_key, value, expires) VALUES (:0, :1, :2)"),
+                sa.text(
+                    f"INSERT INTO {self._table} (cache_key, value, expires) VALUES (:0, :1, :2)"
+                ),
                 {"0": key, "1": raw, "2": expires},
             )
             await db.commit()

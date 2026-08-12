@@ -185,8 +185,6 @@ class CsrfViewMiddleware:
             scope["_csrf_token"] = stored
 
         # Capture response to inject Set-Cookie header
-        response_started = {}
-        response_headers = []
 
         async def send_with_cookie(message):
             if message["type"] == "http.response.start":

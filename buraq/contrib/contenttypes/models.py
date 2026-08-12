@@ -34,7 +34,7 @@ class ContentType(Model):
         return f"<ContentType {self.app_label}.{self.model}>"
 
     @classmethod
-    async def get_for_model(cls, model_class) -> "ContentType":
+    async def get_for_model(cls, model_class) -> ContentType:
         app_label = model_class.__module__.split(".")[0]
         model_name = model_class.__name__.lower()
         ct, _ = await cls.objects.get_or_create(
@@ -45,7 +45,7 @@ class ContentType(Model):
         return ct
 
     @classmethod
-    async def get_by_natural_key(cls, app_label: str, model: str) -> "ContentType":
+    async def get_by_natural_key(cls, app_label: str, model: str) -> ContentType:
         """Look up a ContentType by its natural key (app_label, model)."""
         ct = await cls.objects.get_or_none(app_label=app_label, model=model)
         if ct is None:

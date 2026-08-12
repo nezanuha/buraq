@@ -201,7 +201,6 @@ class ListView(MultipleObjectMixin, ContextMixin, TemplateMixin, View):
     _template_suffix = "_list.html"
 
     async def get(self, request, **kwargs):
-        from starlette.responses import Response
         self.kwargs = kwargs
         self.request = request
         object_list = await self.get_queryset()

@@ -129,9 +129,10 @@ class Subquery:
 
     def _replace_outer_refs(self, query, outer_model):
         """Walk the query tree and replace __outerref__<field> placeholders."""
-        from buraq.orm.query import _OUTER_REF_PREFIX
         from sqlalchemy.sql import visitors
         from sqlalchemy.sql.elements import ColumnClause
+
+        from buraq.orm.query import _OUTER_REF_PREFIX
 
         replacements: dict[str, sa.sql.ColumnElement] = {}
 

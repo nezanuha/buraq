@@ -4,14 +4,13 @@ Cache decorators — re-exported from the canonical implementation in buraq.deco
 Import from here for convenience:
     from buraq.contrib.cache.decorators import cache_page, cache_result, never_cache
 """
-from buraq.decorators import cache_page, never_cache  # noqa: F401
-
 import functools
 import hashlib
 import json
 from collections.abc import Callable
 
 from buraq.contrib.cache.core import cache
+from buraq.decorators import cache_page, never_cache  # noqa: F401
 
 
 def cache_result(key: str | None = None, timeout: int = 300):

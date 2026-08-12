@@ -6,7 +6,9 @@ Use with QuerySet.aggregate() or QuerySet.annotate():
     from buraq.contrib.postgres.aggregates import ArrayAgg, StringAgg, JsonAgg
 
     result = await Post.objects.aggregate(all_tags=ArrayAgg("tag"))
-    result = await Post.objects.values("author_id").annotate(titles=StringAgg("title", delimiter=", "))
+    result = await Post.objects.values("author_id").annotate(
+        titles=StringAgg("title", delimiter=", ")
+    )
 """
 from __future__ import annotations
 

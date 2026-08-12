@@ -35,10 +35,7 @@ def format(
             number = number.quantize(Decimal(10) ** -decimal_pos)
         str_number = str(number)
     else:
-        if decimal_pos is not None:
-            str_number = f"{number:.{decimal_pos}f}"
-        else:
-            str_number = str(number)
+        str_number = f"{number:.{decimal_pos}f}" if decimal_pos is not None else str(number)
 
     if str_number.startswith("-"):
         sign = "-"

@@ -619,8 +619,6 @@ class FilePathField(ChoiceField):
 
     def __init__(self, path: str, match: str = None, recursive: bool = False,
                  allow_files: bool = True, allow_folders: bool = False, **kwargs):
-        import os
-        import re as _re
         self.path = path
         self.match = match
         self.recursive = recursive
@@ -651,8 +649,9 @@ class FilePathField(ChoiceField):
                     full = os.path.join(self.path, entry)
                     is_file = os.path.isfile(full)
                     is_dir = os.path.isdir(full)
-                    if (self.allow_files and is_file) or (self.allow_folders and is_dir):
-                        if matcher is None or matcher.search(entry):
+                    if ((self.allow_files and is_file) or (self.allow_folders and is_dir)) and (
+                        matcher is None or matcher.search(entry)
+                    ):
                             choices.append((full, entry))
         except OSError:
             pass

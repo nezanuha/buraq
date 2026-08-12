@@ -83,7 +83,8 @@ class Signer:
 
         if sep in _b64_encode(b"x"):
             raise ValueError(
-                f"Unsafe sep {sep!r} — it appears in base64 output and cannot be used as a separator."
+                f"Unsafe sep {sep!r} — it appears in base64 output"
+                f" and cannot be used as a separator."
             )
 
     def _signing_key(self) -> bytes:
@@ -239,7 +240,9 @@ def dumps(
         serializer: JSON-compatible module (default: :mod:`json`).
         compress:   If ``True``, zlib-compress before encoding.
     """
-    return TimestampSigner(key=key, salt=salt).sign_object(obj, serializer=serializer, compress=compress)
+    return TimestampSigner(key=key, salt=salt).sign_object(
+        obj, serializer=serializer, compress=compress
+    )
 
 
 def loads(
@@ -263,7 +266,9 @@ def loads(
         :class:`BadSignature` if verification fails.
         :class:`SignatureExpired` if older than *max_age*.
     """
-    return TimestampSigner(key=key, salt=salt).unsign_object(s, serializer=serializer, max_age=max_age)
+    return TimestampSigner(key=key, salt=salt).unsign_object(
+        s, serializer=serializer, max_age=max_age
+    )
 
 
 __all__ = [

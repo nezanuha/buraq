@@ -25,10 +25,10 @@ class YamlSerializer(JsonSerializer):
         try:
             import yaml
             return yaml
-        except ImportError:
+        except ImportError as err:
             raise SerializationError(
                 "YAML serialization requires PyYAML. Install with: pip install pyyaml"
-            )
+            ) from err
 
     async def serialize(self, queryset, *, indent: int | None = 2) -> str:
         yaml = self._check_yaml()

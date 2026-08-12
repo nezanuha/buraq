@@ -1,4 +1,3 @@
-import sqlalchemy as sa
 
 
 class ModelAdmin:
@@ -24,7 +23,9 @@ class ModelAdmin:
         return getattr(self.model, "_meta_verbose_name", None) or self.model.__name__
 
     def get_verbose_name_plural(self) -> str:
-        return getattr(self.model, "_meta_verbose_name_plural", None) or f"{self.get_verbose_name()}s"
+        return (
+            getattr(self.model, "_meta_verbose_name_plural", None) or f"{self.get_verbose_name()}s"
+        )
 
     def get_app_label(self) -> str:
         parts = [p for p in self.model.__module__.split(".") if p not in ("models", "")]

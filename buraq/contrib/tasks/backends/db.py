@@ -39,8 +39,8 @@ from __future__ import annotations
 import importlib
 import json
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any, Callable
 
 import sqlalchemy as sa
 
@@ -58,12 +58,16 @@ buraq_task_table = sa.Table(
     sa.Column("func_path", sa.String(512), nullable=False),
     sa.Column("args_json", sa.Text, nullable=False, default="[]"),
     sa.Column("kwargs_json", sa.Text, nullable=False, default="{}"),
-    sa.Column("status", sa.String(16), nullable=False, default=TaskStatus.PENDING.value, index=True),
+    sa.Column(
+        "status", sa.String(16), nullable=False, default=TaskStatus.PENDING.value, index=True
+    ),
     sa.Column("return_json", sa.Text, nullable=True),
     sa.Column("error", sa.Text, nullable=True),
     sa.Column("attempts", sa.Integer, nullable=False, default=0),
     sa.Column("priority", sa.Integer, nullable=False, default=0),
-    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)),
+    sa.Column(
+        "created_at", sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    ),
     sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
     sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
 )

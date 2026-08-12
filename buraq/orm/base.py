@@ -265,7 +265,9 @@ class Model(Base):
         post_init.send_sync(sender=self.__class__, instance=self)
 
     async def save(self, update_fields: list | None = None) -> None:
-        """Insert or update this instance. Participates in the current atomic() session if active."""
+        """
+        Insert or update this instance. Participates in the current atomic() session if active.
+        """
         from buraq.core.db import SessionLocal, _current_session
         from buraq.signals import post_save, pre_save
         created = self.id is None
@@ -343,7 +345,7 @@ class Model(Base):
                 setattr(self, col.name, getattr(fresh, col.name))
 
     async def full_clean(self) -> None:
-        """Run all field-level validators and model-level clean(). Raises ValidationError on failure."""
+        """Run all field-level validators and model-level clean(). Raises ValidationError."""
         from buraq.exceptions import ValidationError
         errors: dict[str, list] = {}
 
@@ -378,9 +380,10 @@ class Model(Base):
 
     async def validate_unique(self) -> None:
         """Check that unique constraints are not violated. Raises ValidationError if they are."""
+        from sqlalchemy import select
+
         from buraq.core.db import SessionLocal, _current_session
         from buraq.exceptions import ValidationError
-        from sqlalchemy import select
 
         errors = []
         table = self.__class__.__table__

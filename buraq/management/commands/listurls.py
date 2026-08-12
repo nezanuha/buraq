@@ -20,6 +20,7 @@ class Command(BaseCommand):
 
     async def handle(self, *args, **options):
         import importlib
+
         from buraq.conf import settings
 
         urlconf_module = options["urlconf"] or getattr(settings, "ROOT_URLCONF", None)

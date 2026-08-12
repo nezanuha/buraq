@@ -5,7 +5,7 @@ All backends must implement ``aenqueue()`` and ``aget_result()``.
 """
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
 
 
 class BaseTaskBackend:
@@ -24,8 +24,8 @@ class BaseTaskBackend:
         *,
         priority: int = 0,
         queue: str = "default",
-    ) -> "buraq.contrib.tasks.result.TaskResult":  # noqa: F821
+    ) -> buraq.contrib.tasks.result.TaskResult:  # noqa: F821
         raise NotImplementedError
 
-    async def aget_result(self, task_id: str) -> "buraq.contrib.tasks.result.TaskResult | None":
+    async def aget_result(self, task_id: str) -> buraq.contrib.tasks.result.TaskResult | None:  # noqa: F821
         raise NotImplementedError

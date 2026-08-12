@@ -43,9 +43,7 @@ def _is_auto_col(col) -> bool:
         return True
     if col.server_default is not None and "now" in str(col.server_default).lower():
         return True
-    if getattr(col, "onupdate", None) is not None:
-        return True
-    return False
+    return getattr(col, "onupdate", None) is not None
 
 
 def get_form_fields(model_admin) -> list[dict]:

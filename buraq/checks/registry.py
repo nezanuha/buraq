@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 
 class CheckMessage:
@@ -67,7 +67,7 @@ class CheckRegistry:
         return messages
 
     def run_checks_or_raise(self) -> None:
-        """Run all checks; raise ImproperlyConfigured if any Error-level messages exist in non-DEBUG mode."""
+        """Run all checks; raise ImproperlyConfigured if any Error-level messages exist."""
         from buraq.conf import settings
         messages = self.run_checks()
         errors = [m for m in messages if m.level >= Error.level]
@@ -76,7 +76,8 @@ class CheckRegistry:
                 import sys
                 summary = "; ".join(f"[{e.id}] {e.msg}" for e in errors)
                 print(
-                    f"SystemCheck: {len(errors)} error(s) found (DEBUG mode — startup not blocked): {summary}",
+                    f"SystemCheck: {len(errors)} error(s) found"
+                    f" (DEBUG mode — startup not blocked): {summary}",
                     file=sys.stderr,
                 )
             else:

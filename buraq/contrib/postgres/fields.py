@@ -12,9 +12,18 @@ Usage:
 """
 from __future__ import annotations
 
-import sqlalchemy as sa
-from sqlalchemy import Index, Text
-from sqlalchemy.dialects.postgresql import ARRAY, CITEXT, HSTORE, JSONB, NUMRANGE, INT4RANGE, INT8RANGE, DATERANGE, TSRANGE, TSTZRANGE
+from sqlalchemy import Index
+from sqlalchemy.dialects.postgresql import (
+    ARRAY,
+    CITEXT,
+    DATERANGE,
+    HSTORE,
+    INT4RANGE,
+    INT8RANGE,
+    JSONB,
+    NUMRANGE,
+    TSTZRANGE,
+)
 
 
 class JSONField(JSONB):

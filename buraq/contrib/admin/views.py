@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 import hmac
 from collections import defaultdict
@@ -21,6 +22,7 @@ def _ensure_admin_templates() -> None:
     if _admin_loader_added:
         return
     from jinja2 import ChoiceLoader, FileSystemLoader
+
     from buraq.core.templating import get_templates
 
     admin_dir = str(Path(__file__).parent / "templates")
@@ -95,7 +97,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 return ma
         return None
 
-    # â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @router.get("/login", response_class=HTMLResponse)
     async def login_get(request: Request):
@@ -138,7 +140,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         resp.delete_cookie("_buraq_admin")
         return resp
 
-    # â”€â”€ Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # â”€â”€ Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @router.get("/", response_class=HTMLResponse)
     async def dashboard(request: Request):
@@ -165,7 +167,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             "model_cards": model_cards,
         })
 
-    # â”€â”€ Model list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # â”€â”€ Model list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @router.get("/{app_label}/{model_name}/", response_class=HTMLResponse)
     async def model_list(request: Request, app_label: str, model_name: str):
@@ -183,7 +185,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
 
         qs = ma.model.objects.all()
 
-        # â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if search and ma.search_fields:
             from buraq.orm.query import Q
             q_filter = None
@@ -192,31 +194,26 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 q_filter = clause if q_filter is None else (q_filter | clause)
             qs = qs.filter(q_filter)
 
-        # â”€â”€ list_filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â”€â”€ list_filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         filter_params: dict[str, str] = {}
         for field in ma.list_filter:
             val = request.query_params.get(field, "")
             if val:
                 filter_params[field] = val
-                try:
+                with contextlib.suppress(Exception):
                     qs = qs.filter(**{field: val})
-                except Exception:
-                    pass
 
-        # â”€â”€ Ordering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â”€â”€ Ordering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         all_col_names = ma._all_column_names()
         if ordering_param:
             col = ordering_param.lstrip("-")
-            if col in all_col_names:
-                qs = qs.order_by(ordering_param)
-            else:
-                qs = qs.order_by("-id")
+            qs = qs.order_by(ordering_param) if col in all_col_names else qs.order_by("-id")
         elif ma.ordering:
             qs = qs.order_by(*ma.ordering)
         else:
             qs = qs.order_by("-id")
 
-        # â”€â”€ Paginate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â”€â”€ Paginate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         from buraq.contrib.admin.helpers import obj_to_dict, paginate
 
         total = await qs.count()
@@ -232,7 +229,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 "cells": [str(d.get(f, "")) for f in list_display],
             })
 
-        # â”€â”€ Filter groups for sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â”€â”€ Filter groups for sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         filter_groups = []
         for field in ma.list_filter:
             try:
@@ -262,7 +259,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             "ordering_param": ordering_param,
         })
 
-    # â”€â”€ Bulk action POST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # â”€â”€ Bulk action POST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @router.post("/{app_label}/{model_name}/")
     async def model_list_action(request: Request, app_label: str, model_name: str):
@@ -295,7 +292,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
 
         return RedirectResponse(redirect_url, status_code=303)
 
-    # â”€â”€ Add â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # â”€â”€ Add â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @router.get("/{app_label}/{model_name}/add/", response_class=HTMLResponse)
     async def model_add_get(request: Request, app_label: str, model_name: str):
@@ -364,7 +361,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 "error": str(e),
             })
 
-    # â”€â”€ Change â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # â”€â”€ Change â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @router.get("/{app_label}/{model_name}/{obj_id}/change/", response_class=HTMLResponse)
     async def model_change_get(
@@ -381,7 +378,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         try:
             obj = await ma.model.objects.get(id=obj_id)
         except Exception:
-            raise HTTPException(404)
+            raise HTTPException(404) from None
 
         from buraq.contrib.admin.helpers import get_form_fields, obj_to_dict
 
@@ -412,7 +409,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         try:
             obj = await ma.model.objects.get(id=obj_id)
         except Exception:
-            raise HTTPException(404)
+            raise HTTPException(404) from None
 
         from buraq.contrib.admin.helpers import coerce_form_data, get_form_fields, obj_to_dict
 
@@ -449,7 +446,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 "error": str(e),
             })
 
-    # â”€â”€ Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # â”€â”€ Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @router.get("/{app_label}/{model_name}/{obj_id}/delete/", response_class=HTMLResponse)
     async def model_delete_get(
@@ -466,7 +463,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         try:
             obj = await ma.model.objects.get(id=obj_id)
         except Exception:
-            raise HTTPException(404)
+            raise HTTPException(404) from None
 
         from buraq.contrib.admin.helpers import obj_to_dict
 

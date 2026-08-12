@@ -18,6 +18,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import functools
 from collections.abc import Callable
 
@@ -74,10 +75,8 @@ def _wrap_method(decorator: Callable, method: Callable) -> Callable:
         for attr in dir(decorated):
             if attr.startswith("_"):
                 continue
-            try:
+            with contextlib.suppress(AttributeError, TypeError):
                 setattr(async_wrapper, attr, getattr(decorated, attr))
-            except (AttributeError, TypeError):
-                pass
 
         return async_wrapper
     else:

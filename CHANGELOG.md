@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-08-12
+
+### Fixed
+
+- **`buraq.contrib.staticfiles` missing from PyPI wheel** — the entire `contrib/staticfiles/` package was excluded by an overly broad `.gitignore` entry (`staticfiles/` matched the source directory); the pattern is now anchored to the repo root (`/staticfiles/`) so the module ships correctly
+- **`buraq.contrib.auth.validate_password` raised `ImportError`** — the shortcut re-export was dropped from `buraq.contrib.auth.__init__`; `from buraq.contrib.auth import validate_password` now works as documented
+- **`contrib/auth/views.py` — `NameError: check_password`** — `check_password` was called in the password-change view but not imported; raises `NameError` at runtime for any user who triggers that view
+- **`test/testcase.py` — `assertNumQueries` always reported 0** — `_QueryCounter.start()` computed the engine reference and discarded it; `stop()` was a no-op; the counter now registers a SQLAlchemy `before_cursor_execute` event listener, matching the implementation used by `_AssertNumQueriesContext`
+- **`management/cli.py` — `listurls` name column not padded** — the name-column width was computed by `max()` but the result was never stored; long route names extended past the separator line; the width is now applied to the `name` column in `_fmt`
+- **`contrib/cache/backends/base.py` — `zip(strict=False)` was a no-op** — `strict=False` is the default; changed to `strict=True` so a length mismatch between keys and gathered results raises immediately instead of silently truncating the returned dict
+
 ## [1.5.0] - 2026-08-12
 
 ### Security
@@ -725,7 +736,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Argon2 password hashing via argon2-cffi
 - orjson for high-performance JSON serialization
 
-[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/nezanuha/buraq/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/nezanuha/buraq/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/nezanuha/buraq/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/nezanuha/buraq/compare/v1.2.0...v1.3.0

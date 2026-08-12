@@ -59,7 +59,9 @@ SKIP_NAMES = {
     # Auth internals
     "GroupPermission", "get_password_validators", "render_to_string_safe",
     # Cache internals
-    "BaseCacheBackend",
+    "BaseCacheBackend", "CacheExtension",
+    # Auth internals
+    "verify_password",
     # Messages internals
     "MessageStorage",
     # Static file internals

@@ -27,13 +27,11 @@ Usage::
 from __future__ import annotations
 
 import hashlib
-import time
-from typing import Callable
+from collections.abc import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-
 
 _CACHE_KEY_PREFIX = "buraq_cache_page:"
 _CACHEABLE_METHODS = {"GET", "HEAD"}
@@ -50,9 +48,7 @@ def _is_cacheable_response(response: Response) -> bool:
     if response.status_code in _UNCACHEABLE_STATUS:
         return False
     cc = response.headers.get("cache-control", "")
-    if "no-store" in cc or "no-cache" in cc or "private" in cc:
-        return False
-    return True
+    return not ("no-store" in cc or "no-cache" in cc or "private" in cc)
 
 
 class FetchFromCacheMiddleware(BaseHTTPMiddleware):

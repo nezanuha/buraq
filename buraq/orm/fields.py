@@ -115,7 +115,10 @@ class PositiveIntegerField(Field):
         constraint_name = f"ck_{name}_positive" if name else None
         return sa.Column(
             sa.Integer,
-            sa.CheckConstraint(f"{name} >= 0", name=constraint_name) if name else sa.CheckConstraint("value >= 0"),
+            (
+                sa.CheckConstraint(f"{name} >= 0", name=constraint_name)
+                if name else sa.CheckConstraint("value >= 0")
+            ),
             nullable=self.null,
             unique=self.unique,
             index=self.db_index,
@@ -128,7 +131,10 @@ class PositiveSmallIntegerField(Field):
         constraint_name = f"ck_{name}_positive" if name else None
         return sa.Column(
             sa.SmallInteger,
-            sa.CheckConstraint(f"{name} >= 0", name=constraint_name) if name else sa.CheckConstraint("value >= 0"),
+            (
+                sa.CheckConstraint(f"{name} >= 0", name=constraint_name)
+                if name else sa.CheckConstraint("value >= 0")
+            ),
             nullable=self.null,
             unique=self.unique,
             index=self.db_index,
@@ -514,7 +520,9 @@ class _M2MManager:
             elif dialect in ("mysql", "mariadb"):
                 from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
             else:
-                from sqlalchemy.dialects.postgresql import insert as _insert  # type: ignore[no-redef]
+                from sqlalchemy.dialects.postgresql import (
+                    insert as _insert,  # type: ignore[no-redef]
+                )
             stmt = _insert(assoc).values(rows).on_conflict_do_nothing()
             await db.execute(stmt)
             await db.commit()
@@ -573,9 +581,13 @@ class _M2MManager:
                 if dialect == "sqlite":
                     from sqlalchemy.dialects.sqlite import insert as _insert
                 elif dialect in ("mysql", "mariadb"):
-                    from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
+                    from sqlalchemy.dialects.mysql import (
+                        insert as _insert,  # type: ignore[no-redef]
+                    )
                 else:
-                    from sqlalchemy.dialects.postgresql import insert as _insert  # type: ignore[no-redef]
+                    from sqlalchemy.dialects.postgresql import (
+                        insert as _insert,  # type: ignore[no-redef]
+                    )
                 await db.execute(_insert(assoc).values(rows).on_conflict_do_nothing())
             await db.commit()
         await m2m_changed.send(
