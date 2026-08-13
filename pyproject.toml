@@ -34,7 +34,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://buraqproject.com"
-Documentation = "https://buraqproject.com/docs/"
+Documentation = "https://buraqproject.com/docs"
 Source = "https://github.com/nezanuha/buraq"
 Tracker = "https://github.com/nezanuha/buraq/issues"
 Changelog = "https://github.com/nezanuha/buraq/blob/main/CHANGELOG.md"
