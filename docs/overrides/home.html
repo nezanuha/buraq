@@ -240,13 +240,58 @@
     font-size: .83rem;
     line-height: 1.7;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     color: var(--md-code-fg-color);
   }
 
-  @media (max-width: 600px) {
-    .hero { padding: 3.5rem 1rem 2.5rem; }
+  /* ── Responsive ─────────────────────────────────────────────── */
+
+  @media (max-width: 960px) {
+    .features { grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+    .ai-grid  { grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+  }
+
+  @media (max-width: 768px) {
+    .hero { padding: 4rem 1.25rem 3rem; }
+    .hero__code { margin-top: 2rem; }
+    .hero__code pre { font-size: .8rem; padding: 1rem 1.25rem; }
     .section { padding: 3rem 0; }
-    .ai-section { padding: 2rem 1.25rem; }
+    .section__title { font-size: 1.6rem; }
+    .cta { padding: 2.5rem 1.5rem; }
+    .cta h2 { font-size: 1.5rem; }
+    .cta code {
+      display: block;
+      white-space: nowrap;
+      overflow-x: auto;
+      max-width: 100%;
+      font-size: .82rem;
+    }
+    .ai-section { padding: 2.5rem 1.5rem; }
+    .ai-code pre { font-size: .78rem; padding: 1rem 1.25rem; }
+  }
+
+  @media (max-width: 600px) {
+    .hero { padding: 3rem 1rem 2.5rem; }
+    .hero h1 { font-size: 1.9rem; }
+    .hero__sub { font-size: 1rem; }
+    .hero__code pre { font-size: .75rem; }
+    .features { grid-template-columns: 1fr; }
+    .ai-grid  { grid-template-columns: 1fr; }
+    .section { padding: 2.5rem 0; }
+    .section__title { font-size: 1.4rem; }
+    .ai-section { padding: 2rem 1rem; }
+    .cta { padding: 2rem 1rem; border-radius: .75rem; }
+    .cta h2 { font-size: 1.3rem; }
+    .cta__links { flex-direction: column; align-items: center; }
+    .cta__btn { width: 100%; max-width: 18rem; text-align: center; }
+    .page { padding: 0 1rem; }
+  }
+
+  @media (max-width: 400px) {
+    .hero h1 { font-size: 1.65rem; }
+    .hero__badge { font-size: .72rem; }
+    .hero__actions { flex-direction: column; align-items: center; }
+    .hero__btn { width: 100%; max-width: 16rem; text-align: center; }
   }
 </style>
 
