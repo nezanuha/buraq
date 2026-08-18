@@ -76,10 +76,20 @@ python -c "import buraq; print(buraq.__version__)"
 buraq startproject myproject
 cd myproject
 uv sync
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 buraq migrate
 buraq runserver
 ```
 
-:::tip
-`buraq runserver` auto-detects the `.venv` in your project folder and uses it — no manual activation needed.
+:::tip[Activate the project's environment first]
+`uv sync` creates a `.venv` inside your project. Activate it before running
+`buraq` commands — otherwise they run against whichever environment you
+installed Buraq into, not your project's.
+
+Two ways to skip activation:
+
+```bash
+uv run buraq runserver         # uv resolves the project environment
+python manage.py runserver     # manage.py re-executes itself using ./.venv
+```
 :::
