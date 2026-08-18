@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 """
 Buraq management CLI.
-Works like Django's manage.py — just run:  python manage.py <command>
+Run any management command:  python manage.py <command>
 """
 import os
 import sys
 from pathlib import Path
+
 
 def _bootstrap():
     root = Path(__file__).parent.resolve()

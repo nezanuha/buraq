@@ -1,5 +1,5 @@
 """
-Logging utilities — mirrors django.utils.log.
+Logging utilities — request logging and admin error mail.
 
 Usage::
 

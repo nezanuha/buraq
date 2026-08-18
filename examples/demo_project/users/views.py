@@ -1,6 +1,5 @@
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException
 
-from buraq.contrib.auth import get_user
 from .models import Profile
 from .schemas import ProfileRead, ProfileUpdate
 

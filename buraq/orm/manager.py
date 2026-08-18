@@ -10,7 +10,7 @@ from buraq.orm.prefetch import Prefetch
 
 T = TypeVar("T")
 
-# ── Fetch mode constants (Django 6.1) ─────────────────────────────────────────
+# ── Fetch mode constants ──────────────────────────────────────────────────────
 
 FETCH_ONE   = "FETCH_ONE"    # default — fetch only for current instance
 FETCH_PEERS = "FETCH_PEERS"  # on-demand prefetch across all queryset peers
@@ -29,6 +29,21 @@ class MultipleObjectsReturned(Exception):
     pass
 
 
+def _apply_order_fields(model_class, query, fields):
+    """Apply ordering field names to a query; a leading ``-`` means descending."""
+    for field in fields:
+        col = getattr(model_class, field.lstrip("-"), None)
+        if col is None:
+            continue
+        query = query.order_by(col.desc() if field.startswith("-") else col)
+    return query
+
+
+def _default_ordering(model_class):
+    """``Meta.ordering`` for a model, or an empty tuple."""
+    return tuple(getattr(getattr(model_class, "_meta", None), "ordering", ()) or ())
+
+
 class QuerySet:
     """
     Chainable async query builder.
@@ -43,7 +58,13 @@ class QuerySet:
 
     def __init__(self, model_class: type, query=None):
         self._model = model_class
-        self._query = query if query is not None else select(model_class)
+        if query is None:
+            # A fresh queryset starts with Meta.ordering applied; an explicit
+            # .order_by() later replaces it.
+            query = _apply_order_fields(
+                model_class, select(model_class), _default_ordering(model_class)
+            )
+        self._query = query
         self._values_fields: list | None = None
         self._flat: bool = False
         self._fetch_mode: str = FETCH_ONE
@@ -84,13 +105,14 @@ class QuerySet:
         return self._clone(q)
 
     def order_by(self, *fields: str) -> "QuerySet":
-        q = self._query
-        for field in fields:
-            if field.startswith("-"):
-                q = q.order_by(getattr(self._model, field[1:]).desc())
-            else:
-                q = q.order_by(getattr(self._model, field))
-        return self._clone(q)
+        """
+        Order the results, replacing any ordering already applied — including
+        the model's ``Meta.ordering`` default.
+
+        Call with no arguments to clear ordering entirely.
+        """
+        q = self._query.order_by(None)
+        return self._clone(_apply_order_fields(self._model, q, fields))
 
     def limit(self, n: int) -> "QuerySet":
         return self._clone(self._query.limit(n))
@@ -479,21 +501,38 @@ class QuerySet:
             async for row in result:
                 yield row
 
+    def _latest_by_fields(self) -> tuple[str, ...]:
+        """Default ordering for latest()/earliest(): Meta.get_latest_by, else pk."""
+        configured = getattr(getattr(self._model, "_meta", None), "get_latest_by", None)
+        if not configured:
+            return ("id",)
+        return (configured,) if isinstance(configured, str) else tuple(configured)
+
     async def earliest(self, *fields: str) -> Any | None:
-        """Return the earliest object by the given field(s), default to primary key."""
-        order_fields = fields or ("id",)
-        qs = self
-        for f in order_fields:
-            qs = qs._clone(qs._query.order_by(getattr(self._model, f)))
-        return await qs.first()
+        """
+        Earliest object by the given field(s).
+
+        With no arguments this uses ``Meta.get_latest_by``, falling back to the
+        primary key. A leading ``-`` reverses that field.
+        """
+        q = self._query.order_by(None)
+        for f in fields or self._latest_by_fields():
+            col = getattr(self._model, f.lstrip("-"))
+            q = q.order_by(col.desc() if f.startswith("-") else col)
+        return await self._clone(q).first()
 
     async def latest(self, *fields: str) -> Any | None:
-        """Return the latest object by the given field(s), default to primary key."""
-        order_fields = fields or ("id",)
-        qs = self
-        for f in order_fields:
-            qs = qs._clone(qs._query.order_by(getattr(self._model, f).desc()))
-        return await qs.first()
+        """
+        Latest object by the given field(s) — the reverse of :meth:`earliest`.
+
+        With no arguments this uses ``Meta.get_latest_by``, falling back to the
+        primary key.
+        """
+        q = self._query.order_by(None)
+        for f in fields or self._latest_by_fields():
+            col = getattr(self._model, f.lstrip("-"))
+            q = q.order_by(col if f.startswith("-") else col.desc())
+        return await self._clone(q).first()
 
     async def dates(self, field: str, kind: str) -> list:
         """
@@ -725,7 +764,9 @@ class Manager:
     Async ORM manager attached to every Model as `.objects`.
     """
 
-    def __init__(self, model_class: type):
+    def __init__(self, model_class: type | None = None):
+        # Managers declared on a model (``objects = MyManager()``) are bound to
+        # the class later by the model metaclass, so the model is optional here.
         self._model = model_class
 
     # ── QuerySet factory shortcuts ──────────────────────────────────────────
@@ -921,6 +962,18 @@ class Manager:
 
     async def count(self) -> int:
         return await QuerySet(self._model).count()
+
+    async def exists(self) -> bool:
+        """True if the table has any rows. Mirrors ``QuerySet.exists()``."""
+        return await QuerySet(self._model).exists()
+
+    async def first(self) -> Any | None:
+        """First row by default ordering, or ``None``. Mirrors ``QuerySet.first()``."""
+        return await QuerySet(self._model).first()
+
+    async def last(self) -> Any | None:
+        """Last row by default ordering, or ``None``. Mirrors ``QuerySet.last()``."""
+        return await QuerySet(self._model).last()
 
     async def aggregate(self, **kwargs) -> dict:
         return await QuerySet(self._model).aggregate(**kwargs)

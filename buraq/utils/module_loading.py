@@ -60,8 +60,8 @@ def autodiscover_modules(*module_names: str, register_to=None) -> None:
     """
     Auto-import ``<app>.<module_name>`` for every app in INSTALLED_APPS.
 
-    Works like Django's autodiscover — useful for signals, admin registrations,
-    management commands, or any side-effect-driven imports.
+    Imports a named submodule from every installed app — useful for signals,
+    admin registrations, management commands, or any side-effect-driven imports.
 
     Usage:
         autodiscover_modules("signals")       # imports myapp.signals for each app

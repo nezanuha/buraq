@@ -1,13 +1,15 @@
 import asyncio
 from logging.config import fileConfig
+
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
 from alembic import context
+from buraq.contrib.auth.models import User  # noqa: F401
 
 # Import Base and ALL models so Alembic detects them
 from buraq.core.db import Base
-from buraq.contrib.auth.models import User  # noqa: F401
 
 # Import user app models here as you create them:
 # from users.models import ...
@@ -18,6 +20,15 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+
+
+def include_object(obj, name, type_, reflected, compare_to):
+    """Skip tables owned by models with Meta.managed = False."""
+    from buraq.core.db import unmanaged_table_names
+
+    if type_ == "table" and name in unmanaged_table_names():
+        return False
+    return True
 
 
 def run_migrations_offline() -> None:
@@ -33,7 +44,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 

@@ -6,7 +6,7 @@ These decorators let individual views override the global CSP policy set in
 
 Usage::
 
-    from buraq.views.decorators import csp_override, csp_report_only_override
+    from buraq.views.decorators.csp import csp_override, csp_report_only_override
 
     @csp_override(
         default_src=["'self'"],

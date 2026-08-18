@@ -26,7 +26,7 @@ class BuraqJSONEncoder(json.JSONEncoder):
     - Objects with a ``__json__()`` method → its return value
 
     For ``datetime`` and ``time`` objects, the millisecond (microsecond) component
-    is omitted when it is zero, matching Django 6.2 serialization behaviour.
+    is omitted when it is zero.
     """
 
     def default(self, o):

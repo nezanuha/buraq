@@ -17,8 +17,8 @@ Usage:
             if await form.is_valid():
                 name = form.cleaned_data["name"]
                 ...
-            return render(request, "contact.html", {"form": form})
-        return render(request, "contact.html", {"form": ContactForm()})
+            return await render(request, "contact.html", {"form": form})
+        return await render(request, "contact.html", {"form": ContactForm()})
 
     # ModelForm:
     class PostForm(ModelForm):

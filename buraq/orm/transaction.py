@@ -71,7 +71,7 @@ async def on_commit(func):
 
     If called inside an ``async with atomic():`` block, the callback is deferred
     until the block's commit succeeds.  If called outside any atomic block,
-    the callback runs immediately (the same behaviour as Django outside a
+    the callback runs immediately (as it does outside a
     transaction — the "transaction" is already committed at that point).
 
     Must be awaited.

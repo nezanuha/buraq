@@ -1,6 +1,6 @@
 from buraq import Buraq
-from buraq.urls import path, include
 from buraq.contrib.admin import BuraqAdmin
+from buraq.urls import include, path
 
 app = Buraq(settings_module="config.settings")
 admin = BuraqAdmin(app)

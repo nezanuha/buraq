@@ -1,5 +1,5 @@
 """
-Number formatting utilities — mirrors django.utils.numberformat.
+Number formatting utilities — grouping, decimals and localisation.
 
 Usage::
 

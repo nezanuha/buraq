@@ -78,7 +78,24 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
+def unmanaged_table_names() -> set[str]:
+    """
+    Tables owned by models with ``Meta.managed = False``.
+
+    Buraq never creates, alters or drops these — they represent existing tables
+    or database views maintained outside the ORM.
+    """
+    names = set()
+    for mapper in Base.registry.mappers:
+        opts = getattr(mapper.class_, "_meta", None)
+        if opts is not None and not opts.managed:
+            names.add(mapper.class_.__tablename__)
+    return names
+
+
 async def create_tables() -> None:
     _lazy._init()
+    unmanaged = unmanaged_table_names()
+    tables = [t for name, t in Base.metadata.tables.items() if name not in unmanaged]
     async with _lazy._engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all, tables=tables)

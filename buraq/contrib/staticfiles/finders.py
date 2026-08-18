@@ -58,7 +58,7 @@ class AppDirectoriesFinder:
     """
     Finds static files inside each installed app's ``static/`` subdirectory.
 
-    Mirrors Django's AppDirectoriesFinder.
+    Finds static files inside each installed app's ``static/`` directory.
     """
 
     def find(self, path: str) -> str | None:

@@ -1,5 +1,5 @@
 """
-Locale-aware format functions — mirrors django.utils.formats.
+Locale-aware date, time and number formatting.
 
 Usage::
 
@@ -40,7 +40,7 @@ def get_format(format_type: str, lang: str | None = None, use_l10n: bool | None 
 
 
 def date_format(value, format: str | None = None, use_l10n: bool | None = None) -> str:
-    """Format a date using Django-style format codes."""
+    """Format a date using the template format codes."""
     from buraq.template.builtins import _format_date
     fmt = format or get_format("DATE_FORMAT")
     return _format_date(value, fmt)

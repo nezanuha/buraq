@@ -9,7 +9,7 @@ Usage:
 
     async def my_view(request):
         token = get_token(request)
-        return render(request, "form.html", {"csrf_token": token})
+        return await render(request, "form.html", {"csrf_token": token})
 
     @csrf_protect
     async def sensitive_view(request):

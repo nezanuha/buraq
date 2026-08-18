@@ -14,14 +14,14 @@ class View:
         class PostView(View):
             async def get(self, request, pk: int):
                 post = await get_object_or_404(Post, id=pk)
-                return render(request, "posts/detail.html", {"post": post})
+                return await render(request, "posts/detail.html", {"post": post})
 
             async def post(self, request, pk: int):
                 form = PostForm(data=dict(await request.form()))
                 if form.is_valid():
                     await form.save()
                     return redirect("/posts/")
-                return render(request, "posts/detail.html", {"form": form})
+                return await render(request, "posts/detail.html", {"form": form})
 
         # In urls.py:
         get("/<int:pk>",  PostView.as_view(), name="post_detail")

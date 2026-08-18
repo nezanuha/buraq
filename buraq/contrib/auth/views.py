@@ -76,7 +76,7 @@ class LoginView:
 
     async def get(self, request, **kwargs):
         from buraq.shortcuts import render
-        return render(request, self.template_name, {
+        return await render(request, self.template_name, {
             "next": request.query_params.get(self.redirect_field_name, ""),
         })
 
@@ -92,7 +92,7 @@ class LoginView:
             await login(request, user)
             return redirect(self.get_success_url(request))
 
-        return render(request, self.template_name, {
+        return await render(request, self.template_name, {
             "error": "Invalid username or password.",
             "next": form_data.get(self.redirect_field_name, ""),
         })
@@ -166,7 +166,7 @@ class PasswordChangeView:
 
     async def get(self, request, **kwargs):
         from buraq.shortcuts import render
-        return render(request, self.template_name, {})
+        return await render(request, self.template_name, {})
 
     async def post(self, request, **kwargs):
         from buraq.shortcuts import redirect, render
@@ -191,7 +191,7 @@ class PasswordChangeView:
                 await User.objects.update(user.id, hashed_password=await make_password(new_pw1))
                 return redirect(self.success_url)
 
-        return render(request, self.template_name, {"errors": errors})
+        return await render(request, self.template_name, {"errors": errors})
 
 
 class PasswordResetView:
@@ -228,7 +228,7 @@ class PasswordResetView:
 
     async def get(self, request, **kwargs):
         from buraq.shortcuts import render
-        return render(request, self.template_name, {})
+        return await render(request, self.template_name, {})
 
     async def post(self, request, **kwargs):
         import hashlib
@@ -329,7 +329,7 @@ class PasswordResetConfirmView:
         from buraq.shortcuts import render
         token = kwargs.get("token", "")
         valid = self._verify_token(token) is not None
-        return render(request, self.template_name, {"valid": valid, "token": token})
+        return await render(request, self.template_name, {"valid": valid, "token": token})
 
     async def post(self, request, **kwargs):
         import hashlib
@@ -343,14 +343,14 @@ class PasswordResetConfirmView:
         parsed = self._verify_token(token)
 
         if not parsed:
-            return render(request, self.template_name, {
+            return await render(request, self.template_name, {
                 "valid": False, "error": "The reset link is invalid or has expired."
             })
 
         uid, timestamp, sig = parsed
         user = await User.objects.get_or_none(id=int(uid))
         if not user:
-            return render(request, self.template_name, {"valid": False})
+            return await render(request, self.template_name, {"valid": False})
 
         # Verify signature
         raw = f"{user.id}:{user.email}:{timestamp}"
@@ -360,19 +360,19 @@ class PasswordResetConfirmView:
             hashlib.sha256,
         ).hexdigest()[:24]
         if not hmac.compare_digest(sig, expected):
-            return render(request, self.template_name, {
+            return await render(request, self.template_name, {
                 "valid": False, "error": "Invalid reset token."
             })
 
         pw1 = form_data.get("new_password1", "")
         pw2 = form_data.get("new_password2", "")
         if pw1 != pw2:
-            return render(request, self.template_name, {
+            return await render(request, self.template_name, {
                 "valid": True, "token": token,
                 "error": "The two passwords didn't match.",
             })
         if not pw1:
-            return render(request, self.template_name, {
+            return await render(request, self.template_name, {
                 "valid": True, "token": token,
                 "error": "Password cannot be empty.",
             })
@@ -396,7 +396,7 @@ class PasswordResetDoneView:
 
         async def _view(request: Request, **kwargs):
             from buraq.shortcuts import render
-            return render(request, view.template_name, {})
+            return await render(request, view.template_name, {})
 
         _view.view_class = cls
         return _view
@@ -421,7 +421,7 @@ class PasswordChangeDoneView:
 
         async def _view(request: Request, **kwargs):
             from buraq.shortcuts import render
-            return render(request, view.template_name, {})
+            return await render(request, view.template_name, {})
 
         _view.view_class = cls
         return _view
@@ -446,7 +446,7 @@ class PasswordResetCompleteView:
 
         async def _view(request: Request, **kwargs):
             from buraq.shortcuts import render
-            return render(request, view.template_name, {})
+            return await render(request, view.template_name, {})
 
         _view.view_class = cls
         return _view

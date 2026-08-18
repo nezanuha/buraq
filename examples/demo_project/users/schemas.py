@@ -1,4 +1,4 @@
-from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -12,5 +12,5 @@ class ProfileRead(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
-    bio: Optional[str] = None
-    avatar_url: Optional[str] = None
+    bio: str | None = None
+    avatar_url: str | None = None

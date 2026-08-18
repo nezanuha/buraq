@@ -5,7 +5,7 @@ Usage:
     from buraq.utils.datastructures import MultiValueDict
 
     d = MultiValueDict({"a": [1, 2, 3]})
-    d["a"]           # → 3  (last value, Django behaviour)
+    d["a"]           # → 3  (last value wins)
     d.getlist("a")   # → [1, 2, 3]
     d.getfirst("a")  # → 1
 """

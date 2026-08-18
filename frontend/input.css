@@ -1,4 +1,0 @@
-@import "tailwindcss";
-@plugin "frutjam";
-@source "../buraq/contrib/admin/templates/**/*.html";
-@source "../buraq/core/debug.py";

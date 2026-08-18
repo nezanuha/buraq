@@ -73,7 +73,7 @@ def get_templates() -> Jinja2Templates:
         _templates.env.globals["STATIC_URL"] = settings.STATIC_URL
         _templates.env.globals["MEDIA_URL"] = settings.MEDIA_URL
 
-        # Django-style {% static %} / {% media %} block tags
+        # {% static %} / {% media %} block tags
         from buraq.contrib.staticfiles.templatetags import StaticExtension
         _templates.env.add_extension(StaticExtension)
 
@@ -113,7 +113,7 @@ def get_templates() -> Jinja2Templates:
             _templates.env.globals["get_language"]    = get_language
             _templates.env.globals["get_language_bidi"] = get_language_bidi
 
-        # ── Built-in filters (Django-compatible) ───────────────────────────
+        # ── Built-in filters ───────────────────────────────────────────────
         from buraq.template.builtins import register_builtins
         register_builtins(_templates.env)
 

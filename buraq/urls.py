@@ -33,28 +33,28 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-_DJANGO_TYPE_MAP = {"int": int, "str": str, "slug": str, "uuid": str, "path": str}
-_DJANGO_PARAM_RE = re.compile(r"<(\w+):(\w+)>")
+_PATH_TYPE_MAP = {"int": int, "str": str, "slug": str, "uuid": str, "path": str}
+_TYPED_PARAM_RE = re.compile(r"<(\w+):(\w+)>")
 
 
-def _to_fastapi_path(django_path: str) -> str:
+def _to_fastapi_path(url_path: str) -> str:
     """
-    Convert Django URL syntax → FastAPI/Starlette syntax.
+    Convert ``<int:pk>`` path syntax → FastAPI/Starlette ``{pk}`` syntax.
 
     'posts/<int:pk>/'  → '/posts/{pk}'
     'blog/<slug:slug>' → '/blog/{slug}'
     '<str:name>/'      → '/{name}'
     '<uuid:uid>'       → '/{uid}'
     """
-    converted = re.sub(r"<(?:\w+:)?(\w+)>", r"{\1}", django_path)
+    converted = re.sub(r"<(?:\w+:)?(\w+)>", r"{\1}", url_path)
     return "/" + converted.strip("/")
 
 
-def _extract_param_types(django_path: str) -> dict:
+def _extract_param_types(url_path: str) -> dict:
     """Return {param_name: python_type} from a typed URL path like /posts/<int:pk>."""
     return {
-        name: _DJANGO_TYPE_MAP.get(type_str, str)
-        for type_str, name in _DJANGO_PARAM_RE.findall(django_path)
+        name: _PATH_TYPE_MAP.get(type_str, str)
+        for type_str, name in _TYPED_PARAM_RE.findall(url_path)
     }
 
 

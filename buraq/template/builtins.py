@@ -1,5 +1,5 @@
 """
-Built-in template filters — Django-compatible set for Jinja2.
+Built-in template filters for Jinja2.
 
 Registered automatically into every Jinja2 environment via get_templates().
 Import and call register_builtins(env) to apply manually.
@@ -36,7 +36,7 @@ def _ordinal_suffix(n: int) -> str:
 
 def _format_date(value, fmt: str) -> str:
     """
-    Format a date/datetime using Django-style format codes.
+    Format a date/datetime using the template format codes.
 
     Supported codes:
       d  — day (01-31)        j  — day (1-31)          N  — month abbr (Jan…)
@@ -124,12 +124,12 @@ def _format_date(value, fmt: str) -> str:
 
 
 def date_filter(value, fmt: str = "N j, Y") -> str:
-    """Format a date or datetime using Django date format codes."""
+    """Format a date or datetime using the template date format codes."""
     return _format_date(value, fmt)
 
 
 def time_filter(value, fmt: str = "P") -> str:
-    """Format a time or datetime using Django time format codes."""
+    """Format a time or datetime using the template time format codes."""
     if fmt == "P":
         fmt = "g:i A"
     return _format_date(value, fmt)

@@ -23,7 +23,7 @@ Usage::
                 return redirect("/books")
         else:
             formset = BookFormSet()
-        return render(request, "books.html", {"formset": formset})
+        return await render(request, "books.html", {"formset": formset})
 """
 from __future__ import annotations
 

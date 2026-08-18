@@ -12,7 +12,7 @@ Usage::
             if user:
                 await login(request, user)
                 return redirect("/")
-        return render(request, "auth/login.html", {"form": form})
+        return await render(request, "auth/login.html", {"form": form})
 """
 from __future__ import annotations
 

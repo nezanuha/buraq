@@ -1,7 +1,7 @@
 """
 Cryptographic signing utilities — sign and verify data using HMAC-SHA256.
 
-Equivalent to Django's ``django.core.signing``.
+Signs values so they can round-trip through untrusted storage.
 
 Usage::
 

@@ -5,10 +5,11 @@ import sqlalchemy as sa
 from buraq.core.db import Base
 from buraq.orm.fields import Field, ManyToManyField
 from buraq.orm.manager import DoesNotExist, Manager, _ReverseFKDescriptor
+from buraq.orm.options import Options
 
 
 class _ModelState:
-    """Mirrors Django's Model._state — tracks per-instance ORM state."""
+    """Tracks per-instance ORM state (whether the row is new, which db)."""
 
     __slots__ = ("adding", "db", "fields_cache")
 
@@ -118,50 +119,114 @@ class Model(Base):
 
     def __init_subclass__(cls, **kwargs):
         meta = cls.__dict__.get("Meta")
+        opts = Options(cls, meta)
+        cls._meta = opts
+
+        # ── 0. Abstract base models ───────────────────────────────────────
+        # No table, no mapper, no manager. Fields are still converted so that
+        # SQLAlchemy copies the columns onto concrete subclasses.
+        if opts.abstract:
+            cls.__abstract__ = True
+            own_fks = {}
+            for attr_name in list(vars(cls)):
+                attr = vars(cls)[attr_name]
+                if isinstance(attr, Field) and not isinstance(attr, ManyToManyField):
+                    # Converting to a Column discards `_to` / `related_name`, so
+                    # record ForeignKeys for subclasses to build reverse
+                    # accessors from.
+                    if hasattr(attr, "_to") and hasattr(attr, "related_name"):
+                        own_fks[attr_name] = attr
+                    col = attr.to_sa_column(name=attr_name)
+                    if col is not None:
+                        setattr(cls, attr_name, col)
+            cls.__buraq_fks__ = {**_inherited_fk_fields(cls), **own_fks}
+            _apply_legacy_meta_aliases(cls, opts)
+            return
+
+        # ── 0b. Proxy models ──────────────────────────────────────────────
+        # A proxy shares its parent's table entirely; it exists only to attach
+        # different Python behaviour (managers, ordering, verbose names).
+        if opts.proxy:
+            concrete = _concrete_parent(cls)
+            if concrete is None:
+                raise TypeError(
+                    f"{cls.__name__}: Meta.proxy = True requires a concrete model parent."
+                )
+            cls.__table__ = concrete.__table__
+            cls.__tablename__ = concrete.__tablename__
+            opts.concrete_model = concrete
+            super().__init_subclass__(**kwargs)
+            _attach_managers(cls, opts)
+            _apply_legacy_meta_aliases(cls, opts)
+            _install_order_helpers(cls, opts, {})
+            return
 
         # ── 1. Auto __tablename__ ──────────────────────────────────────────
         if "__tablename__" not in cls.__dict__:
-            cls.__tablename__ = (
-                getattr(meta, "table_name", None)
-                or getattr(meta, "db_table", None)
-                or _to_table_name(cls.__name__)
-            )
+            cls.__tablename__ = opts.db_table or _to_table_name(cls.__name__)
 
         # ── 2. Auto primary key ────────────────────────────────────────────
         if "id" not in cls.__dict__:
             cls.id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+
+        # ── 2b. order_with_respect_to adds an implicit _order column ───────
+        if opts.order_with_respect_to and "_order" not in cls.__dict__:
+            cls._order = sa.Column(sa.Integer, nullable=True, index=True)
+            # The ordering is applied implicitly, so combining the two is
+            # rejected rather than letting _order silently win.
+            if opts.ordering:
+                raise TypeError(
+                    f"{cls.__name__}: Meta.order_with_respect_to cannot be combined "
+                    f"with Meta.ordering (order_with_respect_to sets ordering to '_order')."
+                )
+            opts.ordering = ["_order"]
 
         # ── 3. Collect table args from Meta (constraints, unique_together) ─
         table_args = list(getattr(cls, "__table_args__", None) or [])
         if not isinstance(table_args, list):
             table_args = list(table_args)
 
-        if meta:
-            # unique_together → UniqueConstraint
-            for fields in getattr(meta, "unique_together", []):
-                table_args.append(
-                    sa.UniqueConstraint(*fields, name=f"uq_{cls.__tablename__}_{'_'.join(fields)}")
-                )
-            # constraints
-            for constraint in getattr(meta, "constraints", []):
-                if isinstance(constraint, (UniqueConstraint, CheckConstraint)):
-                    if isinstance(constraint, UniqueConstraint):
-                        table_args.append(constraint.as_sa_constraint(cls.__tablename__))
-                    else:
-                        table_args.append(constraint.as_sa_constraint())
-                else:
-                    table_args.append(constraint)
+        table_kwargs = {}
+        if table_args and isinstance(table_args[-1], dict):
+            table_kwargs = table_args.pop()
 
-        if table_args:
+        for fields in opts.unique_together:
+            table_args.append(
+                sa.UniqueConstraint(*fields, name=f"uq_{cls.__tablename__}_{'_'.join(fields)}")
+            )
+
+        for constraint in opts.constraints:
+            if isinstance(constraint, UniqueConstraint):
+                table_args.append(constraint.as_sa_constraint(cls.__tablename__))
+            elif isinstance(constraint, CheckConstraint):
+                table_args.append(constraint.as_sa_constraint())
+            else:
+                table_args.append(constraint)
+
+        if opts.db_table_comment:
+            table_kwargs["comment"] = opts.db_table_comment
+
+        # SQLAlchemy requires the options dict to be the final element.
+        if table_kwargs:
+            cls.__table_args__ = (*table_args, table_kwargs)
+        elif table_args:
             cls.__table_args__ = tuple(table_args)
 
         # ── 4. Convert Field → SQLAlchemy Column (skip ManyToManyField) ──
         m2m_fields = {}
+        # FKs inherited from abstract bases are not in vars(cls) yet — SQLAlchemy
+        # copies those columns during mapping, which happens after this pass.
+        fk_fields = dict(_inherited_fk_fields(cls))
         for attr_name in list(vars(cls)):
             attr = vars(cls)[attr_name]
             if isinstance(attr, ManyToManyField):
                 m2m_fields[attr_name] = attr
             elif isinstance(attr, Field):
+                # Remember ForeignKeys now: converting to a Column below replaces
+                # the Field, so the reverse-accessor pass could not find them
+                # afterwards.
+                if hasattr(attr, "_to") and hasattr(attr, "related_name"):
+                    fk_fields[attr_name] = attr
                 col = attr.to_sa_column(name=attr_name)
                 if col is not None:
                     setattr(cls, attr_name, col)
@@ -170,41 +235,44 @@ class Model(Base):
         super().__init_subclass__(**kwargs)
 
         # ── 6. Apply Meta indexes (after table is registered) ─────────────
-        if meta:
-            for idx in getattr(meta, "indexes", []):
-                if isinstance(idx, Index):
-                    idx.as_sa_index(cls.__tablename__, cls)  # registers with metadata
+        for idx in opts.indexes:
+            if isinstance(idx, Index):
+                idx.as_sa_index(cls.__tablename__, cls)  # registers with metadata
 
-        # ── 7. Attach ORM manager and exceptions ──────────────────────────
-        cls.objects = Manager(cls)
+        # ── 7. Attach managers and exceptions ─────────────────────────────
+        _attach_managers(cls, opts)
         cls.DoesNotExist = type("DoesNotExist", (DoesNotExist,), {
             "__doc__": f"{cls.__name__} matching query does not exist."
         })
 
-        # ── 8. Store Meta options on class ────────────────────────────────
-        cls._meta_ordering = getattr(meta, "ordering", [])
-        cls._meta_verbose_name = getattr(meta, "verbose_name", cls.__name__.lower())
-        cls._meta_verbose_name_plural = getattr(
-            meta, "verbose_name_plural", cls._meta_verbose_name + "s"
-        )
+        # ── 8. Legacy _meta_* aliases (admin reads these) ──────────────────
+        _apply_legacy_meta_aliases(cls, opts)
 
         # ── 9. Set up ManyToManyField descriptors ─────────────────────────
         for attr_name, m2m in m2m_fields.items():
             m2m.contribute_to_class(cls, attr_name)
 
         # ── 10. Set up reverse FK descriptors on parent models ────────────
-        for attr_name in list(vars(cls)):
-            attr = vars(cls)[attr_name]
-            if isinstance(attr, Field) and hasattr(attr, "_to") and hasattr(attr, "related_name"):
-                # ForeignKey field — register a reverse accessor on the parent model
-                target = getattr(attr, "_to", None)
-                related_name = getattr(attr, "related_name", "") or f"{cls.__name__.lower()}_set"
-                if target and isinstance(target, type) and issubclass(target, Base):
-                    fk_field = attr_name
-                    child_cls = cls
-                    descriptor = _ReverseFKDescriptor(child_cls, fk_field, related_name)
-                    if not hasattr(target, related_name):
-                        setattr(target, related_name, descriptor)
+        for attr_name, fk in fk_fields.items():
+            target = getattr(fk, "_to", None)
+            related_name = (
+                getattr(fk, "related_name", "")
+                or opts.default_related_name
+                or f"{cls.__name__.lower()}_set"
+            )
+            if (
+                isinstance(target, type)
+                and issubclass(target, Base)
+                and not hasattr(target, related_name)
+            ):
+                descriptor = _ReverseFKDescriptor(cls, attr_name, related_name)
+                setattr(target, related_name, descriptor)
+
+        cls.__buraq_fks__ = fk_fields
+
+        # ── 11. order_with_respect_to helper methods ──────────────────────
+        _install_order_helpers(cls, opts, fk_fields)
+
 
     # ── Class-level helpers ────────────────────────────────────────────────────
 
@@ -213,7 +281,7 @@ class Model(Base):
         """
         Construct an instance from database row data.
 
-        Mirrors Django's Model.from_db() — sets _state.adding=False and populates
+        Sets _state.adding=False and populates
         _state.fields_cache with the loaded values.
         """
         kwargs = dict(zip(field_names, values, strict=False))
@@ -421,3 +489,122 @@ class Model(Base):
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__} object ({self.id})"
+
+
+def _inherited_fk_fields(cls) -> dict:
+    """
+    ForeignKey fields declared on abstract ancestors.
+
+    Abstract bases convert their fields to Columns, which drops the `_to` and
+    `related_name` metadata, so each records the originals in `__buraq_fks__`
+    for concrete subclasses to pick up. Walked base-first so nearer ancestors win.
+    """
+    merged = {}
+    for base in reversed(cls.__mro__[1:]):
+        merged.update(vars(base).get("__buraq_fks__") or {})
+    return merged
+
+
+def _concrete_parent(cls):
+    """Nearest mapped (non-abstract, non-proxy) ancestor — a proxy's real model."""
+    for base in cls.__mro__[1:]:
+        if base is Model or not isinstance(base, type):
+            continue
+        if issubclass(base, Base) and "__table__" in vars(base):
+            return base
+    return None
+
+
+def _apply_legacy_meta_aliases(cls, opts):
+    """
+    Keep the older ``_meta_*`` class attributes working.
+
+    ``buraq.contrib.admin`` reads ``_meta_verbose_name`` / ``_meta_verbose_name_plural``
+    directly, and third-party code may too, so these stay as aliases of the new
+    ``Model._meta`` options rather than being removed.
+    """
+    cls._meta_ordering = opts.ordering
+    cls._meta_verbose_name = opts.verbose_name
+    cls._meta_verbose_name_plural = opts.verbose_name_plural
+
+
+def _attach_managers(cls, opts):
+    """
+    Wire up ``objects`` plus ``_default_manager`` / ``_base_manager``.
+
+    Managers the user declared on the class are preserved; ``objects`` is only
+    created when no manager was declared at all. ``Meta.default_manager_name``
+    and ``Meta.base_manager_name`` select among the declared managers.
+    """
+    declared = {
+        name: value for name, value in vars(cls).items() if isinstance(value, Manager)
+    }
+
+    for name, manager in declared.items():
+        manager._model = cls
+        setattr(cls, name, manager)
+
+    if not declared:
+        cls.objects = Manager(cls)
+        declared["objects"] = cls.objects
+
+    def _resolve(option_name, configured):
+        if configured is None:
+            return None
+        if configured not in declared:
+            raise ValueError(
+                f"{cls.__name__}: Meta.{option_name} = {configured!r} does not match any "
+                f"manager on the model (found: {', '.join(sorted(declared)) or 'none'})."
+            )
+        return declared[configured]
+
+    default = _resolve("default_manager_name", opts.default_manager_name)
+    base = _resolve("base_manager_name", opts.base_manager_name)
+
+    fallback = declared.get("objects") or next(iter(declared.values()))
+    cls._default_manager = default or fallback
+    cls._base_manager = base or cls._default_manager
+    cls._managers = declared
+
+
+def _install_order_helpers(cls, opts, fk_fields=None):
+    """
+    Add ``get_<related>_order`` / ``set_<related>_order`` to the related model and
+    ``get_next_in_order`` / ``get_previous_in_order`` to this one.
+
+    Backs ``Meta.order_with_respect_to``.
+    """
+    field = opts.order_with_respect_to
+    if not field:
+        return
+
+    related_field = field if field.endswith("_id") else f"{field}_id"
+    name = cls.__name__.lower()
+
+    async def get_order(self):
+        rows = await cls.objects.filter(**{related_field: self.id}).order_by("_order")
+        return [row.id for row in rows]
+
+    async def set_order(self, id_list):
+        for position, pk in enumerate(id_list):
+            await cls.objects.filter(id=pk, **{related_field: self.id}).update(_order=position)
+
+    async def get_next_in_order(self):
+        qs = cls.objects.filter(**{related_field: getattr(self, related_field)})
+        return await qs.filter(_order__gt=self._order).order_by("_order").first()
+
+    async def get_previous_in_order(self):
+        qs = cls.objects.filter(**{related_field: getattr(self, related_field)})
+        return await qs.filter(_order__lt=self._order).order_by("-_order").first()
+
+    cls.get_next_in_order = get_next_in_order
+    cls.get_previous_in_order = get_previous_in_order
+
+    # The accessors live on the model being ordered *against*. The FK must come
+    # from the pre-conversion field map: by now the attribute is a plain Column
+    # and no longer carries `_to`.
+    fk = (fk_fields or {}).get(field) or (fk_fields or {}).get(related_field)
+    parent = getattr(fk, "_to", None) if fk is not None else None
+    if isinstance(parent, type) and issubclass(parent, Base):
+        setattr(parent, f"get_{name}_order", get_order)
+        setattr(parent, f"set_{name}_order", set_order)

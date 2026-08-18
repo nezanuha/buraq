@@ -1,4 +1,5 @@
 from buraq.urls import get, put
+
 from . import views
 
 urlpatterns = [

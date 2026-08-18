@@ -1,4 +1,5 @@
 from buraq.contrib.admin import ModelAdmin
+
 from .models import Profile
 
 

@@ -15,7 +15,17 @@ Usage:
             ordering = ["-created_at"]
             verbose_name = "post"
 """
+from buraq.orm.aggregates import Avg, Count, Max, Min, StdDev, Sum, Variance
 from buraq.orm.base import CheckConstraint, Index, Model, UniqueConstraint
+from buraq.orm.expressions import (
+    Case,
+    Exists,
+    ExpressionWrapper,
+    OuterRef,
+    Subquery,
+    Value,
+    When,
+)
 from buraq.orm.fields import (
     CASCADE,
     DO_NOTHING,
@@ -63,6 +73,21 @@ from buraq.orm.fields import (
     UUIDField,
 )
 from buraq.orm.prefetch import Prefetch
+from buraq.orm.query import F, Q
+from buraq.orm.window import (
+    CumeDist,
+    DenseRank,
+    FirstValue,
+    Lag,
+    LastValue,
+    Lead,
+    NthValue,
+    Ntile,
+    PercentRank,
+    Rank,
+    RowNumber,
+    Window,
+)
 from buraq.utils.choices import IntegerChoices, TextChoices
 
 __all__ = [
@@ -81,4 +106,13 @@ __all__ = [
     "ForeignKey", "OneToOneField", "ManyToManyField",
     "GeneratedField", "CompositePrimaryKey",
     "Prefetch",
+    # Query expressions, so `models.Q(...)`, `models.F(...)` and
+    # `models.Count(...)` are available from this one namespace.
+    "F", "Q",
+    "Case", "When", "Value", "OuterRef", "Subquery", "Exists", "ExpressionWrapper",
+    # Aggregates
+    "Count", "Sum", "Avg", "Min", "Max", "StdDev", "Variance",
+    # Window functions
+    "Window", "RowNumber", "Rank", "DenseRank", "Ntile", "Lag", "Lead",
+    "FirstValue", "LastValue", "NthValue", "CumeDist", "PercentRank",
 ]

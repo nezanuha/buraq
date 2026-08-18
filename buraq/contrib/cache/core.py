@@ -55,7 +55,7 @@ def _get_named_backend(alias: str) -> BaseCacheBackend:
 
 class _CachesHandler:
     """
-    Mirrors Django's ``caches`` object — access any configured cache by alias.
+    Access any configured cache by alias.
 
     Usage::
 

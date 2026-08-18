@@ -1,38 +1,45 @@
 """
 Shortcuts for Buraq views — render, redirect, get_object_or_404, get_list_or_404, render_to_string.
 """
+import logging
 from typing import Any
 
 from fastapi import HTTPException
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
 
+_log = logging.getLogger(__name__)
 
-def render(request: Request, template_name: str, context: dict | None = None) -> HTMLResponse:
+
+async def render(
+    request: Request, template_name: str, context: dict | None = None
+) -> HTMLResponse:
     """
     Render a Jinja2 template and return an HTMLResponse.
 
-    Context processors defined in TEMPLATE_CONTEXT_PROCESSORS are automatically
-    applied and merged into the context before rendering.
+    Context processors listed in ``TEMPLATE_CONTEXT_PROCESSORS`` run first and
+    are merged into the context; values passed by the caller win over them.
 
-    Usage:
+    This is a coroutine because context processors may need to hit the database,
+    and every query in Buraq is async. Await it::
+
         async def post_list(request):
             posts = await Post.objects.all()
-            return render(request, 'posts/post_list.html', {'posts': posts})
+            return await render(request, "posts/post_list.html", {"posts": posts})
     """
     from buraq.core.templating import get_templates
     from buraq.template.context_processors import run_context_processors
 
     ctx: dict = {}
 
-    # Auto-apply configured context processors
+    # One bad processor must not take down the page, but the failure is logged
+    # rather than swallowed -- silently returning an empty context is exactly how
+    # this went unnoticed before.
     try:
-        processor_ctx = run_context_processors(request)
-        ctx.update(processor_ctx)
+        ctx.update(await run_context_processors(request))
     except Exception:
-        pass  # never break rendering due to a context processor error
+        _log.exception("render(): context processors failed for %r", template_name)
 
-    # Caller-supplied context wins over processors
     if context:
         ctx.update(context)
 

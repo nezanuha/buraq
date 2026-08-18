@@ -41,7 +41,7 @@ class TemplateView(ContextMixin, TemplateMixin, View):
 
     async def get(self, request, **kwargs):
         ctx = await self.get_context_data(**kwargs)
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)
 
 
 class RedirectView(View):
@@ -182,7 +182,7 @@ class DetailView(SingleObjectMixin, ContextMixin, TemplateMixin, View):
         ctx = await self.get_context_data(
             object=obj, **{self.get_context_object_name(): obj}, **kwargs
         )
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)
 
 
 class ListView(MultipleObjectMixin, ContextMixin, TemplateMixin, View):
@@ -227,7 +227,7 @@ class ListView(MultipleObjectMixin, ContextMixin, TemplateMixin, View):
             })
 
         ctx.update(await self.get_context_data(**kwargs))
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)
 
 
 class FormMixin(ContextMixin):
@@ -259,7 +259,8 @@ class FormMixin(ContextMixin):
         return redirect(self.get_success_url())
 
     async def form_invalid(self, request, form):
-        return render(request, self.get_template_name(), await self.get_context_data(form=form))
+        context = await self.get_context_data(form=form)
+        return await render(request, self.get_template_name(), context)
 
 
 class CreateView(FormMixin, TemplateMixin, View):
@@ -283,7 +284,7 @@ class CreateView(FormMixin, TemplateMixin, View):
         self.kwargs = kwargs
         form = self.get_form()
         ctx = await self.get_context_data(form=form, **kwargs)
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)
 
     async def post(self, request, **kwargs):
         self.kwargs = kwargs
@@ -318,7 +319,7 @@ class UpdateView(SingleObjectMixin, FormMixin, TemplateMixin, View):
         obj = await self.get_object()
         form = self.get_form(instance=obj)
         ctx = await self.get_context_data(form=form, object=obj, **kwargs)
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)
 
     async def post(self, request, **kwargs):
         self.kwargs = kwargs
@@ -353,7 +354,7 @@ class DeleteView(SingleObjectMixin, TemplateMixin, View):
         self.kwargs = kwargs
         obj = await self.get_object()
         ctx = {"object": obj, self.get_context_object_name(): obj, **kwargs}
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)
 
     async def post(self, request, **kwargs):
         self.kwargs = kwargs
@@ -395,7 +396,7 @@ class FormView(ContextMixin, TemplateMixin, View):
         self.kwargs = kwargs
         form = self.get_form()
         ctx = await self.get_context_data(form=form, **kwargs)
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)
 
     async def post(self, request, **kwargs):
         self.kwargs = kwargs
@@ -410,7 +411,7 @@ class FormView(ContextMixin, TemplateMixin, View):
 
     async def form_invalid(self, request, form):
         ctx = await self.get_context_data(form=form)
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)
 
 
 class ArchiveView(ListView):
@@ -490,7 +491,7 @@ class ArchiveIndexView(ArchiveView):
         self.kwargs = kwargs
         years = await self.model.objects.dates(self.date_field, "year")
         ctx = await self.get_context_data(date_list=years, **kwargs)
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)
 
 
 class DateDetailView(SingleObjectMixin, TemplateMixin, View):
@@ -522,4 +523,4 @@ class DateDetailView(SingleObjectMixin, TemplateMixin, View):
             raise Http404
         name = self.get_context_object_name()
         ctx = await self.get_context_data(object=obj, **{name: obj}, **kwargs)
-        return render(request, self.get_template_name(), ctx)
+        return await render(request, self.get_template_name(), ctx)

@@ -11,7 +11,7 @@ Usage in views:
 
     async def post_list(request):
         msgs = get_messages(request)
-        return render(request, "posts/list.html", {"messages": msgs})
+        return await render(request, "posts/list.html", {"messages": msgs})
 
 In templates (Jinja2):
     {% for message in messages %}

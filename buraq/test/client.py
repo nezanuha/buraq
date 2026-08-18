@@ -198,7 +198,7 @@ class AsyncClient:
         """Inject a session cookie so the client acts as ``user`` on every request.
 
         Skips authentication backends that do not implement ``get_user`` or
-        ``aget_user`` (e.g. permission-only backends), matching Django 6.2 behaviour.
+        ``aget_user`` (e.g. permission-only backends).
         """
         from buraq.contrib.auth.backends import _load_backends
         for backend in _load_backends():

@@ -64,7 +64,7 @@ class SessionBase(ABC):
     async def exists(self, session_key: str) -> bool:
         """Return True if a session with this key exists in the store."""
 
-    # ── Convenience methods (mirror Django's Session API) ────────────────────
+    # ── Convenience methods ──────────────────────────────────────────────────
 
     async def _get_session(self, no_load: bool = False) -> dict:
         self.accessed = True

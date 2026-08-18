@@ -1,5 +1,5 @@
 """
-Django-style debug error page, shown only when DEBUG=True.
+Rich debug error page, shown only when DEBUG=True.
 
 Renders a full-page HTML traceback with source context, local variables,
 and request info so you can diagnose 500 errors in the browser instead

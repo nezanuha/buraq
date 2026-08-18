@@ -128,7 +128,7 @@ class MessageMiddleware:
     Middleware placeholder for flash messages.
 
     The actual message storage is handled by ``buraq.contrib.messages`` via
-    the session; this middleware is provided for Django-compatibility in
+    the session; this middleware is provided for compatibility in
     ``MIDDLEWARE`` lists.
     """
 

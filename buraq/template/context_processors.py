@@ -42,23 +42,37 @@ def i18n(req) -> dict:
     return {"LANGUAGE_CODE": lang}
 
 
+def _processor_paths() -> list[str]:
+    """Configured processor import paths, falling back to the defaults."""
+    from buraq.conf import settings
+
+    return getattr(
+        settings,
+        "TEMPLATE_CONTEXT_PROCESSORS",
+        [
+            "buraq.template.context_processors.request",
+            "buraq.template.context_processors.auth",
+        ],
+    )
+
+
+def _load(path: str):
+    module_path, func_name = path.rsplit(".", 1)
+    return getattr(importlib.import_module(module_path), func_name)
+
+
 async def run_context_processors(req) -> dict:
     """
-    Run all configured TEMPLATE_CONTEXT_PROCESSORS and merge their results.
+    Run every configured ``TEMPLATE_CONTEXT_PROCESSORS`` entry and merge the
+    results into one context dict.
 
-    Called automatically by TemplateResponse before rendering.
+    Awaited by the ``render()`` shortcut. Processors may be sync or async --
+    async ones are awaited, which is what lets a processor query the database
+    (every query in Buraq is async).
     """
-    from buraq.conf import settings
-    processors = getattr(settings, "TEMPLATE_CONTEXT_PROCESSORS", [
-        "buraq.template.context_processors.request",
-        "buraq.template.context_processors.auth",
-    ])
     context: dict = {}
-    for path in processors:
-        module_path, func_name = path.rsplit(".", 1)
-        module = importlib.import_module(module_path)
-        fn = getattr(module, func_name)
-        result = fn(req)
+    for path in _processor_paths():
+        result = _load(path)(req)
         if inspect.isawaitable(result):
             result = await result
         context.update(result)

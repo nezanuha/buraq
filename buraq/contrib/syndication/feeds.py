@@ -206,7 +206,7 @@ class Atom1Feed(_SyndicationFeed):
         return ET.tostring(feed, encoding="unicode", xml_declaration=False)
 
 
-# ── High-level Feed class (mirrors Django's Feed) ─────────────────────────────
+# ── High-level Feed class ─────────────────────────────────────────────────────
 
 class Feed:
     """

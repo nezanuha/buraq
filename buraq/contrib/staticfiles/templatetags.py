@@ -1,5 +1,5 @@
 """
-Jinja2 extension providing Django-style {% static %} and {% media %} tags.
+Jinja2 extension providing {% static %} and {% media %} tags.
 
 Registered automatically by Buraq — no {% load %} needed.
 
