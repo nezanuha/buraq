@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING — `render()` is now a coroutine** — `buraq.shortcuts.render()` must be awaited: `return await render(request, "posts/list.html", {"posts": posts})`. It was synchronous while `run_context_processors()` was a coroutine, so the coroutine was never awaited and context processors silently did nothing (see Fixed). Making `render()` async also allows a context processor to query the database, which was previously impossible — every query in the ORM is `await`-only, so a synchronous processor could only read attributes already on the request. All bundled views, the `startapp` scaffold, and every documentation example are updated.
+
+### Added
+
+- **Model `Meta` options** — `Model._meta` now resolves 18 options, up from 7. New: `abstract`, `proxy`, `managed`, `db_table_comment`, `app_label` (with read-only `label` / `label_lower`), `get_latest_by`, `order_with_respect_to`, `default_related_name`, `base_manager_name`, `default_manager_name`, `permissions`, and `default_permissions`. `abstract` and `proxy` are deliberately not inherited, so a concrete child of an abstract model stays concrete even when it does `class Meta(Parent.Meta)`.
+- **`Meta.abstract`** — a base model with no table of its own; its columns, including foreign keys, are copied into each concrete subclass, and reverse accessors are registered per subclass.
+- **`Meta.proxy`** — reuse a parent's table with different Python behaviour (its own ordering, managers and verbose names). A proxy without a concrete parent raises `TypeError` at import.
+- **`Meta.order_with_respect_to`** — adds an implicit `_order` column and generates `get_<model>_order()` / `set_<model>_order()` on the related model plus `get_next_in_order()` / `get_previous_in_order()` on instances. Combining it with `Meta.ordering` raises, since it sets the ordering itself.
+- **Custom managers** — declare managers as class attributes and they are bound automatically; `Meta.default_manager_name` and `Meta.base_manager_name` select among them. Naming a manager that does not exist raises `ValueError` at import. `Manager()` no longer requires the model up front.
+- **`Manager.exists()`, `.first()`, `.last()`** — these were documented but only existed on `QuerySet`, so `await Post.objects.exists()` raised `AttributeError`.
+- **Automatic permission creation** — `buraq.contrib.auth.apps.AuthConfig` connects a `post_migrate` receiver that creates a `Permission` row for every model's `add`/`change`/`delete`/`view` set plus anything in `Meta.permissions`. Safe to re-run. Add `"buraq.contrib.auth.apps.AuthConfig"` to `INSTALLED_APPS` to enable it, or call `create_permissions()` yourself.
+- **Query expressions on `buraq.models`** — `Q`, `F`, `Case`, `When`, `Value`, `OuterRef`, `Subquery`, `Exists`, `ExpressionWrapper`, the aggregates and the window functions are re-exported, so `from buraq import models` covers models, fields and queries in one import. The specific modules still work and return the same objects.
+- **Per-concern decorator modules** — `buraq.contrib.auth.decorators`, `buraq.views.decorators.http`, `.cache`, `.csrf`, `.vary` and `.csp`, alongside the flat `buraq.decorators` namespace. `buraq.views.decorators.csp` was documented but did not exist; `buraq.views.decorators` was a plain module, so the submodule import raised `ModuleNotFoundError`.
+- **Documentation: Sync and Async Code** — when a synchronous view is acceptable (and why it cannot reach the ORM), how to call blocking libraries with `asyncio.to_thread()`, and why no sync bridge ships.
+
+### Fixed
+
+- **`Meta.ordering` never reached a query** — the value was stored on the model but never applied, so a model declaring `ordering = ["-created_at"]` returned rows in unspecified order. Ordering is now applied to every queryset; an explicit `order_by()` replaces it rather than appending to it, and `order_by()` with no arguments clears it.
+- **Reverse foreign-key accessors were never created** — `Author.book_set` did not exist for any model. The pass that registers them looked for `Field` objects, but an earlier step had already replaced those with SQLAlchemy `Column`s, so the check never matched. Foreign keys are now captured before that conversion, which also makes accessors work for keys inherited from an abstract base.
+- **`TEMPLATE_CONTEXT_PROCESSORS` silently did nothing** — `render()` called the asynchronous `run_context_processors()` from synchronous code, producing a coroutine; the resulting `TypeError` was swallowed by a bare `except`, leaving every template without `request`, `user` or `LANGUAGE_CODE`. Processor failures are now logged instead of discarded.
+- **`Meta.managed = False` was ignored by migrations** — unmanaged tables were excluded from `create_tables()` but migration autogeneration still emitted `create_table` for them. An `include_object` filter is applied, and `startproject` scaffolds it into new projects.
+- **Unknown `Meta` attributes were ignored** — a typo such as `orderring` left the model on default behaviour with no indication. `class Meta` now raises `TypeError` naming the invalid attributes.
+- **Test suite could not run from a clean clone** — the settings layer refuses to import without a real `SECRET_KEY` and `.env` is gitignored, so the documented `pytest` command failed until a developer hand-wrote one. `tests/conftest.py` now sets a test-only environment, keeping the suite hermetic.
+- **Release workflow pointed at a removed directory** — the docs deployment steps still referenced the previous documentation tooling (`website/`, `versioned_docs/`, `npm run docs:version`); none of those paths exist, so the next release would have failed while installing dependencies. The workflow now builds `docs/` and publishes `docs/dist`, adding `.nojekyll` so Pages does not drop the `_astro/` asset directory.
+
+### Removed
+
+- **`node_modules` from version control** — 456 files, including platform-specific shims, were committed and no ignore rule covered them. Adding the rule alone does nothing for tracked paths, so they are removed from the index.
+- **MkDocs configuration and source** — the documentation site is Astro + Starlight; `mkdocs.yml`, the old `docs/` tree and the `mkdocs`/`mike` dependency group are gone. The site now lives at `docs/`, and the admin panel stylesheet build moved from `frontend/` to `assets/`.
+
 ## [1.5.2] - 2026-08-12
 
 ### Fixed
