@@ -1,0 +1,14 @@
+{
+  "name": "buraq-admin-assets",
+  "private": true,
+  "description": "Tailwind + Frutjam build for the bundled admin panel and debug page stylesheet.",
+  "scripts": {
+    "build": "tailwindcss -i input.css -o ../buraq/contrib/admin/static/admin/frutjam.min.css --minify",
+    "watch": "tailwindcss -i input.css -o ../buraq/contrib/admin/static/admin/frutjam.min.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "frutjam": "^2.2.5",
+    "tailwindcss": "^4.3.3"
+  }
+}

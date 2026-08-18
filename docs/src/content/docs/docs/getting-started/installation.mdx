@@ -1,0 +1,85 @@
+﻿---
+title: "Installation"
+description: "Buraq uses SQLAlchemy's async engine. SQLite support (aiosqlite) is bundled — no extra install needed for development."
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Requirements
+
+- **Python 3.11+**
+- An async database driver (pick one based on your database)
+
+## Install Buraq
+
+<Tabs>
+<TabItem label="uv (recommended)">
+
+```bash
+uv add buraq
+```
+
+</TabItem>
+<TabItem label="pip">
+
+```bash
+pip install buraq
+```
+
+</TabItem>
+</Tabs>
+
+## Install a Database Driver
+
+Buraq uses SQLAlchemy's async engine. SQLite support (`aiosqlite`) is bundled — no extra install needed for development.
+
+For other databases install the matching driver:
+
+<Tabs>
+<TabItem label="PostgreSQL (production)">
+
+```bash
+uv add "buraq[postgres]"
+# or directly: uv add asyncpg
+```
+
+</TabItem>
+<TabItem label="MySQL / MariaDB">
+
+```bash
+uv add "buraq[mysql]"
+# or directly: uv add aiomysql
+```
+
+</TabItem>
+</Tabs>
+
+## Optional Extras
+
+```bash
+# Memcached cache backend
+uv add aiomcache
+
+# Redis cache backend
+uv add "redis[hiredis]"
+```
+
+## Verify Installation
+
+```bash
+python -c "import buraq; print(buraq.__version__)"
+```
+
+## Create Your First Project
+
+```bash
+buraq startproject myproject
+cd myproject
+uv sync
+buraq migrate
+buraq runserver
+```
+
+:::tip
+`buraq runserver` auto-detects the `.venv` in your project folder and uses it — no manual activation needed.
+:::

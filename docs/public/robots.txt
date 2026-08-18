@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://buraqproject.com/sitemap-index.xml

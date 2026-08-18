@@ -1,0 +1,472 @@
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@300..800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+@plugin "frutjam";
+
+/* ═══════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Typography */
+  --sl-font:      'Onest', system-ui, -apple-system, sans-serif;
+  --sl-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Brand accent — indigo */
+  --sl-color-accent-low:  #e0e7ff;
+  --sl-color-accent:      #4f46e5;
+  --sl-color-accent-high: #3730a3;
+
+  /* Neutral scale — warm-neutral zinc */
+  --sl-color-white:   #09090b;
+  --sl-color-gray-1:  #18181b;
+  --sl-color-gray-2:  #3f3f46;
+  --sl-color-gray-3:  #71717a;
+  --sl-color-gray-4:  #a1a1aa;
+  --sl-color-gray-5:  #e4e4e7;
+  --sl-color-gray-6:  #f4f4f5;
+  --sl-color-gray-7:  #fafafa;
+  --sl-color-black:   #ffffff;
+
+  --sl-color-text:        var(--sl-color-gray-2);
+  --sl-color-text-accent: var(--sl-color-accent);
+
+  --sl-color-bg:             #ffffff;
+  --sl-color-bg-nav:         rgba(255, 255, 255, 0.72);
+  --sl-color-bg-sidebar:     #ffffff;
+  --sl-color-bg-inline-code: #f4f4f5;
+
+  --sl-color-hairline:       #e8e8ec;
+  --sl-color-hairline-light: #f1f1f4;
+  --sl-color-hairline-shade: #e4e4e7;
+
+  /* Layout */
+  --sl-nav-height:    4rem;
+  --sl-sidebar-width: 17.5rem;
+  --sl-content-width: 46rem;
+  --sl-text-code:     0.855rem;
+
+  /* Custom */
+  --bq-radius:      0.625rem;
+  --bq-radius-sm:   0.4rem;
+  --bq-ease:        cubic-bezier(0.32, 0.72, 0, 1);
+  --bq-shadow-sm:   0 1px 2px rgba(9, 9, 11, 0.04),
+                    0 1px 3px rgba(9, 9, 11, 0.06);
+  --bq-shadow-md:   0 4px 12px -2px rgba(9, 9, 11, 0.06),
+                    0 2px 6px -2px rgba(9, 9, 11, 0.04);
+}
+
+:root[data-theme='dark'] {
+  --sl-color-accent-low:  #1e1b4b;
+  --sl-color-accent:      #818cf8;
+  --sl-color-accent-high: #c7d2fe;
+
+  --sl-color-white:   #fafafa;
+  --sl-color-gray-1:  #f4f4f5;
+  --sl-color-gray-2:  #d4d4d8;
+  --sl-color-gray-3:  #a1a1aa;
+  --sl-color-gray-4:  #71717a;
+  --sl-color-gray-5:  #27272a;
+  --sl-color-gray-6:  #18181b;
+  --sl-color-gray-7:  #131316;
+  --sl-color-black:   #09090b;
+
+  --sl-color-bg:             #09090b;
+  --sl-color-bg-nav:         rgba(9, 9, 11, 0.72);
+  --sl-color-bg-sidebar:     #09090b;
+  --sl-color-bg-inline-code: #1c1c20;
+
+  --sl-color-hairline:       #232327;
+  --sl-color-hairline-light: #1c1c20;
+  --sl-color-hairline-shade: #232327;
+
+  --bq-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --bq-shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* Font smoothing + tabular figures for a crisper render */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv01', 'cv03', 'ss01';
+  letter-spacing: -0.005em;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════ */
+
+.page > .header {
+  background-color: var(--sl-color-bg-nav);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  border-bottom: 1px solid var(--sl-color-hairline);
+  box-shadow: none;
+}
+
+.site-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.03em;
+  color: var(--sl-color-white);
+}
+
+/* Search box — refined pill */
+.header button[data-open-modal] {
+  border-radius: var(--bq-radius-sm);
+  border: 1px solid var(--sl-color-hairline);
+  background: var(--sl-color-gray-7);
+  transition: border-color 0.18s var(--bq-ease),
+              background 0.18s var(--bq-ease);
+}
+
+.header button[data-open-modal]:hover {
+  border-color: var(--sl-color-gray-4);
+  background: var(--sl-color-bg);
+}
+
+/* Social icons */
+.social-icons a {
+  color: var(--sl-color-gray-3);
+  transition: color 0.18s var(--bq-ease);
+}
+.social-icons a:hover {
+  color: var(--sl-color-white);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR — visual only, never layout
+   ═══════════════════════════════════════════════════════════ */
+
+.sidebar-pane {
+  border-inline-end-color: var(--sl-color-hairline);
+}
+
+/* Section labels */
+.group-label span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+}
+
+/* Spacing. Starlight only spaces top-level items (`.top-level > li + li`);
+   items nested inside a group get none, hence the cramped look. Each rule below
+   either targets an untouched property or *replaces* Starlight's value at higher
+   specificity — none of them stack on top of an existing margin. */
+
+/* Separation between top-level groups (replaces Starlight's 0.75rem) */
+.sidebar-content .top-level > li + li {
+  margin-top: 1.5rem;
+}
+
+/* Air between a group's label and its first item */
+.sidebar-content details > summary {
+  margin-bottom: 0.4rem;
+}
+
+/* Vertical rhythm between items within a group */
+.sidebar-content ul ul li + li {
+  margin-top: 0.1rem;
+}
+
+.sidebar-content details > summary {
+  border-radius: var(--bq-radius-sm);
+  transition: background 0.15s var(--bq-ease);
+}
+
+.sidebar-content details > summary:hover {
+  background: var(--sl-color-gray-6);
+}
+
+.sidebar-content .caret {
+  color: var(--sl-color-gray-4);
+  transition: transform 0.22s var(--bq-ease);
+}
+
+details[open] > summary .caret {
+  transform: rotate(90deg);
+}
+
+/* Nav links */
+.sidebar-content a {
+  border-radius: var(--bq-radius-sm);
+  color: var(--sl-color-gray-3);
+  font-weight: 450;
+  transition: background 0.15s var(--bq-ease),
+              color 0.15s var(--bq-ease);
+}
+
+.sidebar-content a:hover {
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+}
+
+/* Active page */
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover {
+  background: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high);
+  font-weight: 600;
+}
+
+[data-theme='dark'] .sidebar-content a[aria-current='page'],
+[data-theme='dark'] .sidebar-content a[aria-current='page']:hover {
+  background: color-mix(in srgb, var(--sl-color-accent) 15%, transparent);
+  color: var(--sl-color-accent-high);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HOME — hero breakout (hide auto page title panel)
+   ═══════════════════════════════════════════════════════════ */
+
+main:has(.bq-hero) .content-panel:not(:has(.sl-markdown-content)) {
+  display: none;
+}
+
+main:has(.bq-hero) { padding: 0; }
+
+main:has(.bq-hero) .content-panel {
+  padding: 0;
+  border-top: none;
+}
+
+main:has(.bq-hero) .sl-container {
+  max-width: none;
+  margin-inline: 0;
+}
+
+main:has(.bq-hero) .sl-markdown-content {
+  max-width: none;
+}
+
+/* The footer shares the hero's zero-padded content panel, so give it back a
+   container matching .bq-page — otherwise it runs flush to the viewport edge. */
+main:has(.bq-hero) .bq-site-footer__inner {
+  max-width: 74rem;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+@media (max-width: 45rem) {
+  main:has(.bq-hero) .bq-site-footer__inner {
+    padding-inline: 1.15rem;
+  }
+}
+
+/* Hero code blocks — strip Starlight pre styling */
+/* NOTE: the home page carries `not-content`, so Starlight supplies no
+   font-family here — set the mono stack explicitly. */
+.bq-hero__code pre,
+.bq-ai-code pre {
+  margin: 0;
+  padding: 1.35rem 1.6rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.83rem;
+  line-height: 1.8;
+  overflow-x: auto;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  tab-size: 4;
+}
+
+.bq-hero__code code,
+.bq-ai-code code {
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DOC PAGE TYPOGRAPHY
+   ═══════════════════════════════════════════════════════════ */
+
+h1#_top {
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  color: var(--sl-color-white);
+}
+
+.sl-markdown-content {
+  font-size: 0.945rem;
+  line-height: 1.75;
+}
+
+.sl-markdown-content h2 {
+  font-size: 1.45rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  color: var(--sl-color-white);
+}
+
+.sl-markdown-content h3 {
+  font-size: 1.125rem;
+  font-weight: 620;
+  letter-spacing: -0.017em;
+  color: var(--sl-color-white);
+}
+
+.sl-markdown-content h4 {
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--sl-color-white);
+}
+
+/* Links */
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--sl-color-accent);
+  font-weight: 500;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, var(--sl-color-accent) 35%, transparent);
+  transition: text-decoration-color 0.18s var(--bq-ease);
+}
+
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+  text-decoration-color: var(--sl-color-accent);
+}
+
+/* Inline code */
+.sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
+  background: var(--sl-color-bg-inline-code);
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: var(--bq-radius-sm);
+  padding: 0.13em 0.4em;
+  font-size: 0.845em;
+  font-weight: 500;
+  color: var(--sl-color-gray-1);
+}
+
+/* Code blocks */
+.sl-markdown-content pre:not(:where(.not-content *)) {
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: var(--bq-radius);
+  font-size: 0.845rem;
+  line-height: 1.75;
+  box-shadow: var(--bq-shadow-sm);
+}
+
+/* Blockquote */
+.sl-markdown-content blockquote:not(:where(.not-content *)) {
+  border-inline-start: 2px solid var(--sl-color-accent);
+  padding-inline-start: 1.15rem;
+  color: var(--sl-color-gray-3);
+  font-style: normal;
+}
+
+/* Tables — markdown only, never Frutjam .table components */
+.sl-markdown-content table:not(.table) {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: var(--bq-radius);
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.885rem;
+}
+
+.sl-markdown-content table:not(.table) th {
+  background: var(--sl-color-gray-7);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sl-color-gray-3);
+  border-bottom: 1px solid var(--sl-color-hairline);
+  white-space: nowrap;
+}
+
+.sl-markdown-content table:not(.table) td {
+  border-bottom: 1px solid var(--sl-color-hairline-light);
+}
+
+.sl-markdown-content table:not(.table) tr:last-child td {
+  border-bottom: none;
+}
+
+.sl-markdown-content table:not(.table) tbody tr {
+  transition: background 0.13s var(--bq-ease);
+}
+
+.sl-markdown-content table:not(.table) tbody tr:hover {
+  background: var(--sl-color-gray-7);
+}
+
+/* Asides */
+.sl-markdown-content .starlight-aside {
+  border-radius: var(--bq-radius);
+  border-inline-start-width: 2px;
+}
+
+.sl-markdown-content .starlight-aside__title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Horizontal rule */
+.sl-markdown-content hr {
+  border-color: var(--sl-color-hairline);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TABLE OF CONTENTS
+   ═══════════════════════════════════════════════════════════ */
+
+starlight-toc a {
+  font-size: 0.815rem;
+  color: var(--sl-color-gray-3);
+  border-radius: var(--bq-radius-sm);
+  transition: color 0.15s var(--bq-ease);
+}
+
+starlight-toc a:hover {
+  color: var(--sl-color-white);
+}
+
+starlight-toc a[aria-current='true'] {
+  color: var(--sl-color-accent);
+  font-weight: 550;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PAGINATION
+   ═══════════════════════════════════════════════════════════ */
+
+.pagination-links a {
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: var(--bq-radius);
+  box-shadow: none;
+  transition: border-color 0.18s var(--bq-ease),
+              box-shadow 0.18s var(--bq-ease),
+              transform 0.18s var(--bq-ease);
+}
+
+.pagination-links a:hover {
+  border-color: var(--sl-color-gray-4);
+  box-shadow: var(--bq-shadow-md);
+  transform: translateY(-1px);
+}
+
+.pagination-links svg {
+  color: var(--sl-color-gray-4);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 50rem) {
+  h1#_top                 { font-size: 1.75rem; }
+  .sl-markdown-content h2 { font-size: 1.28rem; }
+  .sl-markdown-content h3 { font-size: 1.06rem; }
+}

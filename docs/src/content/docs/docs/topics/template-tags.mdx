@@ -1,0 +1,295 @@
+﻿---
+title: "Custom Template Tags & Filters"
+description: "Buraq lets you register custom globals, filters, and tests for Jinja2 templates using simple decorators — no tag library files, no {% load %}, no boilerplate."
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Buraq lets you register custom globals, filters, and tests for Jinja2 templates using simple decorators — no tag library files, no `{% load %}`, no boilerplate.
+
+---
+
+## Why Buraq's approach is better
+
+<Tabs>
+<TabItem label="Buraq">
+
+**Step 1 — create `templatetags.py` in your app:**
+
+```python title="myapp/templatetags.py"
+from buraq.template import register
+
+@register.global
+def format_price(amount):
+    return f"${amount:,.2f}"
+```
+
+**Step 2 — use it anywhere, no imports needed:**
+
+```html+jinja title="any template — just works"
+{{ format_price(product.price) }}
+{{ format_price(product.price, "$") }}
+```
+
+That's it. Buraq auto-discovers the file at startup and registers everything globally.
+
+</TabItem>
+<TabItem label="Django equivalent">
+
+**Step 1 — create the directory and `__init__.py`:**
+
+```
+myapp/
+└── templatetags/
+    ├── __init__.py        ← required, even if empty
+    └── myapp_tags.py
+```
+
+**Step 2 — instantiate `Library()` and decorate:**
+
+```python title="myapp/templatetags/myapp_tags.py"
+from django import template
+
+register = template.Library()
+
+@register.simple_tag
+def format_price(amount):
+    return f"${amount:,.2f}"
+```
+
+**Step 3 — `{% load %}` in every template that uses it:**
+
+```html+jinja title="every template that uses it"
+{% load myapp_tags %}
+{% format_price product.price %}
+```
+
+Forget `{% load %}` in one template → silent failure at render time.
+
+</TabItem>
+</Tabs>
+
+**Why Buraq wins:**
+
+- **Simpler** — 1 file, 1 decorator, no `{% load %}` ever vs 5 steps (directory, `__init__.py`, tag file, `Library()`, `{% load %}` in every template)
+- **Safer** — registration errors are caught at startup, not silently at render time when a template forgets `{% load %}`
+- **Faster** — no `{% load %}` parsing on every request; all tags registered once into `env.globals` at startup
+- **More powerful** — `@register.global` exposes a full Python callable with natural argument and keyword-argument support (`{{ fn(a, b, key=val) }}`); `simple_tag` cannot be called with keyword args as naturally in template syntax
+
+---
+
+## Setup
+
+Create a `templatetags.py` file inside any app listed in `INSTALLED_APPS`:
+
+```
+myapp/
+├── models.py
+├── views.py
+├── urls.py
+└── templatetags.py   ← create this
+```
+
+Buraq auto-discovers and imports every `templatetags.py` at startup. Everything registered inside is available in all templates immediately.
+
+---
+
+## Globals
+
+A global is a callable available anywhere in a template — called like a function.
+
+```python title="myapp/templatetags.py"
+from buraq.template import register
+
+@register.global
+def format_price(amount, currency="$"):
+    return f"{currency}{amount:,.2f}"
+
+@register.global
+def now():
+    from buraq.utils.timezone import now as _now
+    return _now()
+```
+
+```html+jinja title="template.html"
+<span>{{ format_price(product.price) }}</span>
+<span>{{ format_price(product.price, currency="€") }}</span>
+<footer>Generated at {{ now() }}</footer>
+```
+
+---
+
+## Filters
+
+A filter transforms a value via the `|` pipe syntax.
+
+```python title="myapp/templatetags.py"
+from buraq.template import register
+
+@register.filter
+def truncate(value, length=100):
+    value = str(value)
+    return value[:length] + "…" if len(value) > length else value
+
+@register.filter
+def currency(amount, symbol="$"):
+    return f"{symbol}{float(amount):,.2f}"
+
+@register.filter
+def initials(name):
+    return "".join(w[0].upper() for w in name.split() if w)
+```
+
+```html+jinja title="template.html"
+{{ product.description|truncate(150) }}
+{{ order.total|currency("£") }}
+{{ user.full_name|initials }}
+```
+
+---
+
+## Tests
+
+A test is used in `{% if x is mytest %}` conditions.
+
+```python title="myapp/templatetags.py"
+from buraq.template import register
+
+@register.test
+def even(value):
+    return int(value) % 2 == 0
+
+@register.test
+def published(post):
+    return post.published and post.published_at is not None
+```
+
+```html+jinja title="template.html"
+{% if loop.index is even %}
+  <tr class="alt-row">
+{% endif %}
+
+{% if article is published %}
+  <span class="badge">Live</span>
+{% endif %}
+```
+
+---
+
+## Safe output (disable auto-escaping)
+
+By default Jinja2 auto-escapes output. If your function returns trusted HTML, mark it safe with `is_safe=True`:
+
+```python
+from buraq.template import register
+
+@register.global(is_safe=True)
+def icon(name):
+    return f'<svg class="icon icon-{name}"><use href="#{name}"/></svg>'
+
+@register.filter(is_safe=True)
+def highlight(value, term):
+    return str(value).replace(term, f"<mark>{term}</mark>")
+```
+
+```html+jinja
+{{ icon("search") }}              {# rendered as raw HTML, not escaped #}
+{{ article.body|highlight(query) }}
+```
+
+---
+
+## Custom name
+
+Use `name=` to register the function under a different name in templates:
+
+```python
+from buraq.template import register
+
+@register.global(name="static")
+def static_url(path):
+    from buraq.conf import settings
+    return f"{settings.STATIC_URL}{path}"
+
+@register.filter(name="nl2br", is_safe=True)
+def newline_to_br(value):
+    return str(value).replace("\n", "<br>")
+```
+
+```html+jinja
+<img src="{{ static('images/logo.png') }}">
+{{ post.body|nl2br }}
+```
+
+---
+
+## Accessing request context
+
+Globals and filters are plain Python functions — pass `request` explicitly from the view if needed, or read context from `contextvars`:
+
+```python
+@register.global
+def active_language():
+    from buraq.utils.translation import get_language
+    return get_language()   # reads from LocaleMiddleware's ContextVar
+```
+
+---
+
+## Reference
+
+| Decorator | Template usage | Description |
+|---|---|---|
+| `@register.global` | `{{ fn(args) }}` | Callable available everywhere |
+| `@register.filter` | `{{ value\|fn(args) }}` | Transforms a value |
+| `@register.test` | `{% if x is fn %}` | Boolean check |
+
+All decorators accept:
+
+| Option | Type | Description |
+|---|---|---|
+| `name` | `str` | Override the name used in templates |
+| `is_safe` | `bool` | Wrap output in `Markup` to skip auto-escaping |
+
+---
+
+## Built-in filters
+
+Buraq registers 21 filters automatically — no `{% load %}` needed. They live in `buraq/template/builtins.py` and are installed via `register_builtins(env)` at startup.
+
+### Date & time
+
+| Filter | Usage |
+|---|---|
+| `date` | `{{ dt\|date("Y-m-d") }}` — full Django format-code set |
+| `time` | `{{ dt\|time("H:i:s") }}` |
+| `timesince` | `{{ dt\|timesince }}` → `"2 hours, 5 minutes"` |
+| `timeuntil` | `{{ dt\|timeuntil }}` → `"3 days"` |
+
+### Text
+
+| Filter | Usage |
+|---|---|
+| `truncatechars(n)` | `{{ text\|truncatechars(50) }}` |
+| `truncatewords(n)` | `{{ text\|truncatewords(10) }}` |
+| `wordcount` | `{{ body\|wordcount }}` |
+| `capfirst` | `{{ name\|capfirst }}` |
+| `addslashes` | `{{ val\|addslashes }}` |
+| `slugify` | `{{ title\|slugify }}` |
+| `linenumbers` | `{{ code\|linenumbers }}` |
+| `pluralize` | `{{ n\|pluralize }}` or `{{ n\|pluralize("y,ies") }}` |
+| `yesno` | `{{ flag\|yesno("yes,no,maybe") }}` |
+| `default_if_none` | `{{ val\|default_if_none("—") }}` |
+| `phone2numeric` | `{{ "HELLO"\|phone2numeric }}` → `"43556"` |
+| `floatformat(n)` | `{{ 3.14159\|floatformat(2) }}` → `"3.14"` |
+
+### HTML (marked safe — output not auto-escaped)
+
+| Filter | Usage |
+|---|---|
+| `linebreaks` | `{{ body\|linebreaks }}` |
+| `linebreaksbr` | `{{ body\|linebreaksbr }}` |
+| `urlize` | `{{ text\|urlize }}` |
+| `escapejs` | `var x = "{{ val\|escapejs }}"` |
+| `json_script(id)` | `{{ data\|json_script("app-data") }}` |
+| `filesizeformat` | `{{ size\|filesizeformat }}` → `"1.2 MB"` |

@@ -1,0 +1,392 @@
+﻿---
+title: "Templates"
+description: "Buraq uses Jinja2 as its sole template engine."
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Buraq uses Jinja2 as its sole template engine.
+
+---
+
+## Configuration
+
+```python title="config/settings.py"
+TEMPLATES_DIR = str(BASE_DIR / "templates")
+
+# APP_DIRS (default True) — also search <app>/templates/ in every INSTALLED_APP
+APP_DIRS = True
+```
+
+Buraq searches template directories in priority order:
+
+1. `TEMPLATES_DIR` (your project-level templates)
+2. Each installed app's `templates/` subfolder (when `APP_DIRS = True`)
+
+This means an app can ship its own templates that are automatically available without any extra configuration.
+
+---
+
+## Rendering
+
+```python
+from buraq.shortcuts import render
+
+async def my_view(request):
+    return await render(request, "posts/list.html", {"posts": posts})
+```
+
+---
+
+## Jinja2 vs Django template syntax
+
+Jinja2 and Django templates share similar syntax (`{{ var }}`, `{% block %}`, `{% for %}`, `{% if %}`) but they are not identical:
+
+| Feature | Jinja2 (Buraq) | Django templates |
+|---|---|---|
+| Filters | `{{ val\|upper }}` | `{{ val\|upper }}` — same |
+| Tests | `{% if x is defined %}` | not available |
+| Macros | `{% macro foo() %}` | not available |
+| Expressions | `{{ 1 + 2 }}`, `{{ loop.index }}` | limited |
+| `{% set %}` | ✅ | ✅ |
+| `{% include %}` | ✅ | ✅ |
+| `{% extends %}` / `{% block %}` | ✅ | ✅ |
+| `{% with %}` | ✅ | ✅ |
+| Custom globals | `@register.global` in `templatetags.py` | `@register.simple_tag` + `{% load %}` |
+| Custom filters | `@register.filter` in `templatetags.py` | `@register.filter` + `{% load %}` |
+| Custom tests | `@register.test` in `templatetags.py` | not available |
+| `{% load %}` | ❌ not needed — tags auto-discovered at startup | required in every template |
+| CSRF token | `{{ csrf_input }}` | `{% csrf_token %}` |
+
+Buraq registers its own globals (`_()`, `get_language()`, `reverse()`, etc.) to cover the most common cases without any extra setup.
+
+---
+
+## CSRF token — `{{ csrf_input }}`
+
+Buraq uses `{{ csrf_input }}` — a plain string global — instead of a special `{% csrf_token %}` tag.
+
+<Tabs>
+<TabItem label="Buraq">
+
+```html+jinja
+<form method="post">
+  {{ csrf_input }}
+  ...
+</form>
+```
+
+</TabItem>
+<TabItem label="Django equivalent">
+
+```html+jinja
+<form method="post">
+  {% csrf_token %}
+  ...
+</form>
+```
+
+</TabItem>
+</Tabs>
+
+**Why `{{ csrf_input }}` is better:**
+
+- **Consistent** — `{{ }}` outputs values, `{% %}` is for control flow. A CSRF token is a value, so `{{ }}` is the right syntax. Using `{% csrf_token %}` breaks this convention by making a tag output HTML.
+- **Simple mental model** — `csrf_input` is just a string injected into `env.globals` at startup, the same mechanism as every other global. Nothing special about it.
+- **Composable** — because it's a plain value, it works anywhere a value is valid:
+
+    ```html+jinja
+    {# inline in a form #}
+    {{ csrf_input }}
+
+    {# stored in a variable for reuse #}
+    {% set token = csrf_input %}
+    ```
+
+---
+
+## Why no `{% load %}`?
+
+<Tabs>
+<TabItem label="Buraq">
+
+```python title="myapp/templatetags.py"
+from buraq.template import register
+
+@register.global
+def my_tag():
+    return "hello"
+```
+
+```html+jinja title="any template — just works"
+{{ my_tag() }}
+```
+
+</TabItem>
+<TabItem label="Django equivalent">
+
+```python title="myapp/templatetags/myapp_tags.py"
+from django import template
+
+register = template.Library()
+
+@register.simple_tag
+def my_tag():
+    return "hello"
+```
+
+```html+jinja title="every template that uses it"
+{% load myapp_tags %}
+{% my_tag %}
+```
+
+</TabItem>
+</Tabs>
+
+**Why Buraq wins:**
+
+- **Simpler** — 1 file, 1 decorator, no `{% load %}` ever; Django requires a separate `templatetags/` directory, `__init__.py`, a `Library()` instance, the decorator, and `{% load %}` in every template that uses it
+- **Safer** — tag errors are caught at startup, not silently at render time when a template forgets `{% load %}`
+- **Faster** — no `{% load %}` parsing on every request; all tags registered once into `env.globals` at startup
+- **More powerful** — `@register.global` gives you a full callable with arguments (`{{ fn(a, b) }}`); `simple_tag` has limitations around argument handling and can't be called with keyword args as naturally in template syntax
+
+Buraq auto-discovers `templatetags.py` in every `INSTALLED_APPS` app at startup and registers all globals, filters, and tests into the Jinja2 environment once. This means:
+
+- **No per-template `{% load %}`** — no parsing overhead on every request
+- **One file, one decorator** — vs Django's `templatetags/` directory, `__init__.py`, `Library()` instance, decoration, and `{% load %}` in every template
+- **Fail loudly at startup** — a missing or broken tag file is caught immediately, not silently at render time
+
+**Performance** — both resolve to the same Jinja2 `env.globals` / `env.filters` dict lookup at render time, so runtime speed is identical. The difference is startup: Buraq's auto-discovery scans once at app startup and registers everything — no per-template `{% load %}` parsing overhead on every request.
+
+**Maintenance** — one file (`templatetags.py`), one decorator, done. The alternative requires: create `templatetags/` directory, add `__init__.py`, create the tag file, instantiate `Library()`, decorate, then `{% load %}` in every template that uses it. That's 5 steps vs 1. When you rename or move a tag, the other approach breaks silently at render time (missing `{% load %}`); Buraq fails loudly at startup.
+
+**Scalability** — auto-discovery scales better. As the app grows, new `templatetags.py` files in new apps are picked up automatically — no central registration, no config changes. `{% load %}` becomes a maintenance burden across hundreds of templates when tag libraries are reorganized.
+
+---
+
+## Built-in template globals
+
+In addition to `url`, `static`, `csrf_input`, and `now`, Buraq registers several utility globals:
+
+### `regroup(iterable, grouper)`
+
+Group a sequence by a common attribute. Returns a list of `{"grouper": value, "list": [items]}` dicts:
+
+```html+jinja
+{% set grouped = regroup(people, "city") %}
+{% for group in grouped %}
+  <h3>{{ group.grouper }}</h3>
+  {% for person in group.list %}
+    <p>{{ person.name }}</p>
+  {% endfor %}
+{% endfor %}
+```
+
+### `cycle(*values)`
+
+Returns a callable that cycles through values on each call:
+
+```html+jinja
+{% set row_class = cycle("odd", "even") %}
+{% for item in items %}
+  <tr class="{{ row_class() }}">
+    <td>{{ item.name }}</td>
+  </tr>
+{% endfor %}
+```
+
+### `ifchanged()`
+
+Returns a callable that outputs `True` only when its argument changes between calls:
+
+```html+jinja
+{% set ic = ifchanged() %}
+{% for item in items %}
+  {% if ic(item.category) %}
+    <h3>{{ item.category }}</h3>
+  {% endif %}
+  <p>{{ item.name }}</p>
+{% endfor %}
+```
+
+### `spaceless(html)`
+
+Remove whitespace between HTML tags:
+
+```html+jinja
+{{ spaceless(content) }}
+```
+
+See [Template Tags](template-tags.md) for the full API.
+
+---
+
+## Template inheritance
+
+```html+jinja title="templates/base.html"
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{% block title %}My Site{% endblock %}</title>
+</head>
+<body>
+  {% block content %}{% endblock %}
+</body>
+</html>
+```
+
+```html+jinja title="templates/posts/list.html"
+{% extends "base.html" %}
+
+{% block title %}Posts{% endblock %}
+
+{% block content %}
+  {% for post in posts %}
+    <h2>{{ post.title }}</h2>
+  {% endfor %}
+{% endblock %}
+```
+
+---
+
+## Built-in template globals
+
+Available in every template automatically — no import or passing from views needed:
+
+| Name | Description |
+|---|---|
+| `request` | Current request object |
+| `get_messages(request)` | Flash messages |
+| `_()` / `gettext()` | Translate a string (when `USE_I18N = True`) |
+| `ngettext()` | Plural translation |
+| `pgettext()` | Context-disambiguated translation |
+| `get_language()` | Active language code |
+| `get_language_bidi()` | `True` for RTL languages |
+| `csrf_input` | Hidden CSRF `<input>` field (HTML) |
+| `csrf_token` | Raw CSRF token string |
+| `url(name, **kwargs)` | Reverse a named URL — equivalent to `reverse()` |
+| `static(path)` | Prepend `STATIC_URL` to a path |
+| `STATIC_URL` | Value of the `STATIC_URL` setting |
+| `MEDIA_URL` | Value of the `MEDIA_URL` setting |
+| `{% cache timeout "key" %}` | Cache a template block — see [Cache](cache.md#-cache--template-tag) |
+
+---
+
+## Context processors
+
+`render()` automatically calls every processor listed in `TEMPLATE_CONTEXT_PROCESSORS` and merges the results into the template context before rendering. Caller-supplied keys override processor values.
+
+```python title="config/settings.py"
+TEMPLATE_CONTEXT_PROCESSORS = [
+    "buraq.template.context_processors.request",
+    "buraq.template.context_processors.auth",
+    # add your own
+]
+```
+
+You can still pass extra context explicitly — it takes priority:
+
+```python
+return await render(request, "posts/list.html", {"user": override_user})
+```
+
+---
+
+## Built-in filters
+
+Buraq ships 21 built-in Jinja2 filters, registered automatically into every environment. No `{% load %}` required.
+
+### Date & time
+
+| Filter | Example | Output |
+|---|---|---|
+| `date` | `{{ post.created_at\|date("d M Y") }}` | `"05 Aug 2026"` |
+| `time` | `{{ post.created_at\|time("H:i") }}` | `"14:30"` |
+| `timesince` | `{{ post.created_at\|timesince }}` | `"2 hours ago"` |
+| `timeuntil` | `{{ event.starts_at\|timeuntil }}` | `"3 days"` |
+
+`date` supports the full format code set: `d`, `j`, `D`, `l`, `S`, `m`, `n`, `M`, `N`, `F`, `Y`, `y`, `H`, `G`, `h`, `g`, `i`, `s`, `A`, `a`, `U`, `W`, `z`, `t`.
+
+### Text
+
+| Filter | Example | Output |
+|---|---|---|
+| `truncatechars` | `{{ text\|truncatechars(30) }}` | truncate to 30 chars, append `…` |
+| `truncatewords` | `{{ text\|truncatewords(10) }}` | truncate to 10 words |
+| `wordcount` | `{{ body\|wordcount }}` | number of words |
+| `capfirst` | `{{ name\|capfirst }}` | first character uppercased |
+| `addslashes` | `{{ value\|addslashes }}` | escape `'`, `"`, `\` |
+| `slugify` | `{{ title\|slugify }}` | `"hello-world"` |
+| `linenumbers` | `{{ code\|linenumbers }}` | prepend line numbers |
+| `pluralize` | `{{ count\|pluralize }}` | `""` / `"s"` |
+| `yesno` | `{{ flag\|yesno("yes,no") }}` | `"yes"` or `"no"` |
+| `default_if_none` | `{{ val\|default_if_none("—") }}` | fallback when `None` |
+| `phone2numeric` | `{{ "1-800-COLLECT"\|phone2numeric }}` | `"1-800-2655328"` |
+| `floatformat` | `{{ 3.14159\|floatformat(2) }}` | `"3.14"` |
+
+### HTML output
+
+| Filter | Description |
+|---|---|
+| `linebreaks` | Wrap paragraphs in `<p>`, line breaks in `<br>` |
+| `linebreaksbr` | Replace `\n` with `<br>` |
+| `urlize` | Convert plain URLs to `<a href="…">` links |
+| `escapejs` | Escape for safe embedding in JS string literals |
+| `json_script(id)` | Wrap JSON in `<script type="application/json" id="…">` |
+| `filesizeformat` | Human-readable file size (`1.2 MB`) |
+
+---
+
+## Jinja2 features
+
+```html+jinja
+{# Comments #}
+
+{# Variables and filters #}
+{{ post.title }}
+{{ post.title|upper }}
+{{ post.created_at.strftime("%Y-%m-%d") }}
+
+{# Expressions #}
+{{ loop.index }}. {{ post.title }}
+{{ 1 + 2 }}
+
+{# Control flow #}
+{% if post.is_published %}Published{% else %}Draft{% endif %}
+
+{% for post in posts %}
+  {{ loop.index }}. {{ post.title }}
+{% else %}
+  No posts.
+{% endfor %}
+
+{# Tests #}
+{% if loop.index is even %}<tr class="alt">{% endif %}
+{% if post is defined %}{{ post.title }}{% endif %}
+
+{# Set variables #}
+{% set total = items|length %}
+
+{# Include #}
+{% include "partials/nav.html" %}
+
+{# Macros — reusable snippets #}
+{% macro render_field(field) %}
+  <div class="field">
+    <label>{{ field.label }}</label>
+    <input name="{{ field.html_name }}" value="{{ field.value }}">
+  </div>
+{% endmacro %}
+
+{{ render_field(form.title) }}
+```
+
+---
+
+## Auto-escaping
+
+Jinja2 auto-escapes HTML output by default. To render trusted HTML, use the `safe` filter or mark your function with `is_safe=True` in the tag registry:
+
+```html+jinja
+{{ post.content|safe }}
+```

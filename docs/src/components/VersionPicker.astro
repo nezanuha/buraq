@@ -1,0 +1,73 @@
+---
+import { allVersions, versionForId, currentEquivalentOf } from '../versions.mjs';
+
+/**
+ * Version dropdown for the header.
+ *
+ * Renders nothing until at least one version has been archived — a picker with
+ * a single entry is noise. Each option links to the same page in the target
+ * version when that page exists there, so switching versions keeps your place.
+ */
+const versions = allVersions();
+const route = Astro.locals.starlightRoute;
+const id = route?.entry?.id ?? '';
+const active = versionForId(id);
+
+// Path of the current page relative to its version root, e.g. `tutorial/models`.
+const relative = active
+  ? currentEquivalentOf(id, active.slug).replace(/^\/docs\//, '')
+  : id.replace(/^docs\//, '');
+
+const hrefFor = (version) =>
+  version.current ? `/docs/${relative}` : `/docs/${version.slug}/${relative}`;
+---
+
+{
+  versions.length > 1 && (
+    <div class="bq-version">
+      <label>
+        <span class="sr-only">Select documentation version</span>
+        <select
+          onchange="if(this.value) window.location.href = this.value"
+          aria-label="Documentation version"
+        >
+          {versions.map((version) => (
+            <option
+              value={hrefFor(version)}
+              selected={active ? active.slug === version.slug : version.current}
+            >
+              {version.label}
+              {version.current ? ' (latest)' : ''}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  )
+}
+
+<style>
+  .bq-version select {
+    appearance: none;
+    background: var(--sl-color-bg-nav);
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: var(--bq-radius-sm, 0.4rem);
+    color: var(--sl-color-gray-2);
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.25rem 1.6rem 0.25rem 0.6rem;
+    cursor: pointer;
+    /* caret */
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right 0.72rem center, right 0.45rem center;
+    background-size: 0.28rem 0.28rem, 0.28rem 0.28rem;
+    background-repeat: no-repeat;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .bq-version select:hover {
+    border-color: var(--sl-color-gray-4);
+    color: var(--sl-color-white);
+  }
+</style>

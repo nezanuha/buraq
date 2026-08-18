@@ -1,0 +1,141 @@
+/**
+ * Sidebar for the CURRENT version of the docs (served at /docs/...).
+ *
+ * Kept separate from astro.config.mjs so `scripts/snapshot-version.mjs` can
+ * import it and freeze a copy when a version is archived. Slugs are relative to
+ * the content collection, so they all start with `docs/`.
+ */
+export const currentSidebar = [
+  {
+    label: 'Getting Started',
+    collapsed: false,
+    items: [
+      { label: 'Installation', slug: 'docs/getting-started/installation' },
+      { label: 'Quickstart', slug: 'docs/getting-started/quickstart' },
+      { label: 'Project Structure', slug: 'docs/getting-started/project-structure' },
+      { label: 'Settings', slug: 'docs/getting-started/settings' },
+    ],
+  },
+  {
+    label: 'Tutorial',
+    items: [
+      { label: 'Overview', slug: 'docs/tutorial' },
+      { label: 'Models', slug: 'docs/tutorial/models' },
+      { label: 'Views & URLs', slug: 'docs/tutorial/views-urls' },
+      { label: 'Forms', slug: 'docs/tutorial/forms' },
+      { label: 'Templates', slug: 'docs/tutorial/templates' },
+      { label: 'Authentication', slug: 'docs/tutorial/authentication' },
+    ],
+  },
+  {
+    label: 'Topics',
+    items: [
+      {
+        label: 'ORM',
+        items: [
+          { label: 'Models', slug: 'docs/topics/orm/models' },
+          { label: 'Querying', slug: 'docs/topics/orm/querying' },
+          { label: 'Advanced Querying', slug: 'docs/topics/orm/advanced-querying' },
+          { label: 'Aggregates', slug: 'docs/topics/orm/aggregates' },
+          { label: 'Window Functions', slug: 'docs/topics/orm/window-functions' },
+          { label: 'Pagination', slug: 'docs/topics/orm/pagination' },
+          { label: 'Expressions', slug: 'docs/topics/orm/expressions' },
+          { label: 'Functions', slug: 'docs/topics/orm/functions' },
+          { label: 'Relationships', slug: 'docs/topics/orm/relationships' },
+          { label: 'Migrations', slug: 'docs/topics/orm/migrations' },
+        ],
+      },
+      {
+        label: 'Views',
+        items: [
+          { label: 'Function-Based', slug: 'docs/topics/views/function-based' },
+          { label: 'Class-Based', slug: 'docs/topics/views/class-based' },
+          { label: 'Generic', slug: 'docs/topics/views/generic' },
+          { label: 'Form View', slug: 'docs/topics/views/form-view' },
+          { label: 'Mixins', slug: 'docs/topics/views/mixins' },
+        ],
+      },
+      {
+        label: 'Forms',
+        items: [
+          { label: 'Overview', slug: 'docs/topics/forms/overview' },
+          { label: 'Fields', slug: 'docs/topics/forms/fields' },
+          { label: 'Widgets', slug: 'docs/topics/forms/widgets' },
+          { label: 'Validation', slug: 'docs/topics/forms/validation' },
+          { label: 'ModelForm', slug: 'docs/topics/forms/modelform' },
+          { label: 'Formsets', slug: 'docs/topics/forms/formsets' },
+        ],
+      },
+      { label: 'Templates', slug: 'docs/topics/templates' },
+      { label: 'Template Loader', slug: 'docs/topics/template-loader' },
+      { label: 'Template Tags', slug: 'docs/topics/template-tags' },
+      { label: 'URLs', slug: 'docs/topics/urls' },
+      { label: 'Middleware', slug: 'docs/topics/middleware' },
+      { label: 'HTTP Responses', slug: 'docs/topics/http-responses' },
+      { label: 'Authentication', slug: 'docs/topics/authentication' },
+      { label: 'Permissions', slug: 'docs/topics/permissions' },
+      { label: 'CSRF', slug: 'docs/topics/csrf' },
+      { label: 'Sessions', slug: 'docs/topics/sessions' },
+      { label: 'Cache', slug: 'docs/topics/cache' },
+      { label: 'Signals', slug: 'docs/topics/signals' },
+      { label: 'i18n', slug: 'docs/topics/i18n' },
+      { label: 'Translatable Models', slug: 'docs/topics/translatable-models' },
+      { label: 'Text', slug: 'docs/topics/text' },
+      { label: 'Timezone', slug: 'docs/topics/timezone' },
+      { label: 'Sitemaps', slug: 'docs/topics/sitemaps' },
+      { label: 'Admin', slug: 'docs/topics/admin' },
+      { label: 'Static Files', slug: 'docs/topics/static-files' },
+      { label: 'Email', slug: 'docs/topics/email' },
+      { label: 'File Storage', slug: 'docs/topics/file-storage' },
+      { label: 'Validators', slug: 'docs/topics/validators' },
+      { label: 'Testing', slug: 'docs/topics/testing' },
+      { label: 'Utils', slug: 'docs/topics/utils' },
+      { label: 'Humanize', slug: 'docs/topics/humanize' },
+      { label: 'Transactions', slug: 'docs/topics/transactions' },
+      { label: 'Choices', slug: 'docs/topics/choices' },
+      { label: 'Serialization', slug: 'docs/topics/serialization' },
+      { label: 'Feeds', slug: 'docs/topics/feeds' },
+      { label: 'Checks', slug: 'docs/topics/checks' },
+      { label: 'Context Processors', slug: 'docs/topics/context-processors' },
+      { label: 'Security Middleware', slug: 'docs/topics/security-middleware' },
+      { label: 'Content Types', slug: 'docs/topics/contenttypes' },
+      { label: 'Flatpages', slug: 'docs/topics/flatpages' },
+      { label: 'Redirects', slug: 'docs/topics/redirects' },
+      { label: 'Sites', slug: 'docs/topics/sites' },
+      { label: 'Apps', slug: 'docs/topics/apps' },
+      { label: 'PostgreSQL', slug: 'docs/topics/postgres' },
+      { label: 'Signing', slug: 'docs/topics/signing' },
+      { label: 'Tasks', slug: 'docs/topics/tasks' },
+      { label: 'CSP', slug: 'docs/topics/csp' },
+      { label: 'Debugging', slug: 'docs/topics/debugging' },
+      { label: 'Sync and Async Code', slug: 'docs/topics/sync-and-async' },
+    ],
+  },
+  {
+    label: 'Management Commands',
+    items: [
+      { label: 'Commands', slug: 'docs/management/commands' },
+      { label: 'Custom Commands', slug: 'docs/management/custom-commands' },
+    ],
+  },
+  {
+    label: 'Deployment',
+    items: [
+      { label: 'Overview', slug: 'docs/deployment/overview' },
+      { label: 'PostgreSQL', slug: 'docs/deployment/postgresql' },
+      { label: 'Docker', slug: 'docs/deployment/docker' },
+    ],
+  },
+  { label: 'Migrating from Django', slug: 'docs/migrating-from-django' },
+  {
+    label: 'API Reference',
+    items: [
+      { label: 'ORM', slug: 'docs/reference/orm' },
+      { label: 'Forms', slug: 'docs/reference/forms' },
+      { label: 'Views', slug: 'docs/reference/views' },
+      { label: 'Shortcuts', slug: 'docs/reference/shortcuts' },
+      { label: 'URLs', slug: 'docs/reference/urls' },
+      { label: 'Exceptions', slug: 'docs/reference/exceptions' },
+    ],
+  },
+];

@@ -1,0 +1,133 @@
+---
+import config from 'virtual:starlight/user-config';
+
+import LanguageSelect from 'virtual:starlight/components/LanguageSelect';
+import Search from 'virtual:starlight/components/Search';
+import SiteTitle from 'virtual:starlight/components/SiteTitle';
+import SocialIcons from 'virtual:starlight/components/SocialIcons';
+import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
+import VersionPicker from './VersionPicker.astro';
+
+const shouldRenderSearch =
+  config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
+
+const NAV = [
+  { label: 'Docs',      href: '/docs/getting-started/installation' },
+  { label: 'Tutorial',  href: '/docs/tutorial' },
+  { label: 'Topics',    href: '/docs/topics/orm/models' },
+  { label: 'Reference', href: '/docs/reference/orm' },
+];
+---
+
+<div class="header-content bq-header">
+  <div class="header-start">
+    <SiteTitle />
+  </div>
+
+  <div class="header-center">
+    <nav class="navbar bq-header-nav" aria-label="Main navigation">
+      <ul class="navbar-list gap-x-6">
+        {NAV.map((item) => (
+          <li>
+            <a class="link link-xs link-hover" href={item.href}>{item.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+
+  <div class="header-end">
+    {shouldRenderSearch && (
+      <div class="bq-header-search print:hidden">
+        <Search />
+      </div>
+    )}
+    <div class="sl-hidden md:sl-flex bq-header-actions print:hidden">
+      <VersionPicker />
+      <div class="sl-flex social-icons">
+        <SocialIcons />
+      </div>
+      <ThemeSelect />
+      <LanguageSelect />
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Starlight makes .header a 3-column grid at >=50rem, which would trap
+     .header-content in column 1. Reset it so Frutjam's grid takes over. */
+  :global(.page > .header) {
+    display: block;
+    padding-block: 0;
+    /* Frutjam's .header sets height:3.5rem via --header-height; pin ours. */
+    height: var(--sl-nav-height);
+  }
+
+  /* Starlight owns the horizontal padding (it accounts for the mobile menu
+     button), so neutralise Frutjam's responsive padding-inline. */
+  .bq-header.header-content {
+    padding-inline: 0;
+    gap: 1rem;
+  }
+
+  /* Nav links — hidden below lg, Starlight's sidebar covers mobile */
+  .bq-header-nav {
+    display: none;
+  }
+
+  .bq-header-nav :global(.link) {
+    color: var(--sl-color-gray-3);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: color 0.16s var(--bq-ease, ease);
+  }
+
+  .bq-header-nav :global(.link:hover) {
+    color: var(--sl-color-white);
+  }
+
+  @media (min-width: 64rem) {
+    .bq-header-nav {
+      display: flex;
+    }
+  }
+
+  /* Search — give it real width instead of Frutjam's auto centre column */
+  .bq-header-search {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    max-width: 16rem;
+  }
+
+  .bq-header-search :global(site-search) {
+    width: 100%;
+  }
+
+  .bq-header-search :global(button[data-open-modal]) {
+    width: 100%;
+  }
+
+  .bq-header-actions {
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .social-icons {
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .social-icons::after {
+    content: '';
+    height: 1.5rem;
+    border-inline-end: 1px solid var(--sl-color-hairline);
+  }
+
+  /* On narrow screens the centre column is empty — let search breathe */
+  @media (max-width: 63.99rem) {
+    .bq-header-search {
+      max-width: none;
+    }
+  }
+</style>

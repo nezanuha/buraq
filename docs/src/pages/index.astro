@@ -1,0 +1,327 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import '../styles/home.css';
+
+const FEATURES = [
+  { icon: '⚡', star: true,  title: 'Automatic Transaction Rollback',
+    body: 'SQLAlchemy rolls back the entire transaction automatically when an exception occurs mid-request — no partial writes, no corrupt state.' },
+  { icon: '🔄', star: true,  title: 'True Async — No Wrappers',
+    body: 'Every view, ORM call, form validator, and signal handler is natively async. No sync_to_async(), no asyncio.run() hacks. One event loop.' },
+  { icon: '🛡️', star: true,  title: 'Debug Error Page',
+    body: 'A rich browser-based debug page — source context, local variables per frame, full request headers — shown automatically when DEBUG = True.' },
+  { icon: '🗃️', star: false, title: 'Django-Style ORM',
+    body: 'Model.objects.filter(), Q objects, F expressions, select_related, signals, and get_or_404 — powered by SQLAlchemy 2.0 async.' },
+  { icon: '🏗️', star: false, title: 'Built-in Admin Panel',
+    body: 'A full CRUD admin at /admin — list, filter, search, create, edit, delete — bundled inside Buraq. No sqladmin dependency.' },
+  { icon: '📋', star: false, title: 'ModelForm & Validation',
+    body: 'Auto-generate forms from model columns with field-level and cross-field async validation. CSRF protection built in.' },
+  { icon: '🧩', star: false, title: 'Class-Based Views',
+    body: 'ListView, DetailView, CreateView, UpdateView, DeleteView — the same CBV patterns developers already know.' },
+  { icon: '📡', star: false, title: 'FastAPI Underneath',
+    body: 'Automatic OpenAPI docs at /api/docs, Pydantic integration, dependency injection, and full Starlette middleware compatibility.' },
+  { icon: '🚀', star: false, title: 'Granian ASGI Server',
+    body: 'Ships with Granian — a Rust-based ASGI server that outperforms uvicorn and hypercorn in benchmarks. buraq runserver just works.' },
+  { icon: '🔐', star: false, title: 'Auth & Permissions',
+    body: 'Built-in user model, login_required, permission_required, groups, and session-based auth — no extra packages.' },
+  { icon: '🌍', star: false, title: 'i18n & Translations',
+    body: 'Django-style internationalization with gettext, translatable model fields, and per-request locale switching.' },
+  { icon: '🧰', star: false, title: 'Full CLI',
+    body: 'startproject, startapp, migrate, makemigrations, createsuperuser, collectstatic — everything you expect from a batteries-included framework.' },
+];
+
+const ROWS = [
+  ['True async queries',        'no',      'no',  'yes', '#true-async'],
+  ['Auto transaction rollback', 'opt-in',  'no',  'yes'],
+  ['ORM API',                   'yes',     'no',  'yes'],
+  ['Admin panel',               'yes',     'no',  'yes'],
+  ['ModelForm & validation',    'yes',     'no',  'yes'],
+  ['Class-based views',         'yes',     'no',  'yes'],
+  ['Auto OpenAPI docs',         'no',      'yes', 'yes'],
+  ['Type safety',               'partial', 'yes', 'yes'],
+  ['No sync wrappers needed',   'no',      'yes', 'yes'],
+  ['Built-in debug error page', 'yes',     'no',  'yes'],
+  ['manage.py CLI',             'yes',     'no',  'yes'],
+];
+
+const AI_CARDS = [
+  { icon: '🤖', title: 'Non-blocking LLM calls',
+    body: 'Await OpenAI, Anthropic, or any async AI SDK directly in your views. The event loop stays free while the model thinks.' },
+  { icon: '📡', title: 'Auto OpenAPI for inference APIs',
+    body: 'FastAPI underneath gives you typed request/response schemas and live docs at /api/docs — perfect for AI microservices.' },
+  { icon: '🚀', title: 'High-concurrency with Granian',
+    body: 'Bundled Rust-based ASGI server handles hundreds of concurrent AI requests with lower latency than gunicorn or uvicorn.' },
+  { icon: '🗃️', title: 'Async storage for AI data',
+    body: 'Store chat history, embeddings, and model outputs via the async ORM. Works with SQLite, PostgreSQL, and MySQL.' },
+  { icon: '⚙️', title: 'Background AI jobs',
+    body: 'Offload slow inference or embedding generation to buraq worker background tasks — results written to the DB when ready.' },
+  { icon: '🔐', title: 'Auth for AI chat apps',
+    body: 'Built-in user sessions, login_required, and rate limiting — everything needed to secure a multi-user AI assistant.' },
+];
+
+const HERO_CODE = `from buraq import Buraq
+from buraq import models
+from buraq.shortcuts import render
+
+app = Buraq(settings_module="config.settings")
+
+class Post(models.Model):
+    title        = models.CharField(max_length=200)
+    content      = models.TextField()
+    is_published = models.BooleanField(default=False)
+    created      = models.DateTimeField(auto_now_add=True)
+
+@app.get("/posts/")
+async def post_list(request):
+    posts = await Post.objects.filter(is_published=True).order_by("-created")
+    return await render(request, "posts/list.html", {"posts": posts})`;
+
+const AI_CODE = `from buraq import Buraq
+from buraq.contrib.auth.decorators import login_required
+from fastapi.responses import StreamingResponse
+from anthropic import AsyncAnthropic
+
+app = Buraq(settings_module="config.settings")
+llm = AsyncAnthropic()
+
+@app.post("/chat/")
+@login_required
+async def chat(request):
+    body   = await request.json()
+    prompt = body["message"]
+
+    async def token_stream():
+        async with llm.messages.stream(
+            model="claude-opus-5",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        ) as stream:
+            async for text in stream.text_stream:
+                yield text
+
+    return StreamingResponse(token_stream(), media_type="text/plain")`;
+---
+
+<StarlightPage frontmatter={{ title: 'Buraq — The Async Python Framework', template: 'splash' }}>
+{/* `not-content` opts out of Starlight's markdown styling — notably the
+    `* + *` margin-top rule, which otherwise offsets every grid item but the first. */}
+<div class="bq-home not-content">
+
+  <!-- ── Hero ───────────────────────────────────────────── -->
+  <section class="bq-hero">
+    <span class="bq-hero__badge">Async-first · Production-ready</span>
+
+    <h1>
+      The async Python framework<br />
+      <em>you already know how to use</em>
+    </h1>
+
+    <p class="bq-hero__sub">
+      Buraq brings Django's developer experience — ORM, admin, forms, CBVs — to the
+      modern async ecosystem, built on FastAPI and SQLAlchemy 2.0.
+    </p>
+
+    <div class="bq-hero__actions">
+      <a href="/docs/getting-started/installation" class="bq-btn bq-btn-primary">Get Started</a>
+      <a href="/docs/getting-started/quickstart"    class="bq-btn bq-btn-ghost">Quickstart →</a>
+    </div>
+
+    <div class="bq-hero__code">
+      <div class="bq-hero__code-bar">
+        <span style="background:#ff5f57"></span>
+        <span style="background:#febc2e"></span>
+        <span style="background:#28c840"></span>
+        <em>main.py</em>
+      </div>
+      <pre><code>{HERO_CODE}</code></pre>
+    </div>
+  </section>
+
+  <div class="bq-page">
+
+    <!-- ── Features ─────────────────────────────────────── -->
+    <section class="bq-section">
+      <p class="bq-label">Why Buraq</p>
+      <h2 class="bq-title">Everything a full-stack framework gives you.<br />Now fully async.</h2>
+      <p class="bq-sub">
+        Stop choosing between developer ergonomics and async performance.
+        Buraq gives you both without compromise.
+      </p>
+
+      <div class="bq-features">
+        {FEATURES.map((f) => (
+          <article class={`bq-card${f.star ? ' bq-card--star' : ''}`}>
+            <span class="bq-card__icon">{f.icon}</span>
+            <h3>{f.title}</h3>
+            <p>{f.body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <hr class="bq-divider" />
+
+    <!-- ── Comparison ───────────────────────────────────── -->
+    <section class="bq-section">
+      <p class="bq-label">Comparison</p>
+      <h2 class="bq-title">How Buraq stacks up</h2>
+      <p class="bq-sub">The best of two worlds, without the tradeoffs of either.</p>
+
+      <div class="bq-compare-wrap">
+        <table class="bq-compare">
+          <thead>
+            <tr>
+              <th scope="col">Feature</th>
+              <th scope="col" class="bq-c">Django</th>
+              <th scope="col" class="bq-c">FastAPI</th>
+              <th scope="col" class="bq-c bq-col-buraq">Buraq</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ROWS.map(([feat, dj, fa, bq, href]) => (
+              <tr>
+                <th scope="row">
+                  {href
+                    ? <a class="bq-compare__link" href={href}>{feat}<sup aria-hidden="true">†</sup></a>
+                    : feat}
+                </th>
+                <td class="bq-c">
+                  {dj === 'yes'     && <span class="bq-yes"     aria-label="Yes">✓</span>}
+                  {dj === 'no'      && <span class="bq-no"      aria-label="No">✕</span>}
+                  {dj === 'opt-in'  && <span class="bq-partial">opt-in</span>}
+                  {dj === 'partial' && <span class="bq-partial">partial</span>}
+                </td>
+                <td class="bq-c">
+                  {fa === 'yes'     && <span class="bq-yes"     aria-label="Yes">✓</span>}
+                  {fa === 'no'      && <span class="bq-no"      aria-label="No">✕</span>}
+                  {fa === 'partial' && <span class="bq-partial">partial</span>}
+                </td>
+                <td class="bq-c bq-col-buraq">
+                  {bq === 'yes'     && <span class="bq-yes"     aria-label="Yes">✓</span>}
+                  {bq === 'no'      && <span class="bq-no"      aria-label="No">✕</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="bq-compare__note">
+        <span aria-hidden="true">†</span> Django ships async query methods, but they
+        wrap the synchronous ORM and run on one shared thread —
+        <a href="#true-async">see the measurement</a>.
+      </p>
+    </section>
+
+    <hr class="bq-divider" />
+
+    <!-- ── True async ───────────────────────────────────── -->
+    <section class="bq-section" id="true-async">
+      <p class="bq-label">Architecture</p>
+      <h2 class="bq-title">Async that actually runs concurrently</h2>
+      <p class="bq-sub">
+        Django's ORM is synchronous. Its async methods wrap the sync
+        implementation, so concurrent queries queue behind one another. Buraq's
+        ORM is async all the way down — concurrency is bounded by your
+        connection pool, not by a shared thread.
+      </p>
+
+      <div class="bq-async-compare">
+        <article class="bq-async-card">
+          <header class="bq-async-card__head">
+            <span class="bq-async-tag bq-async-tag--muted">Django 5.0</span>
+            <span class="bq-async-note">async wrapper over sync ORM</span>
+          </header>
+          <pre><code>{`# django/db/models/query.py
+
+async def aget(self, *args, **kwargs):
+    return await sync_to_async(self.get)(*args, **kwargs)`}</code></pre>
+          <p class="bq-async-card__foot">
+            <code>sync_to_async</code> defaults to <code>thread_sensitive=True</code>,
+            which runs every call on one shared thread.
+          </p>
+        </article>
+
+        <article class="bq-async-card bq-async-card--ours">
+          <header class="bq-async-card__head">
+            <span class="bq-async-tag">Buraq</span>
+            <span class="bq-async-note">native async, no wrapper</span>
+          </header>
+          <pre><code>{`# asyncpg / aiosqlite driver, awaited directly
+
+post = await Post.objects.get(id=1)`}</code></pre>
+          <p class="bq-async-card__foot">
+            Real non-blocking I/O. Thousands of in-flight queries on a single
+            thread, limited only by the pool.
+          </p>
+        </article>
+      </div>
+
+      <div class="bq-async-bench">
+        <p class="bq-async-bench__title">8 concurrent queries, 100&thinsp;ms each</p>
+        <div class="bq-async-bench__rows">
+          <div class="bq-async-bench__row">
+            <span class="bq-async-bench__label">Django <code>aget()</code></span>
+            <span class="bq-async-bench__bar" style="--w:100%"></span>
+            <span class="bq-async-bench__val bq-async-bench__val--slow">0.81s</span>
+          </div>
+          <div class="bq-async-bench__row">
+            <span class="bq-async-bench__label">True async I/O</span>
+            <span class="bq-async-bench__bar bq-async-bench__bar--fast" style="--w:12.3%"></span>
+            <span class="bq-async-bench__val">0.10s</span>
+          </div>
+        </div>
+        <p class="bq-async-bench__foot">
+          Measured with <code>asgiref.sync_to_async</code> at Django's default
+          settings — the same call path <code>aget()</code> uses. Serialised
+          through one thread versus running concurrently.
+        </p>
+      </div>
+    </section>
+
+    <hr class="bq-divider" />
+
+    <!-- ── AI ───────────────────────────────────────────── -->
+    <section class="bq-section">
+      <div class="bq-ai">
+        <p class="bq-label">AI-Ready</p>
+        <h2 class="bq-title">The ideal layer for AI products</h2>
+        <p class="bq-sub">
+          Buraq's async-first design means every part of your stack — API calls, database
+          writes, background jobs — runs concurrently without blocking.
+        </p>
+
+        <div class="bq-ai-grid">
+          {AI_CARDS.map((c) => (
+            <article class="bq-ai-card">
+              <span class="bq-ai-card__icon">{c.icon}</span>
+              <h3>{c.title}</h3>
+              <p>{c.body}</p>
+            </article>
+          ))}
+        </div>
+
+        <div class="bq-ai-code">
+          <div class="bq-ai-code-bar">✦ AI streaming endpoint — main.py</div>
+          <pre><code>{AI_CODE}</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CTA ──────────────────────────────────────────── -->
+    <section class="bq-section">
+      <div class="bq-cta">
+        <h2>Start building in minutes</h2>
+        <p>One command sets up a full project with database, admin, and auth ready to go.</p>
+
+        <div class="bq-cta__install">pip install buraq &amp;&amp; buraq startproject myapp</div>
+
+        <div class="bq-cta__actions">
+          <a href="/docs/getting-started/installation" class="bq-btn bq-btn-primary">Installation Guide</a>
+          <a href="/docs/getting-started/quickstart"   class="bq-btn bq-btn-ghost">Quickstart</a>
+          <a href="/docs/migrating-from-django"        class="bq-btn bq-btn-ghost">Migrating from Django</a>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+</StarlightPage>

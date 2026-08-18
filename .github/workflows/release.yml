@@ -68,9 +68,23 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
+      - name: Set up Node.js
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: docs/package-lock.json
+
       - name: Install docs dependencies
         if: steps.tag_check.outputs.exists == 'false'
-        run: uv sync --group docs
+        run: npm ci
+        working-directory: docs
+
+      - name: Build docs site
+        if: steps.tag_check.outputs.exists == 'false'
+        run: npm run build
+        working-directory: docs
 
       - name: Configure git
         if: steps.tag_check.outputs.exists == 'false'
@@ -78,21 +92,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Deploy docs
+      - name: Deploy to GitHub Pages
         if: steps.tag_check.outputs.exists == 'false'
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          MINOR=$(echo "$VERSION" | cut -d. -f1,2)
-
-          # Redeploy the current latest with noindex before it loses the alias,
-          # but only when it's a different version (guards against re-releasing same minor).
-          PREV=$(uv run mike list --deploy-prefix docs 2>/dev/null | grep '\[latest\]' | awk '{print $1}')
-          if [ -n "$PREV" ] && [ "$PREV" != "$MINOR" ]; then
-            BURAQ_DOCS_NOINDEX=1 uv run mike deploy --push --deploy-prefix docs "$PREV"
-          fi
-
-          uv run mike deploy --push --deploy-prefix docs --update-aliases "$MINOR" latest
-          uv run mike set-default --push --deploy-prefix docs latest
+          git fetch origin gh-pages || true
+          cp -r docs/dist /tmp/site-build
+          git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
+          git rm -rf . --quiet || true
+          cp -r /tmp/site-build/. .
+          # GitHub Pages would otherwise skip files/dirs beginning with an underscore
+          touch .nojekyll
+          git add .
+          git commit -m "deploy: ${{ steps.version.outputs.tag }}"
+          git push origin gh-pages
+          git checkout main
 
       - name: Create git tag
         if: steps.tag_check.outputs.exists == 'false'

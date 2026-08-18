@@ -250,7 +250,7 @@ Buraq is built on the fastest available Python components at every layer:
 
 ## Documentation
 
-Full documentation: [buraqproject.com/docs/1.0](https://buraqproject.com/docs/1.0)
+Full documentation: [buraqproject.com/docs](https://buraqproject.com/docs)
 
 ---
 

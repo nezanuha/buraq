@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@plugin "frutjam";
+
+/* Scan the repository from its root. Tailwind v4 auto-detects sources relative
+   to the nearest package root; because this package.json lives in assets/,
+   that default would only cover assets/ and silently drop ~20 KB of admin and
+   debug-page styles. Declaring the root keeps the output identical to a
+   repo-root build. .gitignore is respected, so node_modules is skipped. */
+@source "../";
