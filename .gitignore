@@ -25,3 +25,11 @@ media/
 CLAUDE.md
 .claude/
 site/
+
+# Node — frontend/ builds the admin panel CSS, docs/ is the Starlight site
+node_modules/
+
+# Docs site (Astro + Starlight)
+docs/node_modules/
+docs/dist/
+docs/.astro/
