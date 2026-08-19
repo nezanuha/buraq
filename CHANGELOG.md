@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Template snippets rendered without highlighting** — 37 code blocks were fenced `html+jinja` or `html+django`, names carried over from the previous documentation tooling. Shiki has no grammar under either, so every build logged a warning and fell back to plain text. Both now alias to the bundled `twig` grammar, which highlights HTML with `{% %}` and `{{ }}` tags.
 - **A newly created project could not generate its first migration** — the scaffolded `alembic/env.py` imported no models, so `Base.metadata` was empty in the Alembic process and autogenerate reported no changes. `startproject` → `makemigrations` → `migrate` produced a database containing only `alembic_version`, and the documentation compounded it by stating that `migrate` alone creates the tables.
 - **Twenty-three settings could not be set** — `CACHE_TABLE`, `ROOT_URLCONF`, `APPEND_SLASH`, `SESSION_ENGINE`, `CONTENT_SECURITY_POLICY`, `ADMINS`, `TASKS` and others were read through `getattr(settings, ...)` but never declared, so assigning one raised `ValueError` and a settings module naming one was ignored. Most were already documented. All are now declared with their previous fallbacks as defaults.
 - **Autogeneration proposed dropping the cache and session tables** — the database cache and session backends create their tables with raw SQL, so they are absent from `Base.metadata` and Alembic treated them as tables to remove. Both are now excluded alongside `Meta.managed = False` models.
@@ -129,7 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--settings MODULE` global option — accepted by every `buraq` command; loads the named settings module before the command runs, overriding the defaults (e.g. `buraq migrate --settings config.prod_settings`); also read from the `BURAQ_SETTINGS_MODULE` environment variable
 - `createsuperuser` — completely rewritten: interactive prompts for username, email, and password with two-pass confirmation; checks for duplicate username and email before inserting; accepts `--username`, `--email`, `--password`, and `--no-input` for scripted/CI use; uses `User.objects.create()` instead of raw SQLAlchemy session
 
-**Static Files — Django-equivalent feature set**
+**Static Files — complete feature set**
 - `STATICFILES_DIRS` setting — list of source directories searched by finders (replaces single `STATIC_DIR`; `STATIC_DIR` kept for backward compatibility)
 - `STATICFILES_FINDERS` setting — list of finder class paths; defaults to `FileSystemFinder` + `AppDirectoriesFinder`
 - `STATICFILES_STORAGE` setting — pluggable storage backend class path; defaults to `StaticFilesStorage`

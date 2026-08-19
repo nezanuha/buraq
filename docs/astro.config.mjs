@@ -44,6 +44,21 @@ export default defineConfig({
         { icon: 'github', label: 'GitHub', href: 'https://github.com/nezanuha/buraq' },
       ],
       customCss: ['./src/styles/custom.css'],
+        /**
+         * Template snippets are fenced `html+jinja` (and one `html+django`) —
+         * Pygments names carried over from the previous docs tooling. Shiki has
+         * no grammar under those names, so every build warned and fell back to
+         * plain text. `twig` is the bundled grammar that highlights HTML with
+         * `{% %}` / `{{ }}` tags, which is exactly what these snippets are.
+         */
+        expressiveCode: {
+          shiki: {
+            langAlias: {
+              'html+jinja': 'twig',
+              'html+django': 'twig',
+            },
+          },
+        },
       components: {
         Header: './src/components/Header.astro',
         Footer: './src/components/Footer.astro',
