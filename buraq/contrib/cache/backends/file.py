@@ -28,7 +28,7 @@ class FileCacheBackend(BaseCacheBackend):
     def _read_sync(self, path: Path) -> Any | None:
         if not path.exists():
             return None
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         if data["expires_at"] is not None and time.time() > data["expires_at"]:
             path.unlink(missing_ok=True)
             return None
@@ -36,7 +36,7 @@ class FileCacheBackend(BaseCacheBackend):
 
     def _write_sync(self, path: Path, payload: dict) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, default=str))
+        path.write_text(json.dumps(payload, default=str), encoding="utf-8")
 
     async def get(self, key: str) -> Any | None:
         path = self._key_path(key)

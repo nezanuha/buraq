@@ -57,7 +57,7 @@ class FileSessionBackend(SessionBase):
 
         def _read() -> tuple[dict, bool]:
             try:
-                raw = json.loads(path.read_text())
+                raw = json.loads(path.read_text(encoding="utf-8"))
                 if raw.get("expires", 0) < time.time():
                     path.unlink(missing_ok=True)
                     return {}, True  # expired
@@ -82,7 +82,7 @@ class FileSessionBackend(SessionBase):
                 "data": self._session_cache or {},
                 "expires": self.get_expiry_date(),
             }
-            path.write_text(json.dumps(payload))
+            path.write_text(json.dumps(payload), encoding="utf-8")
 
         await asyncio.to_thread(_write)
 
@@ -102,7 +102,7 @@ class FileSessionBackend(SessionBase):
             removed = 0
             for f in storage.glob("session_*"):
                 try:
-                    raw = json.loads(f.read_text())
+                    raw = json.loads(f.read_text(encoding="utf-8"))
                     if raw.get("expires", 0) < now:
                         f.unlink()
                         removed += 1

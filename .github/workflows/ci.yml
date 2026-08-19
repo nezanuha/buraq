@@ -8,9 +8,15 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Buraq scaffolds files, re-executes itself through a virtualenv and shells
+    # out to alembic -- all of which behave differently per OS. Testing only on
+    # Linux is how a scaffolded main.py written in the Windows locale encoding
+    # (cp1252) shipped as a project that would not even parse.
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.11", "3.12"]
 
     steps:
@@ -35,3 +41,37 @@ jobs:
         env:
           SECRET_KEY: "ci-test-secret-key-not-for-production-use"
           DATABASE_URL: "sqlite+aiosqlite:///./test.db"
+
+      # Granian is the default server `buraq runserver` starts and what the
+      # deployment docs recommend, but it is a compiled Rust extension: it can
+      # import cleanly and still have its worker die on start. Boot it against a
+      # real request so a broken default is caught here rather than in production.
+      - name: Smoke test the default server (granian)
+        # Bash heredoc and backgrounding; the point is whether the compiled
+        # extension serves, which one platform answers well enough.
+        if: runner.os == 'Linux'
+        run: |
+          cat > ci_smoke_app.py <<'APP'
+          async def app(scope, receive, send):
+              if scope['type'] == 'lifespan':
+                  while True:
+                      m = await receive()
+                      if m['type'] == 'lifespan.startup':
+                          await send({'type': 'lifespan.startup.complete'})
+                      elif m['type'] == 'lifespan.shutdown':
+                          await send({'type': 'lifespan.shutdown.complete'})
+                          return
+                  return
+              await send({'type': 'http.response.start', 'status': 200,
+                          'headers': [(b'content-type', b'text/plain')]})
+              await send({'type': 'http.response.body', 'body': b'ok'})
+          APP
+          uv run granian --interface asgi --host 127.0.0.1 --port 8123 ci_smoke_app:app &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8123/ >/dev/null 2>&1; then
+              echo 'granian served a request'; exit 0
+            fi
+            sleep 1
+          done
+          echo 'granian never served a request — the default server is broken on this platform'
+          exit 1

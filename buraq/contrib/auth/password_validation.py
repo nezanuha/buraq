@@ -88,7 +88,7 @@ class CommonPasswordValidator:
             import pathlib
             self._extra = frozenset(
                 p.strip().lower()
-                for p in pathlib.Path(passwords_list_path).read_text().splitlines()
+                for p in pathlib.Path(passwords_list_path).read_text(encoding="utf-8").splitlines()
                 if p.strip()
             )
         else:
