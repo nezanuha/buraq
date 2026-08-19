@@ -28,6 +28,9 @@ class Buraq(FastAPI):
         if settings_module:
             self._load_settings(settings_module)
 
+        self._startup_hooks: list = []
+        self._shutdown_hooks: list = []
+
         @asynccontextmanager
         async def lifespan(app: "Buraq"):
             await self._on_startup()
@@ -168,7 +171,32 @@ class Buraq(FastAPI):
             response.headers["Strict-Transport-Security"] = hsts
         return response
 
+    def on_startup(self, func):
+        """
+        Register a coroutine to run once the framework has finished starting up.
+
+        Use this rather than replacing ``_on_startup``: that method is what loads
+        INSTALLED_APPS, runs system checks and warms the template and translation
+        caches, so overwriting it leaves the app running without any of them.
+
+            @app.on_startup
+            async def seed():
+                ...
+        """
+        self._startup_hooks.append(func)
+        return func
+
+    def on_shutdown(self, func):
+        """Register a coroutine to run before the framework tears itself down."""
+        self._shutdown_hooks.append(func)
+        return func
+
     async def _on_startup(self) -> None:
+        # First: app configs connect signal receivers in ready(), and the checks
+        # below inspect what those hooks register.
+        from buraq.apps import setup as _setup_apps
+        await _setup_apps()
+
         from buraq.checks.registry import registry
         registry.run_checks_or_raise()
 
@@ -179,7 +207,15 @@ class Buraq(FastAPI):
             from buraq.utils.translation import warmup_catalogs
             warmup_catalogs()
 
+        for hook in self._startup_hooks:
+            await hook()
+
     async def _on_shutdown(self) -> None:
+        # Application hooks first: they may still need the connection the engine
+        # below is about to dispose of.
+        for hook in reversed(self._shutdown_hooks):
+            await hook()
+
         from buraq.core.db import _lazy
         if _lazy._engine is not None:
             await _lazy._engine.dispose()

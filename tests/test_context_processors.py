@@ -18,7 +18,9 @@ from buraq.template.context_processors import run_context_processors
 
 
 class FakeRequest:
-    user = "alice"
+    # `user` lives in the ASGI scope — the auth processor reads it from there,
+    # since request.user asserts AuthenticationMiddleware is installed.
+    scope = {"user": "alice"}
 
     class state:
         language = "fr"
@@ -100,3 +102,34 @@ def test_render_is_a_coroutine_function():
     from buraq.shortcuts import render
 
     assert inspect.iscoroutinefunction(render)
+
+
+async def test_auth_processor_works_without_authentication_middleware(processors):
+    """
+    Starlette's `request.user` asserts AuthenticationMiddleware is installed,
+    and that AssertionError is not caught by `getattr(..., None)`. Reading the
+    scope keeps the processor usable in apps that do not install it.
+    """
+    processors(["buraq.template.context_processors.auth"])
+
+    class NoAuthRequest:
+        scope: dict = {}
+
+        @property
+        def user(self):
+            raise AssertionError("AuthenticationMiddleware must be installed")
+
+    ctx = await run_context_processors(NoAuthRequest())
+
+    assert ctx == {"user": None}
+
+
+async def test_auth_processor_reads_the_user_from_scope(processors):
+    processors(["buraq.template.context_processors.auth"])
+
+    class WithUser:
+        scope = {"user": "alice"}
+
+    ctx = await run_context_processors(WithUser())
+
+    assert ctx == {"user": "alice"}

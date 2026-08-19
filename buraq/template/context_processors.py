@@ -25,8 +25,16 @@ def request(req) -> dict:
 
 
 def auth(req) -> dict:
-    """Adds the authenticated user to the template context."""
-    return {"user": getattr(req, "user", None)}
+    """
+    Adds the authenticated user to the template context.
+
+    Reads the ASGI scope rather than ``request.user``: that property asserts
+    AuthenticationMiddleware is installed, and the AssertionError it raises is
+    not caught by ``getattr(..., None)``. Templates get ``None`` when auth
+    middleware is absent instead of the whole processor run failing.
+    """
+    scope = getattr(req, "scope", None) or {}
+    return {"user": scope.get("user")}
 
 
 def debug(req) -> dict:

@@ -21,6 +21,9 @@ class BuraqSettings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./db.sqlite3"
+    # Log every statement the engine emits. Tied to DEBUG previously, which
+    # meant management commands buried their own output in SQL.
+    DATABASE_ECHO: bool = False
 
     # Auth
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
@@ -77,6 +80,40 @@ class BuraqSettings(BaseSettings):
     CACHE_KEY_PREFIX: str = ""
     CACHE_FILE_PATH: str | None = None
     CACHE_DEFAULT_TIMEOUT: int = 300
+    CACHE_TABLE: str = "buraq_cache_table"
+    CACHE_CULL_PROBABILITY: float = 0.1
+    CACHE_MEMCACHED_SERVERS: list[str] | None = None
+    CACHE_MEMCACHED_URL: str | None = None
+    CACHES: dict = {}
+
+    # Sessions
+    SESSION_ENGINE: str = "buraq.contrib.sessions.backends.db"
+    SESSION_CACHE_ALIAS: str = "default"
+    SESSION_FILE_PATH: str | None = None
+
+    # URLs
+    ROOT_URLCONF: str | None = None
+    APPEND_SLASH: bool = True
+    PREPEND_WWW: bool = False
+
+    # Templates
+    APP_DIRS: bool = True
+
+    # Content Security Policy
+    CONTENT_SECURITY_POLICY: dict | None = None
+    CONTENT_SECURITY_POLICY_REPORT_ONLY: dict | None = None
+    CONTENT_SECURITY_POLICY_NONCE_DIRECTIVES: list[str] = []
+
+    # Error reporting
+    ADMINS: list = []
+    MANAGERS: list = []
+
+    # Files, tasks and number formatting
+    DEFAULT_FILE_STORAGE: str | None = None
+    TASKS: dict = {}
+    NUMBER_GROUPING: int = 3
+    DECIMAL_SEPARATOR: str = "."
+    THOUSAND_SEPARATOR: str = ","
 
     # Static files
     STATIC_ROOT: str | None = None

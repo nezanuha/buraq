@@ -34,8 +34,16 @@ class DatabaseCache(BaseCacheBackend):
     """Cache backend that persists entries in a database table."""
 
     def __init__(
-        self, table: str = DEFAULT_TABLE, *, cull_probability: float | None = None, **kwargs
+        self, table: str | None = None, *, cull_probability: float | None = None, **kwargs
     ):
+        if table is None:
+            # Falls back to the setting so CACHE_TABLE actually takes effect; an
+            # explicit table (from CACHES OPTIONS) still wins.
+            try:
+                from buraq.conf import settings
+                table = getattr(settings, "CACHE_TABLE", None) or DEFAULT_TABLE
+            except Exception:
+                table = DEFAULT_TABLE
         self._table = table
         if cull_probability is None:
             try:

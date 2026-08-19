@@ -34,45 +34,47 @@ async def create_permissions(verbosity: int = 1) -> int:
     Safe to run repeatedly — existing codenames are left untouched, so this can
     run after every migrate.
     """
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+
     from buraq.contrib.auth.models import Permission
 
-    existing = {p.codename for p in await Permission.objects.all()}
+    try:
+        existing = {p.codename for p in await Permission.objects.all()}
+    except (OperationalError, ProgrammingError):
+        # A brand new project runs migrate before it has any migrations, so the
+        # auth tables legitimately do not exist yet. Nothing to create, and
+        # nothing worth alarming anyone with.
+        if verbosity > 1:
+            print("  auth tables not created yet; skipping permissions")
+        return 0
 
-    created = 0
+    missing = []
     for model, codename, name in iter_model_permissions():
         if codename in existing:
             continue
         opts = model._meta
-        await Permission.objects.create(
-            name=name,
-            codename=codename,
-            content_type=opts.label_lower,
+        missing.append(
+            {"name": name, "codename": codename, "content_type": opts.label_lower}
         )
         existing.add(codename)
-        created += 1
         if verbosity > 1:
             print(f"  created permission {opts.app_label}.{codename}")
 
-    if verbosity and created:
-        print(f"Created {created} permission(s).")
-    return created
+    if not missing:
+        return 0
+
+    # One statement rather than an INSERT per row: a project with many models
+    # generates four permissions each, and every one was a separate round trip.
+    await Permission.objects.bulk_create(missing)
+
+    if verbosity:
+        print(f"Created {len(missing)} permission(s).")
+    return len(missing)
 
 
-def _on_post_migrate(sender, **kwargs):
-    """
-    ``post_migrate`` receiver.
-
-    The signal is synchronous while permission creation is async, so schedule it
-    on a running loop when there is one and otherwise run it to completion.
-    """
-    import asyncio
-
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        asyncio.run(create_permissions(kwargs.get("verbosity", 1)))
-    else:
-        loop.create_task(create_permissions(kwargs.get("verbosity", 1)))
+async def _on_post_migrate(sender, **kwargs):
+    """``post_migrate`` receiver: create whichever permission rows are missing."""
+    await create_permissions(kwargs.get("verbosity", 1))
 
 
 def register() -> None:

@@ -25,7 +25,7 @@ _on_commit_callbacks: ContextVar[list | None] = ContextVar(
 def _make_engine():
     from buraq.conf import settings
     url = settings.DATABASE_URL
-    kwargs = dict(echo=settings.DEBUG, pool_pre_ping=True)
+    kwargs = dict(echo=settings.DATABASE_ECHO, pool_pre_ping=True)
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
         kwargs["poolclass"] = StaticPool
@@ -91,6 +91,23 @@ def unmanaged_table_names() -> set[str]:
         if opts is not None and not opts.managed:
             names.add(mapper.class_.__tablename__)
     return names
+
+
+def tables_migrations_ignore() -> set[str]:
+    """
+    Tables migration autogeneration must leave alone.
+
+    Two kinds: models declaring ``Meta.managed = False``, and the tables Buraq's
+    database cache and session backends create with raw SQL. Neither appears in
+    ``Base.metadata``, and autogenerate treats a table it cannot see as one to
+    drop -- which would have deleted a project's live cache or session store.
+    """
+    from buraq.conf import settings
+
+    return unmanaged_table_names() | {
+        getattr(settings, "CACHE_TABLE", None) or "buraq_cache_table",
+        "buraq_sessions",
+    }
 
 
 async def create_tables() -> None:
