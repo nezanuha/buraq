@@ -1,19 +1,79 @@
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import typer
 
+# Discovery lives in buraq.conf so alembic's env.py and any other entry point
+# resolve the settings module exactly the way the CLI does.
+from buraq.conf import discover_settings_module as _discover_settings_module
+
+
+def _load_apps() -> None:
+    """
+    Load INSTALLED_APPS from sync CLI code.
+
+    A model class reaches the ORM registry only when its module is imported, so
+    a command reading model metadata sees nothing unless something imported the
+    apps first -- `dumpdata` emitted `{}` for a fully populated database, and
+    `sqlflush` printed no statements at all, for exactly this reason.
+    """
+    import asyncio
+
+    async def _run() -> None:
+        from buraq.apps import setup
+        from buraq.core.db import _lazy
+
+        await setup()
+        # A ready() hook may have opened a connection, and it belongs to the
+        # loop that is about to close.
+        if _lazy._engine is not None:
+            await _lazy._engine.dispose()
+
+    asyncio.run(_run())
+
 
 def _fire_signal(name: str, **kwargs) -> None:
-    """Send a buraq signal by name, silently ignoring import/send errors."""
+    """
+    Send a Buraq signal from sync CLI code.
+
+    ``Signal.send`` is a coroutine and the CLI has no running loop, so this owns
+    one for the duration of the send. Loading the app configs, the receivers
+    themselves and the ORM they query all have to share that single loop, so
+    they happen together inside it.
+    """
+    import asyncio
+    import logging
+
+    from buraq import signals as _signals
+
+    sig = getattr(_signals, name, None)
+    if sig is None:
+        return
+
+    async def _send() -> None:
+        from buraq.apps import setup as _setup_apps
+        from buraq.core.db import _lazy
+
+        await _setup_apps()  # ready() is what connects the receivers
+        try:
+            await sig.send(sender=None, **kwargs)
+        finally:
+            # Receivers open connections bound to this loop, which dies with
+            # asyncio.run() below -- hand them back before that happens.
+            if _lazy._engine is not None:
+                await _lazy._engine.dispose()
+
     try:
-        from buraq import signals as _signals
-        sig = getattr(_signals, name, None)
-        if sig is not None:
-            sig.send(sender=None, **kwargs)
+        asyncio.run(_send())
     except Exception:
-        pass
+        # A receiver failing must not make a completed migration look failed,
+        # but it must not vanish either -- this used to be `except: pass`, which
+        # is how the signal stayed broken.
+        logging.getLogger("buraq.signals").exception(
+            "Error sending %r (the migration itself was applied)", name
+        )
 
 app = typer.Typer(
     name="buraq",
@@ -39,6 +99,9 @@ def _cli(
     ),
 ):
     """Buraq management CLI — run servers, migrations, and project commands."""
+    if not settings_module:
+        settings_module = _discover_settings_module()
+
     if settings_module:
         import sys
 
@@ -80,6 +143,15 @@ def runserver(
     port: int = typer.Option(8000, help="Bind port"),
     reload: bool = typer.Option(True, help="Auto-reload on change"),
     workers: int = typer.Option(1, help="Number of worker processes"),
+    server: str = typer.Option(
+        "auto",
+        envvar="BURAQ_SERVER",
+        help=(
+            "ASGI server: 'auto' (granian, falling back to uvicorn), 'granian', or "
+            "'uvicorn'. Also read from BURAQ_SERVER, so a machine where granian "
+            "does not run can set it once."
+        ),
+    ),
 ):
     """Start the development server."""
     app_path = "main:app"
@@ -101,10 +173,66 @@ def runserver(
 
     typer.echo(f"Starting Buraq on http://{host}:{port}  [app: {app_path}]")
 
-    try:
+    def _serve_uvicorn(reason: str = "") -> None:
+        from pathlib import Path
+
+        import uvicorn
+
+        typer.echo(f"Server: uvicorn{f' ({reason})' if reason else ''}")
+        uvicorn.run(
+            app_path,
+            host=host,
+            port=port,
+            reload=reload,
+            workers=workers if not reload else 1,
+            # The reloader runs the app in a subprocess that does not inherit the
+            # working directory on sys.path, so "main:app" would not import.
+            # granian gets the same treatment through working_dir.
+            app_dir=str(Path.cwd()),
+            log_level="debug",
+        )
+
+    def _serve_granian() -> bool:
+        """
+        Run granian. Returns True if it ever accepted a connection.
+
+        Elapsed time is not a usable health signal: granian retries a failing
+        worker for a while before giving up, so a broken server can still run
+        for many seconds. Probing the port answers the actual question — did
+        anything ever get served?
+        """
+        import socket
+        import threading
+        import time
         from pathlib import Path
 
         from granian import Granian
+
+        served = threading.Event()
+        probe_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+
+        def _probe() -> None:
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline and not served.is_set():
+                try:
+                    with socket.create_connection((probe_host, port), timeout=0.5):
+                        served.set()
+                        return
+                except OSError:
+                    time.sleep(0.25)
+            if not served.is_set():
+                # granian keeps retrying a dead worker for a while before giving
+                # up, so say something now rather than leaving the user watching
+                # a server that is never going to accept a request.
+                typer.secho(
+                    f"\ngranian is not accepting connections on "
+                    f"{probe_host}:{port} — its worker failed to start.\n"
+                    f"Restart with:  buraq runserver --server uvicorn\n",
+                    fg="yellow",
+                )
+
+        threading.Thread(target=_probe, daemon=True).start()
+
         typer.echo("Server: granian (Rust ASGI)")
         Granian(
             app_path,
@@ -115,56 +243,206 @@ def runserver(
             workers=workers if not reload else 1,
             working_dir=Path.cwd(),
         ).serve()
+        return served.is_set()
+
+    if server == "uvicorn":
+        _serve_uvicorn()
+        return
+
+    try:
+        served = _serve_granian()
     except ImportError:
-        import uvicorn
-        typer.echo("Server: uvicorn (granian not installed)")
-        uvicorn.run(
-            app_path,
-            host=host,
-            port=port,
-            reload=reload,
-            workers=workers if not reload else 1,
-            log_level="debug",
+        if server == "granian":
+            typer.secho("granian is not installed. Install it, or use --server uvicorn.", fg="red")
+            raise typer.Exit(1) from None
+        _serve_uvicorn("granian not installed")
+        return
+
+    # granian imports fine but its worker can die on start — a Rust extension that
+    # does not match the platform still imports cleanly. If nothing was ever served,
+    # fall back rather than exiting silently and leaving the user with no server.
+    if not served:
+        if server == "granian":
+            typer.secho(
+                "granian exited immediately — its worker failed to start. "
+                "Retry with --server uvicorn to confirm your app is fine.",
+                fg="red",
+            )
+            raise typer.Exit(1)
+        typer.secho(
+            "granian exited immediately (its worker failed to start); falling back to uvicorn.",
+            fg="yellow",
         )
+        _serve_uvicorn("granian worker failed")
 
 
 # ─── Migrations ──────────────────────────────────────────────────────────────
 
+
+def _require_alembic() -> None:
+    """
+    Fail with something actionable when the project has no Alembic setup.
+
+    Alembic's own message for this is "No 'script_location' key found in
+    configuration", which does not tell you that the file is simply missing.
+    Projects created by `buraq startproject` are scaffolded with it; older or
+    hand-made projects may not be.
+    """
+    if Path("alembic.ini").exists():
+        return
+
+    typer.secho("No alembic.ini found in this directory.", fg="red")
+    typer.echo(
+        "Migrations need an Alembic setup: alembic.ini plus an alembic/ directory.\n"
+        "`buraq startproject` scaffolds both. To add them to an existing project, "
+        "run `alembic init alembic`, then point alembic/env.py at "
+        "buraq.core.db:Base metadata."
+    )
+    raise typer.Exit(1)
+
+
+def _versions_dir() -> Path | None:
+    """Where Alembic writes revision files, according to this project's config."""
+    try:
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
+
+        script = ScriptDirectory.from_config(Config("alembic.ini"))
+        locations = [Path(loc) for loc in script.version_locations]
+        return locations[0] if locations else Path(script.dir) / "versions"
+    except Exception:
+        return None
+
+
+def _is_empty_migration(path: Path) -> bool:
+    """True when the revision's upgrade() does nothing -- i.e. no schema drift."""
+    import ast
+
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return False
+
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "upgrade":
+            body = [
+                stmt
+                for stmt in node.body
+                # Drop the docstring; comments are absent from the AST already.
+                if not (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant))
+            ]
+            return all(isinstance(stmt, ast.Pass) for stmt in body)
+    return False
+
+
+def _names_an_installed_app(text: str) -> bool:
+    """Does `text` look like one of INSTALLED_APPS rather than a description?"""
+    from buraq.conf import settings
+
+    labels = set()
+    for entry in getattr(settings, "INSTALLED_APPS", None) or []:
+        parts = entry.split(".")
+        labels.update({entry, parts[0], parts[-1]})
+    return text in labels
+
+
 @app.command()
-def makemigrations(message: str = typer.Argument("auto", help="Migration message")):
-    """Generate a new database migration."""
+def makemigrations(
+    message: str = typer.Argument(
+        "auto",
+        help="Description of the change, e.g. 'add slug to post'. Not an app name.",
+    ),
+):
+    """
+    Generate a new database migration.
+
+    The argument is the migration's description, which becomes part of the
+    revision filename. Buraq keeps one migration history for the whole project,
+    so there is no app to scope a run to -- every model change is included.
+    """
+    _require_alembic()
+
+    if _names_an_installed_app(message):
+        typer.secho(
+            f"Note: {message!r} is being used as the migration's description, not "
+            "as an app to migrate. Buraq migrates the whole project at once.",
+            fg="yellow",
+        )
+
     typer.echo(f"Creating migration: {message}")
-    result = subprocess.run(["alembic", "revision", "--autogenerate", "-m", message])
+
+    versions = _versions_dir()
+    before = set(versions.glob("*.py")) if versions and versions.is_dir() else set()
+
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "revision", "--autogenerate", "-m", message],
+        capture_output=True,
+        text=True,
+        # Alembic emits paths and model names; decoding those with whatever the
+        # locale happens to be fails outright under the POSIX locale that minimal
+        # container images default to.
+        encoding="utf-8",
+        errors="replace",
+    )
+    if result.stderr:
+        typer.echo(result.stderr, nl=False, err=True)
+
     if result.returncode != 0:
+        if "not up to date" in result.stderr:
+            # Alembic will not diff against a database that is behind its own
+            # history, because the pending revisions would be generated twice.
+            typer.echo("")
+            typer.secho(
+                "The database is behind the migrations already on disk. "
+                "Run `buraq migrate` first, then makemigrations again.",
+                fg="yellow",
+            )
         raise typer.Exit(result.returncode)
+
+    # Autogenerate always writes a file, even when it found nothing to put in
+    # it. Left behind, empty revisions pile up in the history indistinguishable
+    # from real ones -- so drop it and say plainly that nothing changed.
+    new_files = (set(versions.glob("*.py")) - before) if versions and versions.is_dir() else set()
+    empty = [path for path in new_files if _is_empty_migration(path)]
+    for path in empty:
+        path.unlink()
+
+    if empty:
+        # Suppress alembic's "Generating ... done" for a file that no longer exists.
+        typer.secho("No changes detected - no migration created.", fg="green")
+    elif result.stdout:
+        typer.echo(result.stdout, nl=False)
 
 
 @app.command()
 def migrate(revision: str = typer.Argument("head", help="Target revision")):
     """Apply database migrations."""
+    _require_alembic()
     typer.echo(f"Applying migrations to: {revision}")
-    _fire_signal("pre_migrate", revision=revision)
-    result = subprocess.run(["alembic", "upgrade", revision])
+    _fire_signal("pre_migrate", revision=revision, verbosity=1)
+    result = subprocess.run([sys.executable, "-m", "alembic", "upgrade", revision])
     if result.returncode != 0:
         raise typer.Exit(result.returncode)
-    _fire_signal("post_migrate", revision=revision)
+    _fire_signal("post_migrate", revision=revision, verbosity=1)
 
 
 @app.command()
 def rollback(steps: int = typer.Argument(1, help="Number of migrations to roll back")):
     """Roll back N migrations."""
+    _require_alembic()
     typer.echo(f"Rolling back {steps} migration(s)")
-    _fire_signal("pre_migrate", revision=f"-{steps}")
-    result = subprocess.run(["alembic", "downgrade", f"-{steps}"])
+    _fire_signal("pre_migrate", revision=f"-{steps}", verbosity=1)
+    result = subprocess.run([sys.executable, "-m", "alembic", "downgrade", f"-{steps}"])
     if result.returncode != 0:
         raise typer.Exit(result.returncode)
-    _fire_signal("post_migrate", revision=f"-{steps}")
+    _fire_signal("post_migrate", revision=f"-{steps}", verbosity=1)
 
 
 @app.command()
 def showmigrations():
     """List all migrations and their status."""
-    result = subprocess.run(["alembic", "history", "--verbose"])
+    _require_alembic()
+    result = subprocess.run([sys.executable, "-m", "alembic", "history", "--verbose"])
     if result.returncode != 0:
         raise typer.Exit(result.returncode)
 
@@ -181,6 +459,7 @@ def createsuperuser(
     ),
 ):
     """Create a superuser account for the admin panel."""
+    _load_apps()
     import asyncio
     import getpass
 
@@ -313,7 +592,7 @@ def startapp(name: str = typer.Argument(..., help="App name")):
     }
 
     for filename, content in files.items():
-        (base / filename).write_text(content)
+        (base / filename).write_text(content, encoding="utf-8")
 
     typer.echo(f"App '{name}' created. Add '{name}' to INSTALLED_APPS in your settings.")
 
@@ -588,7 +867,7 @@ def startproject(
         f'[tool.pytest.ini_options]\n'
         f'asyncio_mode = "auto"\n'
         f'testpaths = ["tests"]\n'
-    )
+    , encoding="utf-8")
 
     # Generate a random secret key for this project
     import secrets as _secrets
@@ -600,7 +879,7 @@ def startproject(
         f"DEBUG=True\n"
         f'DATABASE_URL={db_url}\n'
         f"ALLOWED_HOSTS=[\"localhost\", \"127.0.0.1\"]\n"
-    )
+    , encoding="utf-8")
 
     # .env.example — use a placeholder so the real key is never committed
     (project_dir / ".env.example").write_text(
@@ -608,7 +887,7 @@ def startproject(
         f"DEBUG=False\n"
         f'DATABASE_URL={db_url}\n'
         f"ALLOWED_HOSTS=[\"yourdomain.com\"]\n"
-    )
+    , encoding="utf-8")
 
     # .gitignore — uv.lock must NOT be ignored, it should be committed
     (project_dir / ".gitignore").write_text(
@@ -616,23 +895,27 @@ def startproject(
         ".ruff_cache/\n.mypy_cache/\n.pytest_cache/\nalembic/versions/*.py\n"
         "!alembic/versions/.gitkeep\nstaticfiles/\nsent_emails/\n.cache/\nmedia/\n"
         "# uv.lock is intentionally NOT listed here — commit it to version control\n"
-    )
+    , encoding="utf-8")
 
     # alembic.ini
     (project_dir / "alembic.ini").write_text(
         "[alembic]\nscript_location = alembic\nprepend_sys_path = .\n"
         f"sqlalchemy.url = {db_url}\n\n"
-        "[loggers]\nkeys = root,sqlalchemy,alembic\n\n"
+        "[loggers]\nkeys = root,sqlalchemy,alembic,alembic_plugins\n\n"
         "[handlers]\nkeys = console\n\n"
         "[formatters]\nkeys = generic\n\n"
         "[logger_root]\nlevel = WARN\nhandlers = console\nqualname =\n\n"
         "[logger_sqlalchemy]\nlevel = WARN\nhandlers =\nqualname = sqlalchemy.engine\n\n"
         "[logger_alembic]\nlevel = INFO\nhandlers =\nqualname = alembic\n\n"
+        # Plugin setup is announced on every autogenerate run and says
+        # nothing about the migration itself.
+        "[logger_alembic_plugins]\nlevel = WARN\nhandlers =\n"
+        "qualname = alembic.runtime.plugins\n\n"
         "[handler_console]\nclass = StreamHandler\nargs = (sys.stderr,)\n"
         "level = NOTSET\nformatter = generic\n\n"
-        "[formatter_generic]\nformat = %%(levelname)-5.5s [%%(name)s] %%(message)s\n"
-        "datefmt = %%H:%%M:%%S\n"
-    )
+        "[formatter_generic]\nformat = %(levelname)-5.5s [%(name)s] %(message)s\n"
+        "datefmt = %H:%M:%S\n"
+    , encoding="utf-8")
 
     # alembic/versions/.gitkeep
     (project_dir / "alembic" / "versions" / ".gitkeep").touch()
@@ -646,15 +929,19 @@ def startproject(
         "from sqlalchemy.ext.asyncio import async_engine_from_config\n"
         "from alembic import context\n"
         "from buraq.core.db import Base\n\n"
-        "# Import your models here so Alembic detects them:\n"
-        "# from myapp.models import MyModel\n\n"
+        "from buraq.apps import configure\n"
+        "\n"
+        "# Loads settings and imports every app's models, so Base.metadata reflects\n"
+        "# INSTALLED_APPS. Without it autogenerate sees no tables and a new project\n"
+        "# can never generate its first migration.\n"
+        "configure()\n"
         "config = context.config\n"
         "if config.config_file_name is not None:\n"
         "    fileConfig(config.config_file_name)\n\n"
         "target_metadata = Base.metadata\n\n\n"
         "def include_object(obj, name, type_, reflected, compare_to):\n"
-        "    from buraq.core.db import unmanaged_table_names\n\n"
-        "    if type_ == 'table' and name in unmanaged_table_names():\n"
+        "    from buraq.core.db import tables_migrations_ignore\n\n"
+        "    if type_ == 'table' and name in tables_migrations_ignore():\n"
         "        return False\n"
         "    return True\n\n\n"
         "def do_run_migrations(connection: Connection) -> None:\n"
@@ -681,7 +968,7 @@ def startproject(
         "    pass\n"
         "else:\n"
         "    run_migrations_online()\n"
-    )
+    , encoding="utf-8")
 
     # alembic/script.py.mako
     (project_dir / "alembic" / "script.py.mako").write_text(
@@ -694,10 +981,10 @@ def startproject(
         'depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}\n\n\n'
         'def upgrade() -> None:\n    ${upgrades if upgrades else "pass"}\n\n\n'
         'def downgrade() -> None:\n    ${downgrades if downgrades else "pass"}\n'
-    )
+    , encoding="utf-8")
 
     # config/__init__.py
-    (project_dir / "config" / "__init__.py").write_text("")
+    (project_dir / "config" / "__init__.py").write_text("", encoding="utf-8")
 
     # config/settings.py
     (project_dir / "config" / "settings.py").write_text(
@@ -721,7 +1008,7 @@ def startproject(
         "# Cache\n"
         "# CACHE_BACKEND = 'buraq.contrib.cache.backends.redis.RedisCacheBackend'\n"
         "# CACHE_REDIS_URL = 'redis://localhost:6379/0'\n"
-    )
+    , encoding="utf-8")
 
     # config/urls.py
     (project_dir / "config" / "urls.py").write_text(
@@ -740,13 +1027,13 @@ def startproject(
         "@app.get('/')\n"
         "async def index():\n"
         f"    return {{\"message\": \"Welcome to {name}!\", \"docs\": \"/api/docs\"}}\n"
-    )
+    , encoding="utf-8")
 
     # main.py — entry point so `main:app` (the runserver default) resolves correctly
     (project_dir / "main.py").write_text(
         "# Entry point — exposes `app` at the module level so `buraq runserver` works.\n"
         "from config.urls import app  # noqa: F401\n"
-    )
+    , encoding="utf-8")
 
     # manage.py — auto-detects .venv so `python manage.py` just works
     (project_dir / "manage.py").write_text(
@@ -760,14 +1047,23 @@ def startproject(
         '    python = venv / "Scripts" / "python.exe"\n'
         '    if not python.exists():\n'
         '        python = venv / "bin" / "python"\n'
-        '    if python.exists() and Path(sys.executable).resolve() != python.resolve():\n'
-        '        os.execv(str(python), [str(python)] + sys.argv)\n\n'
+        '    if not python.exists() or Path(sys.executable).resolve() == python.resolve():\n'
+        '        return\n'
+        '    argv = [str(python)] + sys.argv\n'
+        '    if os.name == \"nt\":\n'
+        '        # Windows has no real exec: execv() spawns a child and exits this\n'
+        '        # process, so the shell takes its prompt back while the server runs\n'
+        '        # on detached and Ctrl+C reaches nobody.\n'
+        '        import subprocess\n'
+        '        raise SystemExit(subprocess.run(argv).returncode)\n'
+        '    os.execv(str(python), argv)\n\n'
         '_bootstrap()\n\n'
         'sys.path.insert(0, str(Path(__file__).parent))\n'
+        'os.environ.setdefault(\"BURAQ_SETTINGS_MODULE\", \"config.settings\")\n'
         'from buraq.management.cli import app\n\n'
         'if __name__ == "__main__":\n'
         '    app()\n'
-    )
+    , encoding="utf-8")
 
     # templates/base.html
     (project_dir / "templates" / "base.html").write_text(
@@ -777,7 +1073,7 @@ def startproject(
         "</head>\n<body>\n"
         "{% block content %}{% endblock %}\n"
         "</body>\n</html>\n"
-    )
+    , encoding="utf-8")
 
     typer.echo("\nProject structure created. Now run:")
     typer.echo(f"\n  cd {project_dir}")
@@ -1070,6 +1366,7 @@ def dumpdata(
         python manage.py dumpdata --output=fixtures/initial.json
         python manage.py dumpdata --exclude=buraq_users --exclude=buraq_sessions
     """
+    _load_apps()
     import asyncio
     import json as _json
 
@@ -1095,7 +1392,7 @@ def dumpdata(
     json_str = _json.dumps(data, indent=indent, default=str)
 
     if output:
-        Path(output).write_text(json_str)
+        Path(output).write_text(json_str, encoding="utf-8")
         typer.echo(f"Data written to {output}")
     else:
         typer.echo(json_str)
@@ -1113,12 +1410,13 @@ def loaddata(
         python manage.py loaddata fixtures/initial.json
         python manage.py loaddata fixtures/initial.json --table=buraq_users
     """
+    _load_apps()
     import asyncio
     import json as _json
 
     from buraq.core.db import Base, SessionLocal
 
-    fixture_data = _json.loads(Path(fixture).read_text())
+    fixture_data = _json.loads(Path(fixture).read_text(encoding="utf-8"))
     table_filter = set(table) if table else None
 
     async def _load():
@@ -1153,6 +1451,7 @@ def flush(
         python manage.py flush
         python manage.py flush --no-input
     """
+    _load_apps()
     import asyncio
 
     from buraq.core.db import Base, SessionLocal
@@ -1188,6 +1487,7 @@ def changepassword(
     Example:
         python manage.py changepassword admin
     """
+    _load_apps()
     import asyncio
     import getpass
 
@@ -1249,37 +1549,59 @@ def inspectdb(
         "JSON": "models.JSONField()",
     }
 
+    def _with_null_false(field_type: str) -> str:
+        """
+        Add null=False to a field expression.
+
+        Trimming the closing paren and appending ", null=False)" yields
+        `IntegerField(, null=False)` for any field that takes no arguments.
+        """
+        head, _, rest = field_type.partition("(")
+        args = [a for a in [rest.rstrip(")")] if a]
+        args.append("null=False")
+        return f"{head}({', '.join(args)})"
+
+    def _reflect(sync_conn):
+        """
+        Read the schema on the sync side of the async connection.
+
+        An Inspector performs IO on every call, so it has to be *used* inside
+        run_sync and not merely created there -- otherwise the first
+        get_columns() raises MissingGreenlet.
+        """
+        inspector = sa.inspect(sync_conn)
+        names = inspector.get_table_names()
+        if table:
+            names = [t for t in names if t in table]
+        return [(name, inspector.get_columns(name)) for name in names]
+
     async def _inspect():
         from sqlalchemy.ext.asyncio import create_async_engine
         engine = create_async_engine(settings.DATABASE_URL)
-        async with engine.connect() as conn:
-            inspector = await conn.run_sync(
-                lambda sync_conn: sa.inspect(sync_conn)
-            )
-            table_names = inspector.get_table_names()
-            if table:
-                table_names = [t for t in table_names if t in table]
+        try:
+            async with engine.connect() as conn:
+                return await conn.run_sync(_reflect)
+        finally:
+            await engine.dispose()
 
-            lines = ["from buraq import models", ""]
-            for tname in table_names:
-                cols = inspector.get_columns(tname)
-                class_name = "".join(p.title() for p in tname.split("_"))
-                lines.append(f"\nclass {class_name}(models.Model):")
-                lines.append("    class Meta:")
-                lines.append(f"        table_name = {tname!r}")
-                for col in cols:
-                    if col["name"] == "id":
-                        continue
-                    col_type = str(col["type"]).upper().split("(")[0]
-                    field_type = _TYPE_MAP.get(col_type, "models.CharField(max_length=255)")
-                    nullable = col.get("nullable", True)
-                    if not nullable:
-                        field_type = field_type.rstrip(")") + ", null=False)"
-                    lines.append(f"    {col['name']} = {field_type}")
-            return "\n".join(lines)
+    tables = asyncio.run(_inspect())
 
-    result = asyncio.run(_inspect())
-    typer.echo(result)
+    lines = ["from buraq import models", ""]
+    for tname, cols in tables:
+        class_name = "".join(part.title() for part in tname.split("_"))
+        lines.append(f"\nclass {class_name}(models.Model):")
+        lines.append("    class Meta:")
+        lines.append(f"        table_name = {tname!r}")
+        for col in cols:
+            if col["name"] == "id":
+                continue
+            col_type = str(col["type"]).upper().split("(")[0]
+            field_type = _TYPE_MAP.get(col_type, "models.CharField(max_length=255)")
+            if not col.get("nullable", True):
+                field_type = _with_null_false(field_type)
+            lines.append(f"    {col['name']} = {field_type}")
+
+    typer.echo("\n".join(lines))
 
 
 # ─── Diff Settings ────────────────────────────────────────────────────────────
@@ -1397,10 +1719,10 @@ def squashmigrations(
 
 @app.command()
 def createcachetable(
-    table: str = typer.Option(
-        "buraq_cache_table",
+    table: str | None = typer.Option(
+        None,
         "--table",
-        help="Cache table name",
+        help="Cache table name (defaults to the CACHE_TABLE setting)",
     ),
 ):
     """
@@ -1416,7 +1738,11 @@ def createcachetable(
 
     import sqlalchemy as sa
 
+    from buraq.conf import settings
     from buraq.core.db import SessionLocal
+
+    if table is None:
+        table = getattr(settings, "CACHE_TABLE", None) or "buraq_cache_table"
 
     DDL = f"""
     CREATE TABLE IF NOT EXISTS {table} (
@@ -1517,7 +1843,7 @@ def run_tests(
     for t in tag:
         pytest_args += ["-m", t]
 
-    result = subprocess.run(["pytest"] + pytest_args)
+    result = subprocess.run([sys.executable, "-m", "pytest"] + pytest_args)
     raise typer.Exit(result.returncode)
 
 
@@ -1581,6 +1907,7 @@ def testserver(
         python manage.py testserver fixtures/posts.json fixtures/users.json
         python manage.py testserver fixtures/initial.json --port 8001
     """
+    _load_apps()
     import asyncio
     import json as _json
 
@@ -1603,7 +1930,7 @@ def testserver(
 
             # Load each fixture
             for fixture_path in fixtures:
-                fixture_data = _json.loads(Path(fixture_path).read_text())
+                fixture_data = _json.loads(Path(fixture_path).read_text(encoding="utf-8"))
                 for table_name, rows in fixture_data.items():
                     sa_table = Base.metadata.tables.get(table_name)
                     if sa_table is None:
@@ -1646,6 +1973,7 @@ def sqlflush():
         python manage.py sqlflush
         python manage.py sqlflush > flush.sql
     """
+    _load_apps()
     import sqlalchemy as sa
     from sqlalchemy.dialects import sqlite as sqlite_dialect
 
@@ -1676,6 +2004,7 @@ def sqlsequencereset(
         python manage.py sqlsequencereset
         python manage.py sqlsequencereset posts auth
     """
+    _load_apps()
     from buraq.conf import settings
     from buraq.core.db import Base
 
@@ -1768,18 +2097,25 @@ def remove_stale_contenttypes(
         python manage.py remove_stale_contenttypes
         python manage.py remove_stale_contenttypes --no-input
     """
+    _load_apps()
     import asyncio
     import importlib
 
-    from buraq.conf import settings
-    from buraq.contrib.contenttypes import ContentType
+    from sqlalchemy.exc import OperationalError
 
-    if not ContentType:
+    from buraq.conf import settings
+
+    # The model lives in .models -- importing it from the package raised
+    # ImportError on every run, and `if not ContentType` could never have
+    # caught that anyway since a class is always truthy.
+    try:
+        from buraq.contrib.contenttypes.models import ContentType
+    except ImportError:
         typer.echo(
             "buraq.contrib.contenttypes is not installed or ContentType model is unavailable.",
             err=True,
         )
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     async def _clean():
         all_cts = await ContentType.objects.all()
@@ -1828,7 +2164,17 @@ def remove_stale_contenttypes(
             await ct.delete()
         typer.echo(f"Deleted {len(stale)} stale content type(s).")
 
-    asyncio.run(_clean())
+    try:
+        asyncio.run(_clean())
+    except OperationalError:
+        # contenttypes is optional: without it in INSTALLED_APPS the table was
+        # never created, which is a setup answer rather than a stack trace.
+        typer.secho(
+            "No contenttypes table found. Add 'buraq.contrib.contenttypes' to "
+            "INSTALLED_APPS and run `buraq migrate` before using this command.",
+            fg="yellow",
+        )
+        raise typer.Exit(1) from None
 
 
 @app.command()
