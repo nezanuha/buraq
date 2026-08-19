@@ -22,10 +22,21 @@ CACHE_MEMCACHED_URL = "memcached://localhost:11211"
 CACHE_BACKEND   = "buraq.contrib.cache.backends.file.FileCacheBackend"
 CACHE_FILE_PATH = "/tmp/buraq_cache"
 
+# Database — create the table once with: buraq createcachetable
+CACHE_BACKEND          = "buraq.contrib.cache.backends.db.DatabaseCache"
+CACHE_TABLE            = "buraq_cache_table"
+CACHE_CULL_PROBABILITY = 0.1        # chance of evicting expired rows on write
+
 # Shared options
 CACHE_KEY_PREFIX      = "myapp:"   # prefix all keys to avoid collisions
 CACHE_DEFAULT_TIMEOUT = 300        # default TTL in seconds
 ```
+
+:::note
+The database backend's table is created by `buraq createcachetable`, not by a
+model, so migrations leave it alone — see
+[what autogeneration ignores](/docs/topics/orm/migrations).
+:::
 
 ## Basic usage
 

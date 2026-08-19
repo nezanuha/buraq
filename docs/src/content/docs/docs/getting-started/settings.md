@@ -55,6 +55,32 @@ DATABASE_URL = "postgresql+asyncpg://user:password@localhost:5432/mydb"
 DATABASE_URL = "mysql+aiomysql://user:password@localhost:3306/mydb"
 ```
 
+### URL handling
+
+```python
+ROOT_URLCONF = "config.urls"   # dotted path to the URLconf module
+APPEND_SLASH = True            # redirect /posts to /posts/ when it matches
+PREPEND_WWW = False            # redirect example.com to www.example.com
+```
+
+### Number formatting
+
+```python
+NUMBER_GROUPING = 3       # digits per group
+DECIMAL_SEPARATOR = "."
+THOUSAND_SEPARATOR = ","
+```
+
+### DATABASE_ECHO
+
+Log every SQL statement the engine emits. Off by default; turn it on while
+debugging a query, not in normal development, since it prints during management
+commands too.
+
+```python
+DATABASE_ECHO = True
+```
+
 ## Cache
 
 ```python

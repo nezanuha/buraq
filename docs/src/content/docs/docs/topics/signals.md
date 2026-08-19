@@ -211,8 +211,10 @@ Extra kwargs: `sender` (through-table class), `action`, `instance` (source model
 
 | Signal | When fired | Extra kwargs |
 |---|---|---|
-| `pre_migrate` | Before migration runs begin | `app_config`, `verbosity`, `interactive`, `using` |
-| `post_migrate` | After all migrations complete | `app_config`, `verbosity`, `interactive`, `using` |
+| `pre_migrate` | Before migration runs begin | `revision`, `verbosity` |
+| `post_migrate` | After all migrations complete | `revision`, `verbosity` |
+
+`revision` is the target passed to the command (`"head"`, or `"-1"` for a rollback).
 
 ```python
 from buraq.signals import post_migrate
@@ -221,6 +223,12 @@ from buraq.signals import post_migrate
 async def seed_data(sender, **kwargs):
     await Permission.objects.get_or_create(codename="view_dashboard")
 ```
+
+:::note
+Connect migration receivers from an app config's `ready()` — see
+[App Registry](/docs/topics/apps). Management commands load `INSTALLED_APPS`, so a
+receiver in a module nothing imports is never connected and never runs.
+:::
 
 ### Request lifecycle signals
 
