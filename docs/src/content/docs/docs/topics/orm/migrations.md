@@ -71,6 +71,39 @@ If the database is behind the migrations already on disk, autogenerate refuses t
 run — comparing against a stale schema would generate the pending changes a second
 time. Apply them first with `buraq migrate`.
 
+## Buraq's own migrations
+
+Buraq's contrib apps own tables — `buraq.contrib.auth` alone defines six — and
+they ship their migrations inside the package rather than expecting each project
+to generate them. Every app gets its own Alembic branch, applied only when the
+app is in `INSTALLED_APPS`:
+
+```ini title="alembic.ini"
+path_separator = newline
+version_locations =
+    %(here)s/alembic/versions
+    buraq.contrib.auth:migrations/versions
+```
+
+The first path is yours. The rest are resolved against the installed package, so
+nothing is copied into your project and upgrading Buraq brings any schema change
+with it — `buraq migrate` applies it like any other migration.
+
+Add a line when you install another contrib app that owns tables
+(`contenttypes`, `flatpages`, `redirects`, `sites`). Leaving it out means that
+app's tables are never created; that is deliberate, since an app you have not
+installed should not add tables to your database.
+
+:::note[Why `path_separator = newline`]
+Alembic's default is `os`, which means `;` on Windows and `:` elsewhere — an
+`alembic.ini` written on one would not parse on the other. Listing one path per
+line is portable and survives directory names containing spaces.
+:::
+
+Because there is now more than one branch, `buraq migrate` targets `heads`
+rather than `head`, and `buraq makemigrations` writes into your own directory on
+your own branch.
+
 ## What autogeneration leaves alone
 
 Some tables are deliberately invisible to autogeneration, because a table it cannot
@@ -80,6 +113,7 @@ see in your models is one it would otherwise drop:
   tables or database views maintained outside the ORM
 - the tables the database cache and session backends create with raw SQL
   (`CACHE_TABLE` and `buraq_sessions`)
+- the framework's own tables, whose migrations ship with Buraq (above)
 
 This is the `include_object` filter in `alembic/env.py`, which calls
 `buraq.core.db.tables_migrations_ignore()`.

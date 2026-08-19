@@ -279,6 +279,19 @@ def runserver(
 # ─── Migrations ──────────────────────────────────────────────────────────────
 
 
+def _scaffold_version_locations(apps: list[str] | None = None) -> str:
+    """
+    The `version_locations` line for a new project's alembic.ini.
+
+    The project's own directory comes first, then one entry per installed Buraq
+    app that ships migrations.
+    """
+    locations = ["%(here)s/alembic/versions"]
+    for app in apps if apps is not None else ["buraq.contrib.auth"]:
+        locations.append(f"{app}:migrations/versions")
+    return "\n".join(f"    {loc}" for loc in locations)
+
+
 def _require_alembic() -> None:
     """
     Fail with something actionable when the project has no Alembic setup.
@@ -301,17 +314,61 @@ def _require_alembic() -> None:
     raise typer.Exit(1)
 
 
-def _versions_dir() -> Path | None:
-    """Where Alembic writes revision files, according to this project's config."""
+def _script_directory():
+    """This project's Alembic ScriptDirectory, or None if it cannot be read."""
     try:
         from alembic.config import Config
         from alembic.script import ScriptDirectory
 
-        script = ScriptDirectory.from_config(Config("alembic.ini"))
-        locations = [Path(loc) for loc in script.version_locations]
-        return locations[0] if locations else Path(script.dir) / "versions"
+        return ScriptDirectory.from_config(Config("alembic.ini"))
     except Exception:
         return None
+
+
+def _versions_dir() -> Path | None:
+    """
+    The project's own versions directory.
+
+    Installed Buraq apps contribute version locations inside the package, so the
+    project's directory is the one under the working directory. Picking the
+    wrong one wrote a project's migration into site-packages.
+    """
+    script = _script_directory()
+    if script is None:
+        return None
+
+    cwd = Path.cwd().resolve()
+    for location in script.version_locations:
+        path = Path(location).resolve()
+        if path == cwd or cwd in path.parents:
+            return path
+    return Path(script.dir) / "versions"
+
+
+def _project_revision_args(versions: Path | None) -> list[str]:
+    """
+    Pin a new revision to the project's own directory and branch.
+
+    With more than one version location Alembic picks a directory on its own,
+    and it chose the installed package. It equally needs telling which head to
+    follow, since the framework's branches are heads too.
+    """
+    if versions is None:
+        return []
+
+    args = ["--version-path", str(versions)]
+    script = _script_directory()
+    if script is None:
+        return args
+
+    own = [rev for rev in script.walk_revisions() if Path(rev.path).parent.resolve() == versions]
+    if not own:
+        # First migration here: start a branch rather than extending one of the
+        # framework's.
+        return [*args, "--head", "base", "--branch-label", "project"]
+
+    heads = [rev.revision for rev in own if rev.is_head] or [own[0].revision]
+    return [*args, "--head", heads[0]]
 
 
 def _is_empty_migration(path: Path) -> bool:
@@ -375,7 +432,10 @@ def makemigrations(
     before = set(versions.glob("*.py")) if versions and versions.is_dir() else set()
 
     result = subprocess.run(
-        [sys.executable, "-m", "alembic", "revision", "--autogenerate", "-m", message],
+        [
+            sys.executable, "-m", "alembic", "revision", "--autogenerate",
+            "-m", message, *_project_revision_args(versions),
+        ],
         capture_output=True,
         text=True,
         # Alembic emits paths and model names; decoding those with whatever the
@@ -415,8 +475,18 @@ def makemigrations(
 
 
 @app.command()
-def migrate(revision: str = typer.Argument("head", help="Target revision")):
-    """Apply database migrations."""
+def migrate(
+    revision: str = typer.Argument(
+        "heads", help="Target revision ('heads' applies every branch)"
+    ),
+):
+    """
+    Apply database migrations.
+
+    Defaults to ``heads`` rather than ``head`` because installed Buraq apps ship
+    their own migrations on their own branches; ``head`` fails outright when more
+    than one branch exists.
+    """
     _require_alembic()
     typer.echo(f"Applying migrations to: {revision}")
     _fire_signal("pre_migrate", revision=revision, verbosity=1)
@@ -900,6 +970,13 @@ def startproject(
     # alembic.ini
     (project_dir / "alembic.ini").write_text(
         "[alembic]\nscript_location = alembic\nprepend_sys_path = .\n"
+        # Buraq's contrib apps ship their own migrations; alembic resolves
+        # package:path against the installed package, so nothing is copied in.
+        # One path per line: path_separator = os would make this file mean
+        # different things on Windows and Linux, and newline survives paths
+        # that contain spaces.
+        "path_separator = newline\n"
+        f"version_locations =\n{_scaffold_version_locations()}\n\n"
         f"sqlalchemy.url = {db_url}\n\n"
         "[loggers]\nkeys = root,sqlalchemy,alembic,alembic_plugins\n\n"
         "[handlers]\nkeys = console\n\n"

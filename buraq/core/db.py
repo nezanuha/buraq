@@ -93,21 +93,75 @@ def unmanaged_table_names() -> set[str]:
     return names
 
 
+#: Contrib apps whose migrations ship with Buraq. Each owns an Alembic branch
+#: under buraq/contrib/<app>/migrations/versions and is applied only when the app
+#: is installed. Extend this when another contrib app gains migrations.
+APPS_WITH_MIGRATIONS = (
+    "auth",
+    "contenttypes",
+    "flatpages",
+    "redirects",
+    "sites",
+)
+
+
+def framework_table_names() -> set[str]:
+    """
+    Tables whose migrations Buraq ships, so a project must never generate them.
+
+    Without this a project's autogenerate would emit create_table for the
+    framework's own schema, duplicating what the shipped branch already applies.
+    """
+    names = set()
+    for mapper in Base.registry.mappers:
+        module = mapper.class_.__module__ or ""
+        for app in APPS_WITH_MIGRATIONS:
+            if module.startswith(f"buraq.contrib.{app}."):
+                table = getattr(mapper.class_, "__tablename__", None)
+                if table:
+                    names.add(table)
+    return names
+
+
+def migration_version_locations() -> list[str]:
+    """
+    The Alembic version locations an installed set of apps requires.
+
+    Alembic resolves ``package:path`` against the installed package, so a
+    project's alembic.ini points at Buraq's own migrations rather than copying
+    them. Only installed apps are listed -- an app that is not installed must
+    not have its tables created.
+    """
+    from buraq.conf import settings
+
+    installed = set(getattr(settings, "INSTALLED_APPS", None) or [])
+    locations = []
+    for app in APPS_WITH_MIGRATIONS:
+        dotted = f"buraq.contrib.{app}"
+        if any(entry == dotted or entry.startswith(f"{dotted}.") for entry in installed):
+            locations.append(f"{dotted}:migrations/versions")
+    return locations
+
+
 def tables_migrations_ignore() -> set[str]:
     """
     Tables migration autogeneration must leave alone.
 
-    Two kinds: models declaring ``Meta.managed = False``, and the tables Buraq's
-    database cache and session backends create with raw SQL. Neither appears in
-    ``Base.metadata``, and autogenerate treats a table it cannot see as one to
-    drop -- which would have deleted a project's live cache or session store.
+    Three kinds: models declaring ``Meta.managed = False``; the tables Buraq's
+    database cache and session backends create with raw SQL, which never appear
+    in ``Base.metadata`` so autogenerate would treat them as tables to drop; and
+    the framework's own tables, whose migrations ship with Buraq.
     """
     from buraq.conf import settings
 
-    return unmanaged_table_names() | {
-        getattr(settings, "CACHE_TABLE", None) or "buraq_cache_table",
-        "buraq_sessions",
-    }
+    return (
+        unmanaged_table_names()
+        | framework_table_names()
+        | {
+            getattr(settings, "CACHE_TABLE", None) or "buraq_cache_table",
+            "buraq_sessions",
+        }
+    )
 
 
 async def create_tables() -> None:
