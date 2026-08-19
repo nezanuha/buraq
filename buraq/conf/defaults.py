@@ -1,8 +1,9 @@
-import warnings
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_INSECURE_SECRET_KEY = "change-me-in-production"
+#: The placeholder SECRET_KEY a project ships with until it sets its own.
+#: Shared with the security checks so the two cannot drift apart.
+INSECURE_SECRET_KEY = "change-me-in-production"
 
 
 class BuraqSettings(BaseSettings):
@@ -15,7 +16,7 @@ class BuraqSettings(BaseSettings):
 
     # Core
     DEBUG: bool = False
-    SECRET_KEY: str = "change-me-in-production"
+    SECRET_KEY: str = INSECURE_SECRET_KEY
     ALLOWED_HOSTS: list[str] = ["*"]
     INSTALLED_APPS: list[str] = []
 
@@ -161,15 +162,7 @@ class BuraqSettings(BaseSettings):
 # Global settings instance — overridden by user's settings module
 settings = BuraqSettings()
 
-if settings.SECRET_KEY == _INSECURE_SECRET_KEY:
-    if not settings.DEBUG:
-        from buraq.exceptions import ImproperlyConfigured
-        raise ImproperlyConfigured(
-            "SECRET_KEY must not be the default insecure value in production. "
-            "Set a strong random SECRET_KEY in your .env file."
-        )
-    warnings.warn(
-        "SECRET_KEY is set to the default insecure value. "
-        "Set a strong SECRET_KEY in your .env file before deploying to production.",
-        stacklevel=2,
-    )
+# An insecure SECRET_KEY is caught by the system checks (security.E001), which
+# run at application startup and refuse to serve when DEBUG is off. Raising here
+# instead would fire on `import buraq`, so a machine with no project configured
+# could not even run `buraq startproject` -- the first command anyone types.

@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 from buraq.checks.registry import Error, Warning, registry
+from buraq.conf.defaults import INSECURE_SECRET_KEY
 
 
 @registry.register
 def check_secret_key(settings, **kwargs):
     errors = []
-    if not settings.SECRET_KEY or settings.SECRET_KEY == "change-me-in-production":
+    if not settings.SECRET_KEY or settings.SECRET_KEY == INSECURE_SECRET_KEY:
         errors.append(Error(
             "SECRET_KEY is set to the insecure default value.",
             hint="Set a strong random SECRET_KEY in your .env before deploying.",
