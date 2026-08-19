@@ -10,13 +10,16 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 - **Python 3.11+**
 - An async database driver (pick one based on your database)
 
-## Install Buraq
+## Install the `buraq` command
+
+Starting a new project needs the `buraq` command before any project exists, so
+install it as a tool rather than as a dependency:
 
 <Tabs>
 <TabItem label="uv (recommended)">
 
 ```bash
-uv add buraq
+uv tool install buraq
 ```
 
 </TabItem>
@@ -29,11 +32,40 @@ pip install buraq
 </TabItem>
 </Tabs>
 
-## Install a Database Driver
+:::caution
+`uv add buraq` does not work at this point. `uv add` adds a dependency to a
+project that already has a `pyproject.toml`, and you do not have one yet — it
+fails with `No pyproject.toml found in current directory or any parent
+directory`. Use `uv add buraq` only to add Buraq to an existing project.
+:::
 
-Buraq uses SQLAlchemy's async engine. SQLite support (`aiosqlite`) is bundled — no extra install needed for development.
+Check it is available:
 
-For other databases install the matching driver:
+```bash
+buraq --version
+```
+
+## Create your project
+
+This is the step that creates files:
+
+```bash
+buraq startproject myproject
+cd myproject
+uv sync
+```
+
+`startproject` writes `config/`, `alembic/`, `main.py`, `manage.py`, a
+`pyproject.toml` that already lists Buraq, and a `.env` holding a freshly
+generated `SECRET_KEY`. `uv sync` then creates `.venv` and installs everything
+that `pyproject.toml` declares.
+
+## Install a database driver
+
+Buraq uses SQLAlchemy's async engine. SQLite support (`aiosqlite`) is bundled —
+nothing extra to install for development.
+
+Run these **inside the project**, after `cd myproject`:
 
 <Tabs>
 <TabItem label="PostgreSQL (production)">
@@ -54,7 +86,9 @@ uv add "buraq[mysql]"
 </TabItem>
 </Tabs>
 
-## Optional Extras
+## Optional extras
+
+Also from inside the project:
 
 ```bash
 # Memcached cache backend
@@ -64,18 +98,9 @@ uv add aiomcache
 uv add "redis[hiredis]"
 ```
 
-## Verify Installation
+## Run it
 
 ```bash
-python -c "import buraq; print(buraq.__version__)"
-```
-
-## Create Your First Project
-
-```bash
-buraq startproject myproject
-cd myproject
-uv sync
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 buraq migrate
 buraq runserver
