@@ -191,8 +191,18 @@ buraq startapp posts
 
 # Scaffold a new project
 buraq startproject myproject
+
+# Put it somewhere other than ./myproject
+buraq startproject myproject blog_folder
+
+# --dest does the same thing, for scripts written against earlier versions
+buraq startproject myproject --dest blog_folder
+
 buraq startproject myproject --postgres    # with PostgreSQL config
 ```
+
+The files land **directly** in the directory you name — no second folder is
+nested inside it. Without one, the project goes in `./<name>`.
 
 ## Static files
 

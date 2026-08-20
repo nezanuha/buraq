@@ -103,7 +103,9 @@ pip install buraq
 
 `startproject` writes `config/`, `alembic/`, `main.py`, `manage.py`, a
 `pyproject.toml` listing Buraq, and a `.env` holding a freshly generated
-`SECRET_KEY`. The second half creates the project's own environment and installs
+`SECRET_KEY`. Name a directory as a second argument to put it somewhere other
+than `./myproject` — `buraq startproject myproject blog_folder` — or use
+`--dest`, which means the same thing. The second half creates the project's own environment and installs
 into it — `buraq startproject` itself prints whichever of these two applies to
 your machine.
 

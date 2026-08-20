@@ -878,13 +878,34 @@ def run(args: list[str] = typer.Argument(..., help="Command to run in uv environ
 @app.command()
 def startproject(
     name: str = typer.Argument(..., help="Project name"),
-    dest: str | None = typer.Option(None, help="Destination directory (defaults to ./<name>)"),
+    directory: str | None = typer.Argument(
+        None, help="Where to put it (defaults to ./<name>)"
+    ),
+    dest: str | None = typer.Option(
+        None, help="Same as the directory argument, kept for existing scripts"
+    ),
     use_postgres: bool = typer.Option(False, "--postgres", help="Configure for PostgreSQL"),
 ):
     """
-    Scaffold a new Buraq project with uv, pyproject.toml, and full structure.
+    Scaffold a new Buraq project: pyproject.toml, settings, migrations, templates.
+
+    The target directory is the second argument, the way `cp`, `mv` and
+    `git clone` take theirs:
+
+        buraq startproject myblog
+        buraq startproject myblog blog_folder
+
+    Files land directly in that directory -- no extra folder is nested inside it.
     """
-    project_dir = Path(dest or name)
+    if directory and dest and directory != dest:
+        typer.secho(
+            f"Two different directories given: {directory!r} and --dest {dest!r}. "
+            "Pass one.",
+            fg="red",
+        )
+        raise typer.Exit(2)
+
+    project_dir = Path(directory or dest or name)
     if project_dir.exists():
         typer.echo(f"Directory '{project_dir}' already exists.", err=True)
         raise typer.Exit(1)
