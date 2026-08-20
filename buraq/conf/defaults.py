@@ -1,4 +1,5 @@
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 #: The placeholder SECRET_KEY a project ships with until it sets its own.
@@ -18,6 +19,21 @@ class BuraqSettings(BaseSettings):
     DEBUG: bool = False
     SECRET_KEY: str = INSECURE_SECRET_KEY
     ALLOWED_HOSTS: list[str] = ["*"]
+
+    @field_validator("ALLOWED_HOSTS", mode="before")
+    @classmethod
+    def _accept_comma_separated_hosts(cls, value):
+        """
+        Read "a,b" as well as JSON.
+
+        A list field in .env is parsed as JSON, while a project's settings module
+        reads the same variable from the environment and splits on commas. One
+        variable with two incompatible spellings meant whichever you picked broke
+        the other reader.
+        """
+        if isinstance(value, str) and not value.strip().startswith("["):
+            return [host.strip() for host in value.split(",") if host.strip()]
+        return value
     INSTALLED_APPS: list[str] = []
 
     # Database

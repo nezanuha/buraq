@@ -1,27 +1,29 @@
 ﻿---
 title: "Quickstart"
-description: "Visit http://127.0.0.1:8000/posts/ — your blog is live."
+description: "Build a working blog with models, views, URLs and templates."
 ---
 
-Build a working blog API in 5 minutes.
+A working blog in about five minutes — models, views, URLs, templates.
 
-## 1. Create a project
+New here? [Installation](/docs/getting-started/installation) covers getting the
+`buraq` command first.
+
+## 1. Create the project
 
 ```bash
 buraq startproject myblog
 cd myblog
 ```
 
-That writes the project and installs its dependencies. New to this? Start with
-[Installation](/docs/getting-started/installation).
+That writes the project and installs its dependencies.
 
-## 2. Create an app
+## 2. Create the app
 
 ```bash
 buraq startapp posts
 ```
 
-## 3. Define a model
+## 3. Define the model
 
 ```python title="posts/models.py"
 from buraq import models
@@ -35,10 +37,12 @@ class Post(models.Model):
     created_at   = models.DateTimeField(auto_now_add=True)
 ```
 
-## 4. Write views
+## 4. Write the views
+
+Every view is `async`, and so is `render`:
 
 ```python title="posts/views.py"
-from buraq.shortcuts import render, redirect, get_object_or_404
+from buraq.shortcuts import get_object_or_404, render
 from posts.models import Post
 
 
@@ -52,7 +56,32 @@ async def post_detail(request, slug: str):
     return await render(request, "posts/detail.html", {"post": post})
 ```
 
-## 5. Wire up URLs
+## 5. Add the templates
+
+Templates live under the project's `templates/` directory, in a folder matching
+the paths the views asked for:
+
+```html title="templates/posts/list.html"
+<h1>Posts</h1>
+
+<ul>
+  {% for post in posts %}
+    <li><a href="/posts/{{ post.slug }}">{{ post.title }}</a></li>
+  {% else %}
+    <li>Nothing published yet.</li>
+  {% endfor %}
+</ul>
+```
+
+```html title="templates/posts/detail.html"
+<h1>{{ post.title }}</h1>
+
+<p>{{ post.content }}</p>
+
+<a href="/posts/">Back to all posts</a>
+```
+
+## 6. Wire up the URLs
 
 ```python title="posts/urls.py"
 from buraq.urls import path
@@ -66,7 +95,7 @@ urlpatterns = [
 
 ```python title="config/urls.py"
 from buraq import Buraq
-from buraq.urls import path, include
+from buraq.urls import include, path
 
 app = Buraq(settings_module="config.settings")
 
@@ -77,7 +106,7 @@ urlpatterns = [
 app.load_urls(urlpatterns)
 ```
 
-## 6. Add the app to settings
+## 7. Install the app
 
 ```python title="config/settings.py"
 INSTALLED_APPS = [
@@ -86,7 +115,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-## 7. Create the database tables
+## 8. Create the tables
 
 ```bash
 buraq migrate                     # apply the migrations Buraq ships
@@ -94,21 +123,32 @@ buraq makemigrations "add posts"  # generate one for your model
 buraq migrate                     # apply it
 ```
 
-Three steps rather than two, because autogeneration compares your models against
-the database and refuses to run while the database is behind. A new project
-starts behind: `buraq.contrib.auth` ships its own migrations, and they have not
-been applied yet. Apply those first and the comparison has a clean base to work
-from.
+Three commands on a new project, two from then on. Autogeneration compares your
+models against the database and will not run while the database is behind, and a
+new project starts behind — `buraq.contrib.auth` ships migrations of its own.
+The first `migrate` clears that, and afterwards it is the usual `makemigrations`
+then `migrate`.
 
-From here on it is the usual two: `makemigrations` after changing a model, then
-`migrate`.
-
-## 8. Run the server
+## 9. Run it
 
 ```bash
 buraq runserver
 ```
 
-Visit [http://127.0.0.1:8000/posts/](http://127.0.0.1:8000/posts/) — your blog is live.
+[http://127.0.0.1:8000/posts/](http://127.0.0.1:8000/posts/) — empty until you
+add a post, which the [admin](/docs/topics/admin) or
+[`buraq shell`](/docs/management/commands) can do:
 
-Auto-generated API docs: [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs)
+```bash
+buraq shell -c "await Post.objects.create(title='Hello', slug='hello', content='First post.', is_published=True)"
+```
+
+Auto-generated API docs are at
+[/api/docs](http://127.0.0.1:8000/api/docs).
+
+## Where to go next
+
+- [Models](/docs/topics/orm/models) — fields, relationships, `Meta` options
+- [Views](/docs/topics/views/) — function and class-based
+- [Templates](/docs/topics/templates) — inheritance, tags, filters
+- [Admin](/docs/topics/admin) — a working admin for your models

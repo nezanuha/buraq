@@ -633,7 +633,7 @@ def startapp(name: str = typer.Argument(..., help="App name")):
         typer.echo(f"App '{name}' already exists.", err=True)
         raise typer.Exit(1)
 
-    (base / "migrations").mkdir(parents=True)
+    base.mkdir(parents=True)
 
     files = {
         "__init__.py": "",
@@ -699,7 +699,6 @@ def startapp(name: str = typer.Argument(..., help="App name")):
             f"    list_display = [\"id\", \"name\"]\n\n\n"
             f"site.register({name.title()}, {name.title()}Admin)\n"
         ),
-        "migrations/__init__.py": "",
     }
 
     for filename, content in files.items():
@@ -1013,7 +1012,6 @@ def startproject(
         f"SECRET_KEY={_secret_key}\n"
         f"DEBUG=True\n"
         f'DATABASE_URL={db_url}\n'
-        f"ALLOWED_HOSTS=[\"localhost\", \"127.0.0.1\"]\n"
     , encoding="utf-8")
 
     # .env.example — use a placeholder so the real key is never committed
@@ -1021,7 +1019,7 @@ def startproject(
         f"SECRET_KEY=<generate-with: python -c \"import secrets; print(secrets.token_hex(50))\">\n"
         f"DEBUG=False\n"
         f'DATABASE_URL={db_url}\n'
-        f"ALLOWED_HOSTS=[\"yourdomain.com\"]\n"
+        f"# ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com\n"
     , encoding="utf-8")
 
     # .gitignore — uv.lock must NOT be ignored, it should be committed
@@ -1132,11 +1130,19 @@ def startproject(
     (project_dir / "config" / "settings.py").write_text(
         "import os\n"
         "from pathlib import Path\n\n"
+        "from dotenv import load_dotenv\n\n"
         "BASE_DIR = Path(__file__).resolve().parent.parent\n\n"
-        "# Load from .env — never hardcode these values\n"
+        "# Without this the file below is decorative: os.environ does not see\n"
+        "# .env on its own, so DEBUG and the rest would silently keep their\n"
+        "# defaults.\n"
+        "load_dotenv(BASE_DIR / '.env')\n\n"
+        "# Values come from .env — never hardcode them here\n"
         "SECRET_KEY = os.environ.get('SECRET_KEY', '')\n"
         "DEBUG = os.environ.get('DEBUG', 'False') == 'True'\n"
-        "ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')\n\n"
+        "# runserver binds 127.0.0.1, so both spellings of the loopback address\n"
+        "# have to be allowed or a new project answers its own URL with 400.\n"
+        "# Override with a comma-separated ALLOWED_HOSTS environment variable.\n"
+        "ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')\n\n"
         "INSTALLED_APPS = [\n"
         "    'buraq.contrib.auth',\n"
         "]\n\n"
@@ -1400,7 +1406,19 @@ def shell(
         pass
 
     if command:
-        exec(compile(command, "<string>", "exec"), local_ns)  # noqa: S102
+        import ast
+        import asyncio
+        import inspect as _inspect
+
+        # Every ORM call is awaitable, so a one-liner worth running almost always
+        # contains `await`. Compiling without this flag rejected them outright
+        # with "'await' outside function".
+        code = compile(
+            command, "<string>", "exec", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT
+        )
+        result = eval(code, local_ns)  # noqa: S307
+        if _inspect.iscoroutine(result):
+            asyncio.run(result)
         return
 
     _model_names = ", ".join(
