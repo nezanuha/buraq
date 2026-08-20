@@ -5,6 +5,20 @@ description: "Install the buraq command, create a project, and get it running."
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
+## The short version
+
+```bash
+pip install buraq
+buraq startproject myproject
+cd myproject
+buraq migrate
+buraq runserver
+```
+
+Your project is on [http://127.0.0.1:8000](http://127.0.0.1:8000). Everything
+below explains those five lines, and covers uv, database drivers and what to do
+when a step fails.
+
 ## Requirements
 
 - **Python 3.11 or newer**
@@ -41,8 +55,17 @@ uv tool install buraq
 </Tabs>
 
 The uv tab assumes uv is already on your machine; `uv: command not found` means
-it is not. Either [install uv](#using-uv) or stay on the pip tab — pip works
-everywhere and the rest of this page has a pip column for every step.
+it is not. Staying on pip is fine — it works everywhere, and every step below has
+a pip column.
+
+If you want uv's speed without installing it separately, pip can bring it along:
+
+```bash
+pip install "buraq[uv]"
+```
+
+`buraq startproject` then uses uv on its own. More on
+[what uv gives you](#using-uv) below.
 
 Check it worked:
 
@@ -153,14 +176,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-Or let pip bring it along with Buraq:
-
-```bash
-pip install "buraq[uv]"
-```
-
-That is an opt-in extra rather than a dependency: uv is a ~50 MB binary, and
-nothing in Buraq needs it except project creation.
+Or, as above, `pip install "buraq[uv]"`. That is an opt-in extra rather than a
+dependency: uv is a ~50 MB binary, and nothing in Buraq needs it except project
+creation.
 
 ## Troubleshooting
 
