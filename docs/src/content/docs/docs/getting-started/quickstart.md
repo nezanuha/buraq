@@ -13,6 +13,18 @@ cd myblog
 uv sync
 ```
 
+Using pip instead of uv:
+
+```bash
+buraq startproject myblog
+cd myblog
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install buraq
+```
+
+New to this? Start with [Installation](/docs/getting-started/installation).
+
 ## 2. Create an app
 
 ```bash
@@ -87,8 +99,19 @@ INSTALLED_APPS = [
 ## 7. Create the database tables
 
 ```bash
-buraq migrate
+buraq migrate                     # apply the migrations Buraq ships
+buraq makemigrations "add posts"  # generate one for your model
+buraq migrate                     # apply it
 ```
+
+Three steps rather than two, because autogeneration compares your models against
+the database and refuses to run while the database is behind. A new project
+starts behind: `buraq.contrib.auth` ships its own migrations, and they have not
+been applied yet. Apply those first and the comparison has a clean base to work
+from.
+
+From here on it is the usual two: `makemigrations` after changing a model, then
+`migrate`.
 
 ## 8. Run the server
 

@@ -7,16 +7,45 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Requirements
 
-- **Python 3.11+**
-- An async database driver (pick one based on your database)
+- **Python 3.11 or newer**
+- A package installer: **pip** (ships with Python) or **uv**
+
+Check your Python:
+
+```bash
+python --version
+```
+
+If that reports anything below 3.11, or the command is not found, install Python
+from [python.org/downloads](https://www.python.org/downloads/) first.
+
+### pip or uv?
+
+Either works, and the rest of this page shows both.
+
+**pip** comes with Python, so there is nothing else to install. **uv** is a much
+faster installer that also manages the project's environment and lockfile for
+you; Buraq's generated project is set up for it. If you want it:
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+See [the uv install guide](https://docs.astral.sh/uv/getting-started/installation/)
+for other methods. If you would rather not, stay on the pip tab throughout — every
+step has a pip equivalent.
 
 ## Install the `buraq` command
 
-Starting a new project needs the `buraq` command before any project exists, so
-install it as a tool rather than as a dependency:
+Creating a project needs the `buraq` command *before* any project exists, so
+install it globally rather than as a project dependency:
 
 <Tabs>
-<TabItem label="uv (recommended)">
+<TabItem label="uv">
 
 ```bash
 uv tool install buraq
@@ -49,38 +78,54 @@ buraq --version
 
 This is the step that creates files:
 
+<Tabs>
+<TabItem label="uv">
+
 ```bash
 buraq startproject myproject
 cd myproject
 uv sync
 ```
 
+</TabItem>
+<TabItem label="pip">
+
+```bash
+buraq startproject myproject
+cd myproject
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install buraq
+```
+
+</TabItem>
+</Tabs>
+
 `startproject` writes `config/`, `alembic/`, `main.py`, `manage.py`, a
-`pyproject.toml` that already lists Buraq, and a `.env` holding a freshly
-generated `SECRET_KEY`. `uv sync` then creates `.venv` and installs everything
-that `pyproject.toml` declares.
+`pyproject.toml` listing Buraq, and a `.env` holding a freshly generated
+`SECRET_KEY`. The second half creates the project's own environment and installs
+into it — `buraq startproject` itself prints whichever of these two applies to
+your machine.
 
 ## Install a database driver
 
 Buraq uses SQLAlchemy's async engine. SQLite support (`aiosqlite`) is bundled —
 nothing extra to install for development.
 
-Run these **inside the project**, after `cd myproject`:
+Run these **inside the project**:
 
 <Tabs>
 <TabItem label="PostgreSQL (production)">
 
 ```bash
-uv add "buraq[postgres]"
-# or directly: uv add asyncpg
+uv add "buraq[postgres]"       # pip: pip install "buraq[postgres]"
 ```
 
 </TabItem>
 <TabItem label="MySQL / MariaDB">
 
 ```bash
-uv add "buraq[mysql]"
-# or directly: uv add aiomysql
+uv add "buraq[mysql]"          # pip: pip install "buraq[mysql]"
 ```
 
 </TabItem>
@@ -91,17 +136,15 @@ uv add "buraq[mysql]"
 Also from inside the project:
 
 ```bash
-# Memcached cache backend
-uv add aiomcache
-
-# Redis cache backend
-uv add "redis[hiredis]"
+uv add aiomcache               # Memcached cache backend
+uv add "redis[hiredis]"        # Redis cache backend
 ```
+
+With pip, swap `uv add` for `pip install`.
 
 ## Run it
 
 ```bash
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
 buraq migrate
 buraq runserver
 ```

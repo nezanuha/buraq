@@ -47,15 +47,18 @@ command warns when the text matches an installed app.
 
 ## First migration
 
-A new project has no migrations yet, so start by generating one:
+A new project already has migrations — the ones Buraq ships for its own contrib
+apps — but none for your models yet. Apply those first, then generate yours:
 
 ```bash
-buraq makemigrations initial
-buraq migrate
+buraq migrate                    # apply the migrations Buraq ships
+buraq makemigrations initial     # generate one for your models
+buraq migrate                    # apply it
 ```
 
-`migrate` on its own only records the (empty) migration history — it does not
-create tables that no migration describes.
+The first `migrate` matters: autogeneration compares your models against the
+database and refuses to run while the database is behind, and a new project
+starts behind. After this first run the usual two steps apply.
 
 ## When nothing has changed
 

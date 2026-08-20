@@ -1,3 +1,4 @@
+import os
 import shutil
 import subprocess
 import sys
@@ -1152,15 +1153,27 @@ def startproject(
         "</body>\n</html>\n"
     , encoding="utf-8")
 
+    uv = shutil.which("uv")
+
     typer.echo("\nProject structure created. Now run:")
     typer.echo(f"\n  cd {project_dir}")
-    typer.echo("  uv sync                        # install dependencies")
+    if uv:
+        typer.echo("  uv sync                        # install dependencies")
+    else:
+        # Pointing someone without uv at `uv sync` strands them on the first
+        # step of a brand new project.
+        activate = (
+            "  .venv\\Scripts\\activate"
+            if os.name == "nt"
+            else "  source .venv/bin/activate"
+        )
+        typer.echo("  python -m venv .venv           # create the environment")
+        typer.echo(f"{activate:<33}# activate it")
+        typer.echo("  pip install buraq              # install dependencies")
     typer.echo("  python manage.py migrate       # create tables")
     typer.echo("  python manage.py runserver     # start server")
     typer.echo("\nAPI docs will be at: http://127.0.0.1:8000/api/docs\n")
 
-    # Auto-run uv sync if uv is available
-    uv = shutil.which("uv")
     if uv and typer.confirm("Run 'uv sync' now to install dependencies?", default=True):
         subprocess.run([uv, "sync"], cwd=project_dir)
 
