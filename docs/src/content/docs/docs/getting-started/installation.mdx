@@ -7,6 +7,9 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## The short version
 
+<Tabs syncKey="installer">
+<TabItem label="uv">
+
 ```bash
 uv tool install buraq
 buraq startproject myproject
@@ -15,11 +18,27 @@ buraq migrate
 buraq runserver
 ```
 
+Needs uv — if `uv` is not a command on your machine yet, it is
+[one line away](#requirements), or use the pip tab.
+
+</TabItem>
+<TabItem label="pip">
+
+```bash
+pip install buraq
+buraq startproject myproject
+cd myproject
+buraq migrate
+buraq runserver
+```
+
+Works on any machine with Python. Slower installs than uv, nothing else lost.
+
+</TabItem>
+</Tabs>
+
 Your project is on [http://127.0.0.1:8000](http://127.0.0.1:8000). Everything
 below explains those five lines.
-
-No uv yet? It is [one command away](#requirements) — or swap the first line for
-`pip install buraq`, which works everywhere.
 
 ## Requirements
 
