@@ -83,6 +83,15 @@ app = typer.Typer(
 )
 
 
+def _version_callback(value: bool) -> None:
+    """`--version` has to run before anything else touches settings."""
+    if value:
+        from buraq import __version__
+
+        typer.echo(f"Buraq {__version__}")
+        raise typer.Exit()
+
+
 # ─── Global options ───────────────────────────────────────────────────────────
 
 @app.callback(invoke_without_command=True)
@@ -97,6 +106,14 @@ def _cli(
             "Also read from the BURAQ_SETTINGS_MODULE environment variable."
         ),
         envvar="BURAQ_SETTINGS_MODULE",
+    ),
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the Buraq version and exit.",
     ),
 ):
     """Buraq management CLI — run servers, migrations, and project commands."""

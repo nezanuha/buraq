@@ -149,6 +149,6 @@ Auto-generated API docs are at
 ## Where to go next
 
 - [Models](/docs/topics/orm/models) — fields, relationships, `Meta` options
-- [Views](/docs/topics/views/) — function and class-based
+- [Views](/docs/topics/views/function-based) — function and class-based
 - [Templates](/docs/topics/templates) — inheritance, tags, filters
 - [Admin](/docs/topics/admin) — a working admin for your models

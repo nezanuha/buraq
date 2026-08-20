@@ -133,3 +133,29 @@ def test_exit_code_is_propagated_through_the_bootstrap(tmp_path):
     )
 
     assert result.returncode == 3
+
+
+def test_version_flag_and_module_form_both_work(tmp_path):
+    """
+    The install guide points at both: `buraq --version` to check the install, and
+    `python -m buraq` when the console script is not on PATH. Neither existed.
+    """
+    env = {**os.environ, "SECRET_KEY": "version-check-key"}
+    env["PYTHONPATH"] = str(REPO_ROOT)
+
+    for args in (["-m", "buraq", "--version"], ["-m", "buraq", "-V"]):
+        result = subprocess.run(
+            [sys.executable, *args],
+            cwd=tmp_path,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        assert result.returncode == 0, result.stderr
+        assert "Buraq" in result.stdout, result.stdout
+
+
+def test_the_module_entry_point_exists():
+    """`python -m buraq` needs a __main__, or it reports the package is not runnable."""
+    assert (REPO_ROOT / "buraq" / "__main__.py").is_file()
