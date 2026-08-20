@@ -76,38 +76,22 @@ buraq --version
 
 ## Create your project
 
-This is the step that creates files:
-
-<Tabs>
-<TabItem label="uv">
-
 ```bash
 buraq startproject myproject
 cd myproject
-uv sync
 ```
 
-</TabItem>
-<TabItem label="pip">
+`startproject` writes the project and installs its dependencies — with uv if you
+have it, otherwise a `.venv` and pip. Name a directory as a second argument to
+put it somewhere other than `./myproject`
+(`buraq startproject myproject blog_folder`); `--dest` means the same thing.
 
-```bash
-buraq startproject myproject
-cd myproject
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install buraq
-```
+It writes `config/`, `alembic/`, `main.py`, `manage.py`, a `pyproject.toml`
+listing Buraq, and a `.env` holding a freshly generated `SECRET_KEY`.
 
-</TabItem>
-</Tabs>
-
-`startproject` writes `config/`, `alembic/`, `main.py`, `manage.py`, a
-`pyproject.toml` listing Buraq, and a `.env` holding a freshly generated
-`SECRET_KEY`. Name a directory as a second argument to put it somewhere other
-than `./myproject` — `buraq startproject myproject blog_folder` — or use
-`--dest`, which means the same thing. The second half creates the project's own environment and installs
-into it — `buraq startproject` itself prints whichever of these two applies to
-your machine.
+Pass `--no-install` to write the files and nothing else. If the install cannot
+finish — no network, a blocked index — the project is still correct and the
+command tells you the one step left to run.
 
 ## Install a database driver
 
@@ -151,15 +135,6 @@ buraq migrate
 buraq runserver
 ```
 
-:::tip[Activate the project's environment first]
-`uv sync` creates a `.venv` inside your project. Activate it before running
-`buraq` commands — otherwise they run against whichever environment you
-installed Buraq into, not your project's.
+No activation needed: run from the project directory and `buraq` re-executes
+itself using `./.venv`.
 
-Two ways to skip activation:
-
-```bash
-uv run buraq runserver         # uv resolves the project environment
-python manage.py runserver     # manage.py re-executes itself using ./.venv
-```
-:::

@@ -70,3 +70,53 @@ def test_without_a_directory_it_uses_the_project_name(tmp_path, monkeypatch):
     startproject(name="myblog", directory=None, dest=None, use_postgres=False)
 
     assert (tmp_path / "myblog" / "pyproject.toml").is_file()
+
+
+# ─── Installing dependencies ──────────────────────────────────────────────────
+
+def test_the_installer_is_chosen_from_what_is_available():
+    """uv when present, otherwise a venv and pip — never an instruction to
+    install a tool the machine does not have."""
+    import inspect
+
+    from buraq.management.cli import _install_dependencies
+
+    source = inspect.getsource(_install_dependencies)
+
+    assert 'shutil.which("uv")' in source
+    assert '"-m", "venv"' in source
+    assert '"install", "buraq"' in source
+
+
+def test_no_install_is_offered():
+    assert "no_install" in _params()
+
+
+def test_a_failed_install_does_not_raise(tmp_path, monkeypatch):
+    """
+    The files are correct whatever the network did; scaffolding must not report
+    failure because an index was unreachable.
+    """
+    import subprocess
+
+    import buraq.management.cli as cli
+
+    monkeypatch.setattr(cli.shutil, "which", lambda _: None)
+    monkeypatch.setattr(
+        cli.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 1)
+    )
+
+    assert cli._install_dependencies(tmp_path) is False
+
+
+def test_a_successful_install_reports_ready(tmp_path, monkeypatch):
+    import subprocess
+
+    import buraq.management.cli as cli
+
+    monkeypatch.setattr(cli.shutil, "which", lambda _: "uv")
+    monkeypatch.setattr(
+        cli.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0)
+    )
+
+    assert cli._install_dependencies(tmp_path) is True

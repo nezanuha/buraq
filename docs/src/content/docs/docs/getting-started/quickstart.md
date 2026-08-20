@@ -10,20 +10,10 @@ Build a working blog API in 5 minutes.
 ```bash
 buraq startproject myblog
 cd myblog
-uv sync
 ```
 
-Using pip instead of uv:
-
-```bash
-buraq startproject myblog
-cd myblog
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install buraq
-```
-
-New to this? Start with [Installation](/docs/getting-started/installation).
+That writes the project and installs its dependencies. New to this? Start with
+[Installation](/docs/getting-started/installation).
 
 ## 2. Create an app
 

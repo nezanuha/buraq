@@ -280,6 +280,30 @@ def runserver(
 # ─── Migrations ──────────────────────────────────────────────────────────────
 
 
+def _install_dependencies(project_dir: Path) -> bool:
+    """
+    Install the new project's dependencies. True when it is ready to run.
+
+    Creating the files and installing into them are separate kinds of work with
+    separate failure modes -- no network, a blocked index, a mirror that is down.
+    None of those make the scaffold wrong, so a failure here is reported and the
+    caller carries on rather than leaving a half-made project behind.
+    """
+    uv = shutil.which("uv")
+    if uv:
+        typer.echo("Installing dependencies with uv...")
+        return subprocess.run([uv, "sync"], cwd=project_dir).returncode == 0
+
+    typer.echo("Creating .venv and installing dependencies with pip...")
+    venv_dir = project_dir / ".venv"
+    if subprocess.run([sys.executable, "-m", "venv", str(venv_dir)]).returncode != 0:
+        return False
+
+    bin_dir = venv_dir / ("Scripts" if os.name == "nt" else "bin")
+    pip = bin_dir / ("pip.exe" if os.name == "nt" else "pip")
+    return subprocess.run([str(pip), "install", "buraq"], cwd=project_dir).returncode == 0
+
+
 def _scaffold_version_locations(apps: list[str] | None = None) -> str:
     """
     The `version_locations` line for a new project's alembic.ini.
@@ -885,6 +909,9 @@ def startproject(
         None, help="Same as the directory argument, kept for existing scripts"
     ),
     use_postgres: bool = typer.Option(False, "--postgres", help="Configure for PostgreSQL"),
+    no_install: bool = typer.Option(
+        False, "--no-install", help="Only write the files; do not install dependencies"
+    ),
 ):
     """
     Scaffold a new Buraq project: pyproject.toml, settings, migrations, templates.
@@ -1174,25 +1201,21 @@ def startproject(
         "</body>\n</html>\n"
     , encoding="utf-8")
 
-    uv = shutil.which("uv")
+    typer.echo("")
+    ready = False if no_install else _install_dependencies(project_dir)
 
-    typer.echo("\nProject structure created. Now run:")
+    typer.echo("\nProject created. Now run:")
     typer.echo(f"\n  cd {project_dir}")
-    if uv:
-        typer.echo("  uv sync                        # install dependencies")
-    else:
-        # Pointing someone without uv at `uv sync` strands them on the first
-        # step of a brand new project.
-        activate = (
-            "  .venv\\Scripts\\activate"
-            if os.name == "nt"
-            else "  source .venv/bin/activate"
-        )
-        typer.echo("  python -m venv .venv           # create the environment")
-        typer.echo(f"{activate:<33}# activate it")
-        typer.echo("  pip install buraq              # install dependencies")
-    typer.echo("  python manage.py migrate       # create tables")
-    typer.echo("  python manage.py runserver     # start server")
+    if not ready:
+        # Either --no-install, or the install did not finish. Either way the
+        # files are correct and this is the step that is still outstanding.
+        if shutil.which("uv"):
+            typer.echo("  uv sync                        # install dependencies")
+        else:
+            typer.echo("  python -m venv .venv           # create the environment")
+            typer.echo("  pip install buraq              # install dependencies")
+    typer.echo("  buraq migrate                  # create tables")
+    typer.echo("  buraq runserver                # start server")
     typer.echo("\nAPI docs will be at: http://127.0.0.1:8000/api/docs\n")
 
     # No prompt to run the install for you: it duplicates the step printed above,
