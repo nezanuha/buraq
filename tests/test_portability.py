@@ -108,3 +108,30 @@ def test_the_scaffolded_manage_py_does_not_detach_on_windows():
     assert "subprocess.run(argv).returncode" in manage
     assert "os.execv(str(python), argv)" in manage
     assert source  # guards against the template silently disappearing
+
+
+def test_startproject_does_not_read_from_stdin():
+    """
+    Confirming a prompt against a closed stdin aborted with exit 1 on a project
+    that had been created, so `buraq startproject x && cd x` failed in scripts
+    and CI. Scaffolding should not depend on someone being there to answer.
+    """
+    source = (PACKAGE / "management" / "cli.py").read_text(encoding="utf-8")
+    start = source.index("def startproject(")
+    end = source.index("\n@app.command()", start)
+    body = source[start:end]
+
+    assert "typer.confirm" not in body
+    assert "typer.prompt" not in body
+
+
+def test_startproject_next_steps_match_the_available_installer():
+    """Printing `uv sync` on a machine without uv strands the reader."""
+    source = (PACKAGE / "management" / "cli.py").read_text(encoding="utf-8")
+    start = source.index("def startproject(")
+    end = source.index("\n@app.command()", start)
+    body = source[start:end]
+
+    assert 'shutil.which("uv")' in body
+    assert "python -m venv .venv" in body
+    assert "pip install buraq" in body

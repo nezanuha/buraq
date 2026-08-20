@@ -1174,8 +1174,10 @@ def startproject(
     typer.echo("  python manage.py runserver     # start server")
     typer.echo("\nAPI docs will be at: http://127.0.0.1:8000/api/docs\n")
 
-    if uv and typer.confirm("Run 'uv sync' now to install dependencies?", default=True):
-        subprocess.run([uv, "sync"], cwd=project_dir)
+    # No prompt to run the install for you: it duplicates the step printed above,
+    # and reading a confirmation from a closed stdin aborted with exit 1 on a
+    # project that had in fact been created -- breaking `startproject x && cd x`
+    # in scripts and CI.
 
 
 # ─── URL Listing ─────────────────────────────────────────────────────────────
