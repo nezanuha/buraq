@@ -83,7 +83,7 @@ def test_the_installer_is_chosen_from_what_is_available():
 
     source = inspect.getsource(_install_dependencies)
 
-    assert 'shutil.which("uv")' in source
+    assert "_find_uv()" in source
     assert '"-m", "venv"' in source
     assert '"install", "buraq"' in source
 
@@ -120,3 +120,54 @@ def test_a_successful_install_reports_ready(tmp_path, monkeypatch):
     )
 
     assert cli._install_dependencies(tmp_path) is True
+
+
+def test_uv_is_found_beside_the_interpreter(tmp_path, monkeypatch):
+    """
+    `pip install "buraq[uv]"` puts uv in the same Scripts/bin directory as the
+    buraq console script, which is not on PATH unless the environment is
+    activated. Looking only at PATH made the extra useless unactivated.
+    """
+    import os
+
+    import buraq.management.cli as cli
+
+    bin_dir = tmp_path / "Scripts" if os.name == "nt" else tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_uv = bin_dir / ("uv.exe" if os.name == "nt" else "uv")
+    fake_uv.write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(cli.shutil, "which", lambda _: None)
+    monkeypatch.setattr(cli.sys, "executable", str(bin_dir / "python"))
+
+    assert cli._find_uv() == str(fake_uv)
+
+
+def test_path_wins_when_uv_is_on_it(monkeypatch):
+    import buraq.management.cli as cli
+
+    monkeypatch.setattr(cli.shutil, "which", lambda _: "/usr/bin/uv")
+
+    assert cli._find_uv() == "/usr/bin/uv"
+
+
+def test_no_uv_anywhere_returns_nothing(tmp_path, monkeypatch):
+    import buraq.management.cli as cli
+
+    monkeypatch.setattr(cli.shutil, "which", lambda _: None)
+    monkeypatch.setattr(cli.sys, "executable", str(tmp_path / "python"))
+
+    assert cli._find_uv() is None
+
+
+def test_the_uv_extra_is_declared():
+    """Documented as `pip install "buraq[uv]"`; it has to exist."""
+    import tomllib
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    extras = data["project"]["optional-dependencies"]
+
+    assert "uv" in extras
+    assert any(spec.startswith("uv") for spec in extras["uv"])

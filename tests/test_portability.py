@@ -132,6 +132,6 @@ def test_startproject_next_steps_match_the_available_installer():
     end = source.index("\n@app.command()", start)
     body = source[start:end]
 
-    assert 'shutil.which("uv")' in body
+    assert "_find_uv()" in body
     assert "python -m venv .venv" in body
     assert "pip install buraq" in body

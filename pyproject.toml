@@ -68,6 +68,9 @@ postgres  = ["asyncpg>=0.29.0"]
 mysql     = ["aiomysql>=0.2.0"]
 memcached = ["aiomcache>=0.8.0"]
 redis     = ["redis[hiredis]>=5.0.0"]
+# Brings uv along so `buraq startproject` uses it rather than falling back to
+# venv + pip. Opt-in: it is a large binary, and nothing else here needs it.
+uv        = ["uv>=0.5.0"]
 
 # PEP 735 dependency groups — uv's native format for dev/test deps
 # Install with: uv sync --group dev

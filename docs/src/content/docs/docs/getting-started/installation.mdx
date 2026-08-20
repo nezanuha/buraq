@@ -36,8 +36,19 @@ powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 See [the uv install guide](https://docs.astral.sh/uv/getting-started/installation/)
-for other methods. If you would rather not, stay on the pip tab throughout — every
-step has a pip equivalent.
+for other methods, or let pip fetch it as part of Buraq:
+
+```bash
+pip install "buraq[uv]"
+```
+
+That pulls uv in alongside Buraq, so `buraq startproject` uses it rather than
+falling back to venv and pip. It is an opt-in extra because uv is a ~50 MB
+binary and nothing else in Buraq needs it — worth it if you are creating
+projects, pure weight if you are adding Buraq to an existing one.
+
+If you would rather not, stay on the pip tab throughout — every step has a pip
+equivalent.
 
 ## Install the `buraq` command
 

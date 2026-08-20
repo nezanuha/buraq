@@ -280,6 +280,22 @@ def runserver(
 # ─── Migrations ──────────────────────────────────────────────────────────────
 
 
+def _find_uv() -> str | None:
+    """
+    Locate uv: on PATH, or beside the interpreter running this command.
+
+    `pip install "buraq[uv]"` puts uv in the same Scripts/bin directory as the
+    buraq console script. That directory is only on PATH while the environment
+    is activated, so looking there too is what makes the extra work unactivated.
+    """
+    found = shutil.which("uv")
+    if found:
+        return found
+
+    beside = Path(sys.executable).parent / ("uv.exe" if os.name == "nt" else "uv")
+    return str(beside) if beside.exists() else None
+
+
 def _install_dependencies(project_dir: Path) -> bool:
     """
     Install the new project's dependencies. True when it is ready to run.
@@ -289,7 +305,7 @@ def _install_dependencies(project_dir: Path) -> bool:
     None of those make the scaffold wrong, so a failure here is reported and the
     caller carries on rather than leaving a half-made project behind.
     """
-    uv = shutil.which("uv")
+    uv = _find_uv()
     if uv:
         typer.echo("Installing dependencies with uv...")
         return subprocess.run([uv, "sync"], cwd=project_dir).returncode == 0
@@ -839,7 +855,7 @@ def compilemessages(
 
 def _uv() -> str:
     """Return the uv executable path, or raise if not installed."""
-    uv_path = shutil.which("uv")
+    uv_path = _find_uv()
     if not uv_path:
         typer.echo(
             "uv is not installed. Install it with:\n"
@@ -1209,7 +1225,7 @@ def startproject(
     if not ready:
         # Either --no-install, or the install did not finish. Either way the
         # files are correct and this is the step that is still outstanding.
-        if shutil.which("uv"):
+        if _find_uv():
             typer.echo("  uv sync                        # install dependencies")
         else:
             typer.echo("  python -m venv .venv           # create the environment")
