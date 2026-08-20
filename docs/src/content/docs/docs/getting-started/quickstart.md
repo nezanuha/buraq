@@ -135,16 +135,14 @@ then `migrate`.
 buraq runserver
 ```
 
-[http://127.0.0.1:8000/posts/](http://127.0.0.1:8000/posts/) — empty until you
-add a post, which the [admin](/docs/topics/admin) or
-[`buraq shell`](/docs/management/commands) can do:
+Open `http://127.0.0.1:8000/posts/`. It is empty until you add a post, which the
+[admin](/docs/topics/admin) or [`buraq shell`](/docs/management/commands) can do:
 
 ```bash
 buraq shell -c "await Post.objects.create(title='Hello', slug='hello', content='First post.', is_published=True)"
 ```
 
-Auto-generated API docs are at
-[/api/docs](http://127.0.0.1:8000/api/docs).
+Auto-generated API docs are at `/api/docs`.
 
 ## Where to go next
 
