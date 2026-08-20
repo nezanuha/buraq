@@ -8,7 +8,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 ## The short version
 
 ```bash
-pip install buraq
+uv tool install buraq
 buraq startproject myproject
 cd myproject
 buraq migrate
@@ -16,21 +16,36 @@ buraq runserver
 ```
 
 Your project is on [http://127.0.0.1:8000](http://127.0.0.1:8000). Everything
-below explains those five lines, and covers uv, database drivers and what to do
-when a step fails.
+below explains those five lines.
+
+No uv yet? It is [one command away](#requirements) — or swap the first line for
+`pip install buraq`, which works everywhere.
 
 ## Requirements
 
-- **Python 3.11 or newer**
-- **pip** — ships with Python, so you already have it
-- **[uv](#using-uv)** — optional, faster, and a separate install
+- **Python 3.11 or newer** — check with `python --version`, and install from
+  [python.org/downloads](https://www.python.org/downloads/) if it reports lower
+- **uv** — recommended, and a one-line install
+
+Buraq is built for speed, and uv is the toolchain that matches it: installs are
+far faster than pip's, and it manages the project's environment and lockfile for
+you. A generated Buraq project is already set up for it, and `buraq startproject`
+uses it automatically whenever it is present.
 
 ```bash
-python --version
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-If that reports below 3.11, or the command is not found, install Python from
-[python.org/downloads](https://www.python.org/downloads/) first.
+Other methods are in [uv's own guide](https://docs.astral.sh/uv/getting-started/installation/).
+
+:::note[Prefer to stay with pip?]
+Everything works with pip — it ships with Python, and every step on this page has
+a pip tab. You give up install speed and the managed lockfile, nothing else.
+:::
 
 ## 1. Install the `buraq` command
 
@@ -38,13 +53,6 @@ Creating a project needs `buraq` *before* any project exists, so install it
 globally rather than as a project dependency:
 
 <Tabs syncKey="installer">
-<TabItem label="pip">
-
-```bash
-pip install buraq
-```
-
-</TabItem>
 <TabItem label="uv">
 
 ```bash
@@ -52,20 +60,27 @@ uv tool install buraq
 ```
 
 </TabItem>
+<TabItem label="pip">
+
+```bash
+pip install buraq
+```
+
+</TabItem>
 </Tabs>
 
-The uv tab assumes uv is already on your machine; `uv: command not found` means
-it is not. Staying on pip is fine — it works everywhere, and every step below has
-a pip column.
+`uv: command not found` means uv is not installed yet — see
+[Requirements](#requirements) above, or use the pip tab.
 
-If you want uv's speed without installing it separately, pip can bring it along:
+Pip users who want uv's speed without installing it separately can have pip bring
+it along:
 
 ```bash
 pip install "buraq[uv]"
 ```
 
-`buraq startproject` then uses uv on its own. More on
-[what uv gives you](#using-uv) below.
+`buraq startproject` then uses uv on its own — see
+[About the uv extra](#about-the-uv-extra).
 
 Check it worked:
 
@@ -116,19 +131,19 @@ SQLite works out of the box — `aiosqlite` is bundled, nothing to install. For
 anything else, add the driver **inside the project**:
 
 <Tabs syncKey="installer">
-<TabItem label="pip">
-
-```bash
-pip install "buraq[postgres]"    # PostgreSQL
-pip install "buraq[mysql]"       # MySQL / MariaDB
-```
-
-</TabItem>
 <TabItem label="uv">
 
 ```bash
 uv add "buraq[postgres]"         # PostgreSQL
 uv add "buraq[mysql]"            # MySQL / MariaDB
+```
+
+</TabItem>
+<TabItem label="pip">
+
+```bash
+pip install "buraq[postgres]"    # PostgreSQL
+pip install "buraq[mysql]"       # MySQL / MariaDB
 ```
 
 </TabItem>
@@ -140,14 +155,6 @@ Then point `DATABASE_URL` at it in `config/settings.py` — see
 ## Cache backends
 
 <Tabs syncKey="installer">
-<TabItem label="pip">
-
-```bash
-pip install "redis[hiredis]"     # Redis
-pip install aiomcache            # Memcached
-```
-
-</TabItem>
 <TabItem label="uv">
 
 ```bash
@@ -156,29 +163,22 @@ uv add aiomcache                 # Memcached
 ```
 
 </TabItem>
-</Tabs>
-
-## Using uv
-
-uv is optional. Everything above works with pip, which you already have.
-
-What it buys you: installs are much faster, and it manages the project's
-environment and lockfile for you — a generated Buraq project is already set up
-for it. `buraq startproject` uses uv automatically whenever it is available.
-
-Install it directly:
+<TabItem label="pip">
 
 ```bash
-# macOS / Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows (PowerShell)
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+pip install "redis[hiredis]"     # Redis
+pip install aiomcache            # Memcached
 ```
 
-Or, as above, `pip install "buraq[uv]"`. That is an opt-in extra rather than a
-dependency: uv is a ~50 MB binary, and nothing in Buraq needs it except project
-creation.
+</TabItem>
+</Tabs>
+
+## About the uv extra
+
+`pip install "buraq[uv]"` is an opt-in extra rather than a dependency: uv is a
+~50 MB binary, and nothing in Buraq needs it except project creation. Installing
+Buraq into an existing project therefore does not drag a package manager along
+with it.
 
 ## Troubleshooting
 
