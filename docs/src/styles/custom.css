@@ -473,9 +473,14 @@ starlight-toc a[aria-current='true'] {
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
 /* Starlight's default is a row of underlined links. On this site tabs almost
-   always sit directly on top of a code block and offer the same command two
-   ways, so a segmented control fits better: the choices read as one control,
-   and the selected one visibly belongs to the block beneath it. */
+   always sit on top of a code block and offer the same command two ways, so a
+   segmented control fits better: the choices read as one control, and the
+   selected one belongs to the block beneath it.
+
+   Two other stylesheets reach these elements and both must be undone here:
+   Frutjam ships a .tab component whose name collides with the <li class="tab">
+   Starlight emits, and Starlight draws the active underline with a box-shadow
+   on the anchor. */
 
 starlight-tabs .tablist-wrapper {
   margin-bottom: 0;
@@ -491,76 +496,71 @@ starlight-tabs ul[role='tablist'] {
   display: inline-flex;
   gap: 0.125rem;
   margin: 0;
-  padding: 0.25rem;
+  padding: 0.1875rem;
   border: 1px solid var(--sl-color-hairline);
-  border-radius: var(--bq-radius);
+  border-radius: var(--bq-radius-sm);
   background: var(--sl-color-gray-6);
 }
 
+/* Frutjam's .tab sets padding-inline: 1rem and padding-block: .625rem here,
+   which inflated the control; its ::after injects content: attr(aria-label),
+   unset on these elements, leaving an empty box. */
 starlight-tabs li.tab {
+  display: block;
   margin: 0;
+  padding: 0;
   border: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: inherit;
 }
 
-starlight-tabs a[role='tab'] {
+starlight-tabs li.tab::after {
+  content: none;
+}
+
+/* `.tab > [role=tab]` is (0,2,0) in Starlight, so matching li.tab is what wins
+   the underline back off. */
+starlight-tabs li.tab > a[role='tab'] {
   display: block;
-  /* Starlight marks the active tab with a bottom border; the pill replaces it. */
+  padding: 0.3125rem 0.75rem;
   border: 0;
-  padding: 0.3rem 0.85rem;
-  border-radius: var(--bq-radius-sm);
+  border-radius: calc(var(--bq-radius-sm) - 0.125rem);
+  box-shadow: none;
   font-size: 0.8125rem;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--sl-color-gray-3);
   text-decoration: none;
   white-space: nowrap;
   transition: color 0.15s var(--bq-ease), background 0.15s var(--bq-ease);
 }
 
-starlight-tabs a[role='tab']:hover {
+starlight-tabs li.tab > a[role='tab']:hover {
   color: var(--sl-color-white);
 }
 
-/* Starlight's own rule for this is `.tab :where()[role=tab][aria-selected=true]`,
-   which outweighs a selector without the class. Matching li.tab wins it back. */
-starlight-tabs li.tab a[role='tab'][aria-selected='true'] {
+starlight-tabs li.tab > a[role='tab'][aria-selected='true'] {
   background: var(--sl-color-bg);
   color: var(--sl-color-white);
   box-shadow: var(--bq-shadow-sm);
 }
 
-/* Keyboard users need the focus ring the underline used to imply. */
-starlight-tabs a[role='tab']:focus-visible {
+/* The underline used to carry focus; the pill has to say it instead. */
+starlight-tabs li.tab > a[role='tab']:focus-visible {
   outline: 2px solid var(--sl-color-accent);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
-/* Close the gap so the panel reads as part of the same control. Starlight sets
-   1rem through `.tablist-wrapper ~ [role=tabpanel]`, so match that shape. */
+/* Starlight sets 1rem through `.tablist-wrapper ~ [role=tabpanel]`. */
 starlight-tabs .tablist-wrapper ~ [role='tabpanel'] {
   margin-top: 0.625rem;
 }
 
-/* The panel's own first element already carries the spacing. */
 starlight-tabs [role='tabpanel'] > :first-child {
   margin-top: 0;
 }
 
-[data-theme='dark'] starlight-tabs ul[role='tablist'] {
-  background: var(--sl-color-gray-6);
-}
-
-[data-theme='dark'] starlight-tabs a[role='tab'][aria-selected='true'] {
+[data-theme='dark'] starlight-tabs li.tab > a[role='tab'][aria-selected='true'] {
   background: var(--sl-color-gray-5);
-}
-
-/* Frutjam ships a .tab component, and Starlight emits <li class="tab">. The
-   collision injects an empty ::after (content: attr(aria-label), unset here) and
-   forces a colour and radius onto the item. */
-starlight-tabs li.tab::after {
-  content: none;
-}
-
-starlight-tabs li.tab {
-  color: inherit;
 }
