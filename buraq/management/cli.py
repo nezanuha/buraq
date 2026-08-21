@@ -9,6 +9,7 @@ import typer
 # Discovery lives in buraq.conf so alembic's env.py and any other entry point
 # resolve the settings module exactly the way the CLI does.
 from buraq.conf import discover_settings_module as _discover_settings_module
+from buraq.management import console
 
 
 def _load_apps() -> None:
@@ -189,14 +190,23 @@ def runserver(
     else:
         app_path = bind
 
-    typer.echo(f"Starting Buraq on http://{host}:{port}  [app: {app_path}]")
+    def _banner(server_name: str, reason: str = "") -> None:
+        """
+        What a developer needs on starting a server: where it is, what is
+        serving, and how to stop it. granian and uvicorn both announce the
+        address again themselves, which is why theirs is quietened below.
+        """
+        console.step(f"Starting {app_path}")
+        console.note(f"http://{host}:{port}")
+        detail = f"{server_name}{f' ({reason})' if reason else ''}"
+        console.note(f"server: {detail}    Ctrl+C to stop")
 
     def _serve_uvicorn(reason: str = "") -> None:
         from pathlib import Path
 
         import uvicorn
 
-        typer.echo(f"Server: uvicorn{f' ({reason})' if reason else ''}")
+        _banner("uvicorn", reason)
         uvicorn.run(
             app_path,
             host=host,
@@ -207,7 +217,7 @@ def runserver(
             # working directory on sys.path, so "main:app" would not import.
             # granian gets the same treatment through working_dir.
             app_dir=str(Path.cwd()),
-            log_level="debug",
+            log_level="warning",
         )
 
     def _serve_granian() -> bool:
@@ -242,16 +252,13 @@ def runserver(
                 # granian keeps retrying a dead worker for a while before giving
                 # up, so say something now rather than leaving the user watching
                 # a server that is never going to accept a request.
-                typer.secho(
-                    f"\ngranian is not accepting connections on "
+                console.warn(f"\ngranian is not accepting connections on "
                     f"{probe_host}:{port} — its worker failed to start.\n"
-                    f"Restart with:  buraq runserver --server uvicorn\n",
-                    fg="yellow",
-                )
+                    f"Restart with:  buraq runserver --server uvicorn\n")
 
         threading.Thread(target=_probe, daemon=True).start()
 
-        typer.echo("Server: granian (Rust ASGI)")
+        _banner("granian")
         Granian(
             app_path,
             address=host,
@@ -260,6 +267,9 @@ def runserver(
             reload=reload,
             workers=workers if not reload else 1,
             working_dir=Path.cwd(),
+            # Its startup lines repeat the address the banner just gave and add
+            # worker PIDs nobody asked for; warnings and errors still come through.
+            log_level="warning",
         ).serve()
         return served.is_set()
 
@@ -271,7 +281,7 @@ def runserver(
         served = _serve_granian()
     except ImportError:
         if server == "granian":
-            typer.secho("granian is not installed. Install it, or use --server uvicorn.", fg="red")
+            console.error("granian is not installed. Install it, or use --server uvicorn.")
             raise typer.Exit(1) from None
         _serve_uvicorn("granian not installed")
         return
@@ -281,15 +291,12 @@ def runserver(
     # fall back rather than exiting silently and leaving the user with no server.
     if not served:
         if server == "granian":
-            typer.secho(
-                "granian exited immediately — its worker failed to start. "
-                "Retry with --server uvicorn to confirm your app is fine.",
-                fg="red",
-            )
+            console.error("granian exited immediately — its worker failed to start. "
+                "Retry with --server uvicorn to confirm your app is fine.")
             raise typer.Exit(1)
-        typer.secho(
-            "granian exited immediately (its worker failed to start); falling back to uvicorn.",
-            fg="yellow",
+        console.warn(
+            "granian exited immediately (its worker failed to start); "
+            "falling back to uvicorn."
         )
         _serve_uvicorn("granian worker failed")
 
@@ -324,10 +331,10 @@ def _install_dependencies(project_dir: Path) -> bool:
     """
     uv = _find_uv()
     if uv:
-        typer.echo("Installing dependencies with uv...")
+        console.step("Installing dependencies with uv")
         return subprocess.run([uv, "sync"], cwd=project_dir).returncode == 0
 
-    typer.echo("Creating .venv and installing dependencies with pip...")
+    console.step("Creating .venv and installing dependencies with pip")
     venv_dir = project_dir / ".venv"
     if subprocess.run([sys.executable, "-m", "venv", str(venv_dir)]).returncode != 0:
         return False
@@ -350,6 +357,51 @@ def _scaffold_version_locations(apps: list[str] | None = None) -> str:
     return "\n".join(f"    {loc}" for loc in locations)
 
 
+#: Alembic announces its own setup on every run. None of it says anything about
+#: the migration, and it buried the lines that do.
+_ALEMBIC_NOISE = (
+    "Context impl",
+    "Will assume non-transactional DDL",
+    "setting up autogenerate plugin",
+)
+
+
+def _run_alembic(args: list[str]) -> int:
+    """
+    Run alembic, reporting only the lines that carry information.
+
+    Returns the exit code. Output is relayed as it arrives rather than collected,
+    so a long migration still shows progress.
+    """
+    process = subprocess.Popen(
+        [sys.executable, "-m", "alembic", *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        bufsize=1,
+    )
+
+    assert process.stdout is not None
+    for raw in process.stdout:
+        line = raw.rstrip()
+        if not line or any(noise in line for noise in _ALEMBIC_NOISE):
+            continue
+
+        message = line.split("] ", 1)[-1] if line.startswith("INFO") else line
+        if "Running upgrade" in message or "Running downgrade" in message:
+            console.step(message)
+        elif message.startswith("Detected") or message.startswith("Generating"):
+            console.item(message)
+        elif line.startswith("ERROR") or line.startswith("FAILED"):
+            console.error(message)
+        else:
+            typer.echo(message)
+
+    return process.wait()
+
+
 def _require_alembic() -> None:
     """
     Fail with something actionable when the project has no Alembic setup.
@@ -362,7 +414,7 @@ def _require_alembic() -> None:
     if Path("alembic.ini").exists():
         return
 
-    typer.secho("No alembic.ini found in this directory.", fg="red")
+    console.error("No alembic.ini found in this directory.")
     typer.echo(
         "Migrations need an Alembic setup: alembic.ini plus an alembic/ directory.\n"
         "`buraq startproject` scaffolds both. To add them to an existing project, "
@@ -478,13 +530,10 @@ def makemigrations(
     _require_alembic()
 
     if _names_an_installed_app(message):
-        typer.secho(
-            f"Note: {message!r} is being used as the migration's description, not "
-            "as an app to migrate. Buraq migrates the whole project at once.",
-            fg="yellow",
-        )
+        console.warn(f"Note: {message!r} is being used as the migration's description, not "
+            "as an app to migrate. Buraq migrates the whole project at once.")
 
-    typer.echo(f"Creating migration: {message}")
+    console.step(f"Generating migration: {message}")
 
     versions = _versions_dir()
     before = set(versions.glob("*.py")) if versions and versions.is_dir() else set()
@@ -502,18 +551,28 @@ def makemigrations(
         encoding="utf-8",
         errors="replace",
     )
-    if result.stderr:
-        typer.echo(result.stderr, nl=False, err=True)
+    for raw in (result.stderr or "").splitlines():
+        line = raw.rstrip()
+        if not line or any(noise in line for noise in _ALEMBIC_NOISE):
+            continue
+        body = line.split("] ", 1)[-1] if line.startswith("INFO") else line
+        if body.startswith("Detected"):
+            console.item(body)
+        elif body.startswith("Generating"):
+            # Alembic prints the absolute path; the file name is the useful part.
+            console.item(f"Wrote {Path(body.split()[1]).name}")
+        elif line.startswith("ERROR") or line.startswith("FAILED"):
+            console.error(body)
+        else:
+            console.error(body)
 
     if result.returncode != 0:
         if "not up to date" in result.stderr:
             # Alembic will not diff against a database that is behind its own
             # history, because the pending revisions would be generated twice.
-            typer.echo("")
-            typer.secho(
+            console.hint(
                 "The database is behind the migrations already on disk. "
-                "Run `buraq migrate` first, then makemigrations again.",
-                fg="yellow",
+                "Run `buraq migrate` first, then makemigrations again."
             )
         raise typer.Exit(result.returncode)
 
@@ -527,9 +586,18 @@ def makemigrations(
 
     if empty:
         # Suppress alembic's "Generating ... done" for a file that no longer exists.
-        typer.secho("No changes detected - no migration created.", fg="green")
+        console.success("No changes detected - nothing to migrate")
     elif result.stdout:
-        typer.echo(result.stdout, nl=False)
+        for raw in result.stdout.splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            if line.startswith("Generating"):
+                # Alembic prints the absolute path; the file name is the part
+                # worth reading, and the rest pushes the line off the terminal.
+                console.success(f"Created {Path(line.split()[1]).name}")
+            else:
+                console.item(line)
 
 
 @app.command()
@@ -546,19 +614,20 @@ def migrate(
     than one branch exists.
     """
     _require_alembic()
-    typer.echo(f"Applying migrations to: {revision}")
+    console.step(f"Applying migrations to {revision}")
     _fire_signal("pre_migrate", revision=revision, verbosity=1)
-    result = subprocess.run([sys.executable, "-m", "alembic", "upgrade", revision])
-    if result.returncode != 0:
-        raise typer.Exit(result.returncode)
+    code = _run_alembic(["upgrade", revision])
+    if code != 0:
+        raise typer.Exit(code)
     _fire_signal("post_migrate", revision=revision, verbosity=1)
+    console.success("Database is up to date")
 
 
 @app.command()
 def rollback(steps: int = typer.Argument(1, help="Number of migrations to roll back")):
     """Roll back N migrations."""
     _require_alembic()
-    typer.echo(f"Rolling back {steps} migration(s)")
+    console.step(f"Rolling back {steps} migration(s)")
     _fire_signal("pre_migrate", revision=f"-{steps}", verbosity=1)
     result = subprocess.run([sys.executable, "-m", "alembic", "downgrade", f"-{steps}"])
     if result.returncode != 0:
@@ -600,17 +669,17 @@ def createsuperuser(
             while True:
                 pw1 = getpass.getpass("Password: ")
                 if not pw1:
-                    typer.echo("Password cannot be empty.", err=True)
+                    console.error("Password cannot be empty.")
                     continue
                 pw2 = getpass.getpass("Password (again): ")
                 if pw1 != pw2:
-                    typer.echo("Passwords do not match. Please try again.", err=True)
+                    console.error("Passwords do not match. Please try again.")
                     continue
                 password = pw1
                 break
     else:
         if not username or not email or not password:
-            typer.echo("--no-input requires --username, --email, and --password.", err=True)
+            console.error("--no-input requires --username, --email, and --password.")
             raise typer.Exit(1)
 
     from buraq.contrib.auth import make_password
@@ -618,11 +687,11 @@ def createsuperuser(
 
     async def _create():
         if await User.objects.get_or_none(username=username) is not None:
-            typer.echo(f"Error: a user with username '{username}' already exists.", err=True)
+            console.error(f"Error: a user with username '{username}' already exists.")
             raise typer.Exit(1)
 
         if await User.objects.get_or_none(email=email) is not None:
-            typer.echo(f"Error: a user with email '{email}' already exists.", err=True)
+            console.error(f"Error: a user with email '{email}' already exists.")
             raise typer.Exit(1)
 
         await User.objects.create(
@@ -647,7 +716,7 @@ def startapp(name: str = typer.Argument(..., help="App name")):
     """Create a new Buraq app with the standard directory structure."""
     base = Path(name)
     if base.exists():
-        typer.echo(f"App '{name}' already exists.", err=True)
+        console.error(f"App '{name}' already exists.")
         raise typer.Exit(1)
 
     base.mkdir(parents=True)
@@ -721,7 +790,8 @@ def startapp(name: str = typer.Argument(..., help="App name")):
     for filename, content in files.items():
         (base / filename).write_text(content, encoding="utf-8")
 
-    typer.echo(f"App '{name}' created. Add '{name}' to INSTALLED_APPS in your settings.")
+    console.success(f"App {name!r} created")
+    console.hint(f"Add {name!r} to INSTALLED_APPS in config/settings.py")
 
 
 # ─── Static Files ────────────────────────────────────────────────────────────
@@ -736,7 +806,7 @@ def collectstatic(
     from buraq.contrib.staticfiles.storage import get_storage
     storage = get_storage()
     location = dest or storage.location
-    typer.echo(f"Collecting static files into {location} ...")
+    console.step(f"Collecting static files into {location}")
     result = collect_static(dest_dir=dest, clear=clear)
     typer.echo(
         f"Done. Copied: {result['copied']}, "
@@ -756,7 +826,7 @@ def clearcache():
 
     async def _clear():
         await cache.clear()
-        typer.echo("Cache cleared.")
+        console.success("Cache cleared")
 
     asyncio.run(_clear())
 
@@ -780,7 +850,7 @@ def makemessages(
     try:
         import babel.messages  # noqa: F401
     except ImportError:
-        typer.echo("Error: Babel is required. Run: buraq install babel", err=True)
+        console.error("Error: Babel is required. Run: buraq install babel")
         raise typer.Exit(1) from None
 
     cwd = Path.cwd()
@@ -792,7 +862,7 @@ def makemessages(
 
         pot_path = cwd / "locale" / f"{domain}.pot"
 
-        typer.echo(f"Extracting messages for locale '{lang}'...")
+        console.step(f"Extracting messages for locale {lang!r}")
 
         extract_args = [
             "pybabel", "extract",
@@ -805,7 +875,7 @@ def makemessages(
 
         result = subprocess.run(extract_args, capture_output=True, text=True)
         if result.returncode != 0:
-            typer.echo(result.stderr, err=True)
+            console.error(result.stderr)
             raise typer.Exit(1)
 
         if po_path.exists():
@@ -822,7 +892,7 @@ def makemessages(
             result = subprocess.run(init_args, capture_output=True, text=True)
 
         if result.returncode != 0:
-            typer.echo(result.stderr, err=True)
+            console.error(result.stderr)
             raise typer.Exit(1)
 
         typer.echo(f"  Done → locale/{lang}/LC_MESSAGES/{domain}.po")
@@ -844,12 +914,12 @@ def compilemessages(
         import subprocess as _sp
         _sp.run(["pybabel", "--version"], capture_output=True, check=True)
     except (FileNotFoundError, Exception):  # noqa: BLE001
-        typer.echo("Error: Babel is required. Run: buraq install babel", err=True)
+        console.error("Error: Babel is required. Run: buraq install babel")
         raise typer.Exit(1) from None
 
     locale_dir = Path.cwd() / "locale"
     if not locale_dir.exists():
-        typer.echo("No locale/ directory found. Run buraq makemessages first.", err=True)
+        console.error("No locale/ directory found. Run buraq makemessages first.")
         raise typer.Exit(1)
 
     result = subprocess.run(
@@ -858,10 +928,10 @@ def compilemessages(
         text=True,
     )
     if result.returncode != 0:
-        typer.echo(result.stderr, err=True)
+        console.error(result.stderr)
         raise typer.Exit(1)
 
-    typer.echo(result.stdout or "compilemessages complete. .mo files updated.")
+    console.success(result.stdout.strip() or "Translations compiled")
 
     from buraq.utils.translation import invalidate_cache
     invalidate_cache()
@@ -893,7 +963,7 @@ def install(
     if dev:
         cmd.append("--dev")
     cmd.extend(packages)
-    typer.echo(f"Installing: {', '.join(packages)}")
+    console.step(f"Installing {', '.join(packages)}")
     subprocess.run(cmd)
 
 
@@ -901,7 +971,7 @@ def install(
 def uninstall(packages: list[str] = typer.Argument(..., help="Packages to remove")):
     """Remove packages using uv (uv remove)."""
     cmd = [_uv(), "remove"] + list(packages)
-    typer.echo(f"Removing: {', '.join(packages)}")
+    console.step(f"Removing {', '.join(packages)}")
     subprocess.run(cmd)
 
 
@@ -913,7 +983,7 @@ def sync(
     cmd = [_uv(), "sync"]
     if all_extras:
         cmd.append("--all-extras")
-    typer.echo("Syncing dependencies with uv...")
+    console.step("Syncing dependencies with uv")
     subprocess.run(cmd)
 
 
@@ -957,19 +1027,16 @@ def startproject(
     Files land directly in that directory -- no extra folder is nested inside it.
     """
     if directory and dest and directory != dest:
-        typer.secho(
-            f"Two different directories given: {directory!r} and --dest {dest!r}. "
-            "Pass one.",
-            fg="red",
-        )
+        console.error(f"Two different directories given: {directory!r} and --dest {dest!r}. "
+            "Pass one.")
         raise typer.Exit(2)
 
     project_dir = Path(directory or dest or name)
     if project_dir.exists():
-        typer.echo(f"Directory '{project_dir}' already exists.", err=True)
+        console.error(f"Directory '{project_dir}' already exists.")
         raise typer.Exit(1)
 
-    typer.echo(f"Creating project '{name}' in {project_dir.resolve()}")
+    console.step(f"Creating project {name!r} in {project_dir.resolve()}")
 
     # Create directories
     dirs = [
@@ -1243,7 +1310,8 @@ def startproject(
     typer.echo("")
     ready = False if no_install else _install_dependencies(project_dir)
 
-    typer.echo("\nProject created. Now run:")
+    typer.echo("")
+    console.success("Project created. Now run:")
     typer.echo(f"\n  cd {project_dir}")
     if not ready:
         # Either --no-install, or the install did not finish. Either way the
@@ -1290,7 +1358,7 @@ def listurls(
         module = importlib.import_module(module_path)
         asgi_app = getattr(module, obj_name)
     except Exception as exc:
-        typer.echo(f"Error loading app {app_path!r}: {exc}", err=True)
+        console.error(f"Error loading app {app_path!r}: {exc}")
         raise typer.Exit(1) from exc
 
     # Build a reverse map: path → name for named routes
@@ -1376,7 +1444,7 @@ def run_command(
         except ModuleNotFoundError:
             continue
 
-    typer.echo(f"Unknown management command: '{command}'. No app provides it.", err=True)
+    console.error(f"Unknown management command: '{command}'. No app provides it.")
     raise typer.Exit(1)
 
 
@@ -1467,28 +1535,37 @@ def run_checks(
 
     messages = registry.run_checks()
     if not messages:
-        typer.echo("System check identified no issues (0 silenced).")
+        console.success("System check found no issues")
         return
 
-    errors = warnings = infos = 0
+    errors = warnings = 0
     for msg in messages:
         level = getattr(msg, "level", 0)
+        identifier = getattr(msg, "id", "?")
+        text = getattr(msg, "msg", msg)
+        hint = getattr(msg, "hint", None)
+
         if level >= 40:
             errors += 1
-            label = typer.style("ERROR", fg=typer.colors.RED)
+            console.error(f"{identifier}  {text}")
         elif level >= 30:
             warnings += 1
-            label = typer.style("WARNING", fg=typer.colors.YELLOW)
+            console.warn(f"{identifier}  {text}")
         else:
-            infos += 1
-            label = typer.style("INFO", fg=typer.colors.BLUE)
-        typer.echo(f"[{label}] {getattr(msg, 'id', '?')}: {getattr(msg, 'msg', msg)}")
+            console.step(f"{identifier}  {text}")
 
-    summary = f"System check identified {errors} error(s), {warnings} warning(s)."
+        # The hint is the actionable half and was being thrown away.
+        if hint:
+            console.hint(hint)
+
+    typer.echo("")
     if errors:
-        typer.echo(typer.style(summary, fg=typer.colors.RED), err=True)
+        console.error(f"{errors} error(s), {warnings} warning(s)")
         raise typer.Exit(1)
-    typer.echo(summary)
+    if warnings:
+        console.warn(f"{warnings} warning(s), no errors")
+        return
+    console.success("No errors")
 
 
 # ─── DB Shell ─────────────────────────────────────────────────────────────────
@@ -1526,7 +1603,7 @@ def dbshell():
         db = url.database or ""
         cmd = ["mysql", "-h", host, f"--port={port}", f"-u{user}", db]
     else:
-        typer.echo(f"Unsupported dialect: {dialect}", err=True)
+        console.error(f"Unsupported dialect: {dialect}")
         raise typer.Exit(1)
 
     typer.echo(f"Connecting: {' '.join(cmd)}")
@@ -1580,7 +1657,7 @@ def dumpdata(
 
     if output:
         Path(output).write_text(json_str, encoding="utf-8")
-        typer.echo(f"Data written to {output}")
+        console.success(f"Data written to {output}")
     else:
         typer.echo(json_str)
 
@@ -1613,7 +1690,7 @@ def loaddata(
                     continue
                 sa_table = Base.metadata.tables.get(table_name)
                 if sa_table is None:
-                    typer.echo(f"  Skipping unknown table: {table_name}", err=True)
+                    console.error(f"  Skipping unknown table: {table_name}")
                     continue
                 if not rows:
                     continue
@@ -1622,7 +1699,7 @@ def loaddata(
             await db.commit()
 
     asyncio.run(_load())
-    typer.echo("Fixture loaded.")
+    console.success("Fixture loaded")
 
 
 # ─── Flush ────────────────────────────────────────────────────────────────────
@@ -1659,7 +1736,7 @@ def flush(
             await db.commit()
 
     asyncio.run(_flush())
-    typer.echo("All tables flushed.")
+    console.success("All tables flushed")
 
 
 # ─── Change Password ──────────────────────────────────────────────────────────
@@ -1684,19 +1761,19 @@ def changepassword(
     pw1 = getpass.getpass(f"New password for '{username}': ")
     pw2 = getpass.getpass("Confirm password: ")
     if pw1 != pw2:
-        typer.echo("Passwords do not match.", err=True)
+        console.error("Passwords do not match.")
         raise typer.Exit(1)
     if not pw1:
-        typer.echo("Password cannot be empty.", err=True)
+        console.error("Password cannot be empty.")
         raise typer.Exit(1)
 
     async def _change():
         user = await User.objects.get_or_none(username=username)
         if not user:
-            typer.echo(f"User '{username}' not found.", err=True)
+            console.error(f"User '{username}' not found.")
             raise typer.Exit(1)
         await User.objects.update(user.id, hashed_password=await make_password(pw1))
-        typer.echo(f"Password for '{username}' changed successfully.")
+        console.success(f"Password for {username!r} changed")
 
     asyncio.run(_change())
 
@@ -1848,7 +1925,7 @@ def sendtestemail(
             from_email=None,  # uses DEFAULT_FROM_EMAIL
             recipient_list=[email],
         )
-        typer.echo(f"Test email sent to {email}.")
+        console.success(f"Test email sent to {email}")
 
     asyncio.run(_send())
 
@@ -1873,7 +1950,7 @@ def sqlmigrate(
     )
     typer.echo(result.stdout)
     if result.returncode != 0:
-        typer.echo(result.stderr, err=True)
+        console.error(result.stderr)
         raise typer.Exit(result.returncode)
 
 
@@ -1899,9 +1976,9 @@ def squashmigrations(
     )
     typer.echo(result.stdout)
     if result.returncode != 0:
-        typer.echo(result.stderr, err=True)
+        console.error(result.stderr)
         raise typer.Exit(result.returncode)
-    typer.echo(f"Squashed migrations {start}..{end} into '{name}'.")
+    console.success(f"Squashed migrations {start}..{end} into {name!r}")
 
 
 @app.command()
@@ -1943,7 +2020,7 @@ def createcachetable(
         async with SessionLocal() as db:
             await db.execute(sa.text(DDL))
             await db.commit()
-        typer.echo(f"Cache table '{table}' created (or already exists).")
+        console.success(f"Cache table {table!r} is ready")
 
     asyncio.run(_create())
 
@@ -1963,6 +2040,7 @@ def clearsessions():
     import time
 
     import sqlalchemy as sa
+    from sqlalchemy.exc import OperationalError
 
     from buraq.core.db import SessionLocal
 
@@ -1976,14 +2054,23 @@ def clearsessions():
                     {"now": time.time()},
                 )
                 await db.commit()
-                typer.echo(f"Deleted {result.rowcount} expired session(s).")
-            except Exception as exc:
-                typer.echo(
-                    f"Could not clear sessions: {exc}\n"
-                    "Make sure you are using DatabaseSessionBackend and the "
-                    "buraq_sessions table exists.",
-                    err=True,
+                console.success(f"Deleted {result.rowcount} expired session(s)")
+            except OperationalError:
+                # No table is the ordinary case: sessions live in the database
+                # only when that backend is selected, and its table is not
+                # created by any migration.
+                console.warn("No buraq_sessions table in this database")
+                console.hint(
+                    "Sessions are stored in the database only when SESSION_ENGINE "
+                    "is buraq.contrib.sessions.backends.db."
                 )
+                console.hint(
+                    "That backend creates its table by hand -- the sessions "
+                    "documentation has the statement."
+                )
+                raise typer.Exit(1) from None
+            except Exception as exc:
+                console.error(f"Could not clear sessions: {type(exc).__name__}: {exc}")
                 raise typer.Exit(1) from exc
 
     asyncio.run(_clear())
@@ -2068,7 +2155,7 @@ def findstatic(
                 break
 
     if not found:
-        typer.echo(f"No static file found for {path_!r}", err=True)
+        console.error(f"No static file found for {path_!r}")
         raise typer.Exit(1)
 
     for p in found:
@@ -2121,7 +2208,7 @@ def testserver(
                 for table_name, rows in fixture_data.items():
                     sa_table = Base.metadata.tables.get(table_name)
                     if sa_table is None:
-                        typer.echo(f"  Skipping unknown table: {table_name}", err=True)
+                        console.error(f"  Skipping unknown table: {table_name}")
                         continue
                     if rows:
                         await db.execute(sa_table.insert(), rows)
@@ -2247,9 +2334,7 @@ def optimizemigration(
         python manage.py optimizemigration abc1234 def5678 --name merge_branches
     """
     if len(revisions) < 2:
-        typer.echo(
-            "Error: optimizemigration requires at least two revision IDs to merge.", err=True
-        )
+        console.error("Error: optimizemigration requires at least two revision IDs to merge.")
         raise typer.Exit(1)
 
     result = subprocess.run(
@@ -2259,7 +2344,7 @@ def optimizemigration(
     )
     typer.echo(result.stdout)
     if result.returncode != 0:
-        typer.echo(result.stderr, err=True)
+        console.error(result.stderr)
         raise typer.Exit(result.returncode)
     typer.echo(f"Merged {len(revisions)} revisions as '{name}'.")
 
@@ -2356,11 +2441,8 @@ def remove_stale_contenttypes(
     except OperationalError:
         # contenttypes is optional: without it in INSTALLED_APPS the table was
         # never created, which is a setup answer rather than a stack trace.
-        typer.secho(
-            "No contenttypes table found. Add 'buraq.contrib.contenttypes' to "
-            "INSTALLED_APPS and run `buraq migrate` before using this command.",
-            fg="yellow",
-        )
+        console.warn("No contenttypes table found. Add 'buraq.contrib.contenttypes' to "
+            "INSTALLED_APPS and run `buraq migrate` before using this command.")
         raise typer.Exit(1) from None
 
 
@@ -2404,7 +2486,7 @@ def worker(
         try:
             backend_cls = import_string(backend_path)
         except ImportError as exc:
-            typer.echo(f"Error: cannot import task backend {backend_path!r}: {exc}", err=True)
+            console.error(f"Error: cannot import task backend {backend_path!r}: {exc}")
             raise typer.Exit(1) from exc
 
         backend_cls()  # validate the backend can be instantiated
@@ -2414,9 +2496,7 @@ def worker(
 
         # DummyBackend has no pending tasks to poll — warn and exit.
         if "dummy" in backend_path.lower():
-            typer.echo(
-                "DummyBackend executes tasks immediately in-process — no worker needed.", err=True
-            )
+            console.error("DummyBackend executes tasks immediately in-process — no worker needed.")
             return
 
         processed = 0
@@ -2439,7 +2519,7 @@ def worker(
             from buraq.contrib.tasks.result import TaskStatus
             from buraq.core.db import SessionLocal
         except ImportError as exc:
-            typer.echo(f"DatabaseBackend requires buraq database setup: {exc}", err=True)
+            console.error(f"DatabaseBackend requires buraq database setup: {exc}")
             raise typer.Exit(1) from exc
 
         semaphore = asyncio.Semaphore(concurrency)

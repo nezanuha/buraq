@@ -68,7 +68,11 @@ async def create_permissions(verbosity: int = 1) -> int:
     await Permission.objects.bulk_create(missing)
 
     if verbosity:
-        print(f"Created {len(missing)} permission(s).")
+        # Imported here: this runs from the CLI, but the module is also imported
+        # by applications that have no console attached.
+        from buraq.management import console
+
+        console.success(f"Created {len(missing)} permission(s)")
     return len(missing)
 
 
