@@ -1,0 +1,102 @@
+---
+/**
+ * The page title, plus actions for reading this page somewhere other than here.
+ *
+ * "Copy page" and "Markdown" both use the raw Markdown published at this page's
+ * URL plus `.md`; "Open in AI" hands an assistant that same address rather than
+ * pasting the text into a query string, which would truncate on longer pages.
+ */
+import { Icon } from '@astrojs/starlight/components';
+
+// Taken from the route rather than the entry: the content layer has no `slug`,
+// and the pathname is what the .md endpoint is published under anyway.
+const markdownUrl = new URL(`${Astro.url.pathname}.md`, Astro.site).href;
+
+// The splash template carries its own hero heading, so rendering this one gives
+// the home page two <h1> elements and an actions bar pointing at a page that was
+// never published as Markdown.
+const isSplash = Astro.locals.starlightRoute.entry.data.template === 'splash';
+
+const prompt = `Read ${markdownUrl} and help me with it.`;
+const q = encodeURIComponent(prompt);
+
+const assistants = [
+  { name: 'Claude', href: `https://claude.ai/new?q=${q}` },
+  { name: 'ChatGPT', href: `https://chatgpt.com/?q=${q}` },
+  { name: 'Perplexity', href: `https://www.perplexity.ai/search?q=${q}` },
+  { name: 'v0', href: `https://v0.dev/chat?q=${q}` },
+  { name: 'Scira', href: `https://scira.ai/?q=${q}` },
+];
+---
+
+{!isSplash && (
+<div class="bq-page-head">
+  <h1 id="_top">{Astro.locals.starlightRoute.entry.data.title}</h1>
+
+  <div class="bq-actions" data-markdown-url={markdownUrl}>
+    <button type="button" class="bq-action" data-copy-page>
+      <Icon name="copy" size="0.85em" />
+      <span data-copy-label>Copy page</span>
+    </button>
+
+    <details class="bq-menu">
+      <summary class="bq-action">
+        <Icon name="open-book" size="0.85em" />
+        Open in AI
+        <Icon name="down-caret" size="0.85em" class="bq-menu__caret" />
+      </summary>
+      <ul class="bq-menu__list">
+        {assistants.map((a) => (
+          <li>
+            <a href={a.href} target="_blank" rel="noopener noreferrer">{a.name}</a>
+          </li>
+        ))}
+      </ul>
+    </details>
+
+    <a class="bq-action" href={markdownUrl} rel="nofollow">
+      <Icon name="document" size="0.85em" />
+      Markdown
+    </a>
+  </div>
+</div>
+)}
+
+<script>
+  document.addEventListener('click', async (event) => {
+    const target = event.target as HTMLElement;
+    const button = target.closest('[data-copy-page]') as HTMLButtonElement | null;
+
+    // Close any open menu when the click landed outside it.
+    for (const menu of document.querySelectorAll('details.bq-menu[open]')) {
+      if (!menu.contains(target)) menu.removeAttribute('open');
+    }
+
+    if (!button) return;
+
+    const url = button.closest('.bq-actions')?.getAttribute('data-markdown-url');
+    const label = button.querySelector('[data-copy-label]');
+    if (!url || !label) return;
+
+    const previous = label.textContent;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(String(response.status));
+      await navigator.clipboard.writeText(await response.text());
+      label.textContent = 'Copied';
+    } catch {
+      // A denied clipboard permission or an offline page should say so rather
+      // than look like nothing happened.
+      label.textContent = 'Copy failed';
+    }
+    setTimeout(() => { label.textContent = previous; }, 2000);
+  });
+
+  // Escape closes the menu, as a menu should.
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    for (const menu of document.querySelectorAll('details.bq-menu[open]')) {
+      menu.removeAttribute('open');
+    }
+  });
+</script>
