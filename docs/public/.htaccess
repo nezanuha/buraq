@@ -30,6 +30,16 @@ Options -Indexes
     RewriteRule ^docs/(?:latest|[0-9]+\.[0-9]+)/(.+?)/?$ /docs/$1 [R=301,L]
     RewriteRule ^docs/(?:latest|[0-9]+\.[0-9]+)/?$ /docs/getting-started/installation [R=301,L]
 
+    # Before mike was moved under /docs/, it published each version at the site
+    # root instead — /1.0/, /1.2/, /1.3/ — and one deploy nested a full copy of
+    # every older version inside the newest, leaving paths like /1.3/1.2/topics/.
+    # Strip the leading version segments however many there are. The bare-version
+    # rule has to come first, or /1.3/1.2 is read as version 1.3 of a page named
+    # "1.2" and redirects to /docs/1.2.
+    RewriteRule ^(?:[0-9]+\.[0-9]+/)+(.+?)/index/?$ /docs/$1 [R=301,L]
+    RewriteRule ^(?:[0-9]+\.[0-9]+/?)+$ /docs/getting-started/installation [R=301,L]
+    RewriteRule ^(?:[0-9]+\.[0-9]+/)+(.+?)/?$ /docs/$1 [R=301,L]
+
     # /docs itself was the landing page under mike's default alias. The new site
     # has no index there, so send it to where a reader would have been going.
     RewriteRule ^docs/?$ /docs/getting-started/installation [R=301,L]
