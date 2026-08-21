@@ -299,6 +299,14 @@ h1#_top {
   line-height: 1.75;
 }
 
+/* Starlight reserves room for the anchor icon as padding on the heading, sized
+   in em against the heading, while the icon itself sizes against the wrapper.
+   The headings here override their font-size, so the two disagree and the icon
+   ends up against the last letter. Widening Starlight's own gap restores it. */
+.sl-markdown-content .sl-heading-wrapper {
+  --sl-anchor-icon-gap: 0.45em;
+}
+
 .sl-markdown-content h2 {
   font-size: 1.45rem;
   font-weight: 650;
@@ -375,7 +383,35 @@ h1#_top {
   font-size: 0.885rem;
 }
 
+/* Starlight styles tables borderless and zeroes the outer padding with
+   `:is(th:first-child, td:first-child)`, so in a bordered card the first and
+   last columns end up flush against the frame. Nothing sets the inner padding
+   at all, so cells only had whatever line-height gave them. */
+.sl-markdown-content table:not(.table) th,
+.sl-markdown-content table:not(.table) td {
+  padding: 0.6rem 0.9rem;
+  vertical-align: baseline;
+}
+
+.sl-markdown-content table:not(.table) th:first-child,
+.sl-markdown-content table:not(.table) td:first-child {
+  padding-inline-start: 1rem;
+}
+
+.sl-markdown-content table:not(.table) th:last-child,
+.sl-markdown-content table:not(.table) td:last-child {
+  padding-inline-end: 1rem;
+}
+
+/* Inline code carries its own padding, which made rows containing it taller
+   than rows without. */
+.sl-markdown-content table:not(.table) :not(pre) > code {
+  padding-block: 0.05rem;
+  line-height: 1.4;
+}
+
 .sl-markdown-content table:not(.table) th {
+  padding-block: 0.55rem;
   background: var(--sl-color-gray-7);
   font-size: 0.76rem;
   font-weight: 600;
@@ -472,15 +508,16 @@ starlight-toc a[aria-current='true'] {
 }
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
-/* Starlight's default is a row of underlined links. On this site tabs almost
-   always sit on top of a code block and offer the same command two ways, so a
-   segmented control fits better: the choices read as one control, and the
-   selected one belongs to the block beneath it.
+/* These tabs always sit on a code block and pick between two ways of running the
+   same command, so they are drawn as that block's header rather than as a
+   separate control floating above it.
 
-   Two other stylesheets reach these elements and both must be undone here:
-   Frutjam ships a .tab component whose name collides with the <li class="tab">
-   Starlight emits, and Starlight draws the active underline with a box-shadow
-   on the anchor. */
+   Three stylesheets meet on these elements. Starlight emits <li class="tab">,
+   which collides with Frutjam's .tab component (padding, colour, an ::after
+   carrying attr(aria-label)); Starlight itself draws the active tab with
+   box-shadow: 0 2px 0 on the anchor; and Expressive Code gives a bash block a
+   terminal frame with its own titlebar, which would sit under the tabs as a
+   second, empty bar. Each is undone below. */
 
 starlight-tabs .tablist-wrapper {
   margin-bottom: 0;
@@ -492,19 +529,24 @@ starlight-tabs .tablist-wrapper::-webkit-scrollbar {
   display: none;
 }
 
+/* The strip is the top of the card: same border and background as the code
+   beneath it, square where the two meet. */
 starlight-tabs ul[role='tablist'] {
-  display: inline-flex;
-  gap: 0.125rem;
+  display: flex;
+  gap: 0;
   margin: 0;
-  padding: 0.1875rem;
+  padding: 0 0.375rem;
   border: 1px solid var(--sl-color-hairline);
-  border-radius: var(--bq-radius-sm);
+  border-bottom: 0;
+  /* Square, because Expressive Code renders every block on the site with
+     --ec-brdRad: 0px — a rounded strip would sit on a square block. */
+  border-radius: 0;
   background: var(--sl-color-gray-6);
+  list-style: none;
 }
 
-/* Frutjam's .tab sets padding-inline: 1rem and padding-block: .625rem here,
-   which inflated the control; its ::after injects content: attr(aria-label),
-   unset on these elements, leaving an empty box. */
+/* Frutjam's .tab sets padding-inline: 1rem and padding-block: .625rem here, and
+   an ::after of content: attr(aria-label) — unset on these, so an empty box. */
 starlight-tabs li.tab {
   display: block;
   margin: 0;
@@ -519,48 +561,192 @@ starlight-tabs li.tab::after {
   content: none;
 }
 
-/* `.tab > [role=tab]` is (0,2,0) in Starlight, so matching li.tab is what wins
-   the underline back off. */
+/* `.tab > [role=tab]` is (0,2,0) in Starlight; matching li.tab takes the
+   underline back off. */
 starlight-tabs li.tab > a[role='tab'] {
   display: block;
-  padding: 0.3125rem 0.75rem;
+  position: relative;
+  padding: 0.5rem 0.625rem;
   border: 0;
-  border-radius: calc(var(--bq-radius-sm) - 0.125rem);
+  border-radius: 0;
   box-shadow: none;
-  font-size: 0.8125rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.78rem;
   font-weight: 500;
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--sl-color-gray-3);
   text-decoration: none;
   white-space: nowrap;
-  transition: color 0.15s var(--bq-ease), background 0.15s var(--bq-ease);
+  transition: color 0.15s var(--bq-ease);
 }
 
 starlight-tabs li.tab > a[role='tab']:hover {
-  color: var(--sl-color-white);
+  color: var(--sl-color-gray-1);
 }
 
 starlight-tabs li.tab > a[role='tab'][aria-selected='true'] {
-  background: var(--sl-color-bg);
   color: var(--sl-color-white);
-  box-shadow: var(--bq-shadow-sm);
 }
 
-/* The underline used to carry focus; the pill has to say it instead. */
+/* The mark sits on the seam between strip and code, so the selected tab reads
+   as continuous with the block below it. */
+starlight-tabs li.tab > a[role='tab'][aria-selected='true']::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0.375rem;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px 1px 0 0;
+  background: var(--sl-color-accent);
+}
+
 starlight-tabs li.tab > a[role='tab']:focus-visible {
   outline: 2px solid var(--sl-color-accent);
-  outline-offset: 1px;
+  outline-offset: -2px;
+  border-radius: var(--bq-radius-sm);
 }
 
-/* Starlight sets 1rem through `.tablist-wrapper ~ [role=tabpanel]`. */
+/* No gap: the panel is the rest of the same card. Starlight sets 1rem through
+   `.tablist-wrapper ~ [role=tabpanel]`. */
 starlight-tabs .tablist-wrapper ~ [role='tabpanel'] {
-  margin-top: 0.625rem;
+  margin-top: 0;
 }
 
 starlight-tabs [role='tabpanel'] > :first-child {
   margin-top: 0;
 }
 
-[data-theme='dark'] starlight-tabs li.tab > a[role='tab'][aria-selected='true'] {
-  background: var(--sl-color-gray-5);
+/* A bash block gets a terminal frame whose titlebar is empty here, and would
+   read as a second bar directly under the tabs. */
+starlight-tabs [role='tabpanel'] .frame.is-terminal .header {
+  display: none;
+}
+
+/* The strip already draws that edge. Radius needs no touching: Expressive Code
+   frames are square, which is why the strip is too. */
+starlight-tabs [role='tabpanel'] .expressive-code pre {
+  border-top: 0;
+}
+
+[data-theme='dark'] starlight-tabs ul[role='tablist'] {
+  background: var(--sl-color-gray-6);
+}
+
+/* ── Page actions ─────────────────────────────────────────────────────────── */
+/* Copy page / Open in AI / Markdown, beside the page title. */
+
+.bq-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-top: 1rem;
+}
+
+.bq-page-head h1 {
+  margin: 0;
+  font-size: var(--sl-text-h1);
+  line-height: var(--sl-line-height-headings);
+  font-weight: 600;
+  color: var(--sl-color-white);
+}
+
+.bq-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  /* Optical alignment with the cap height of the title beside it. */
+  margin-top: 0.35rem;
+}
+
+.bq-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3125rem 0.625rem;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: var(--bq-radius-sm);
+  background: var(--sl-color-bg);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--sl-color-gray-2);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s var(--bq-ease), color 0.15s var(--bq-ease),
+    border-color 0.15s var(--bq-ease);
+}
+
+.bq-action:hover {
+  border-color: var(--sl-color-gray-4);
+  background: var(--sl-color-gray-7);
+  color: var(--sl-color-white);
+}
+
+.bq-menu {
+  position: relative;
+}
+
+/* The disclosure triangle would sit beside the caret icon saying the same thing. */
+.bq-menu > summary {
+  list-style: none;
+}
+
+.bq-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.bq-menu[open] > summary {
+  border-color: var(--sl-color-gray-4);
+  background: var(--sl-color-gray-7);
+  color: var(--sl-color-white);
+}
+
+.bq-menu[open] .bq-menu__caret {
+  transform: rotate(180deg);
+}
+
+.bq-menu__caret {
+  transition: transform 0.15s var(--bq-ease);
+}
+
+.bq-menu__list {
+  position: absolute;
+  z-index: 30;
+  inset-inline-end: 0;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  min-width: 9rem;
+  list-style: none;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: var(--bq-radius-sm);
+  background: var(--sl-color-bg);
+  box-shadow: var(--bq-shadow-md);
+}
+
+.bq-menu__list li + li {
+  margin-top: 1px;
+}
+
+.bq-menu__list a {
+  display: block;
+  padding: 0.375rem 0.5rem;
+  border-radius: calc(var(--bq-radius-sm) - 0.125rem);
+  font-size: 0.8rem;
+  color: var(--sl-color-gray-2);
+  text-decoration: none;
+}
+
+.bq-menu__list a:hover {
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+}
+
+/* Narrow screens: the title needs the width more than the labels do. */
+@media (max-width: 30rem) {
+  .bq-action span:not([data-copy-label]) {
+    display: none;
+  }
 }

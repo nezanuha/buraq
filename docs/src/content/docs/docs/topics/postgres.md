@@ -1,5 +1,5 @@
 ﻿---
-title: "PostgreSQL"
+title: "PostgreSQL-specific fields"
 description: "With CIEmailField, queries like filter(email=\"Alice@Example.COM\") match rows stored as alice@example.com."
 ---
 

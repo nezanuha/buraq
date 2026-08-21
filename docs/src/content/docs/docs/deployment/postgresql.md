@@ -1,5 +1,5 @@
 ﻿---
-title: "PostgreSQL"
+title: "Deploying on PostgreSQL"
 description: "Run Buraq on PostgreSQL: install the asyncpg driver, configure the connection, create the database, apply migrations and tune connection pooling."
 ---
 
