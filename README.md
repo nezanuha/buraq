@@ -54,7 +54,7 @@ def post_list(request):
 # Buraq — same pattern, truly async
 async def post_list(request):
     posts = await Post.objects.filter(published=True).order_by("-created_at")
-    return render(request, "posts/list.html", {"posts": posts})
+    return await render(request, "posts/list.html", {"posts": posts})
 ```
 
 ---
@@ -135,7 +135,7 @@ async def post_create(request):
         await form.save()
         success(request, "Post created successfully.")
         return redirect("/posts")
-    return render(request, "posts/form.html", {"form": form})
+    return await render(request, "posts/form.html", {"form": form})
 ```
 
 ### Forms & ModelForm
@@ -214,7 +214,7 @@ Buraq is built on the fastest available Python components at every layer:
 
 | Layer            | Library              | Benefit                          |
 |------------------|----------------------|----------------------------------|
-| ASGI server      | Granian (Rust)       | Faster than uvicorn on all platforms |
+| ASGI server      | Granian (Rust)       | Rust-based; falls back to uvicorn    |
 | Web framework    | FastAPI              | ASGI-native, Pydantic v2         |
 | Database driver  | asyncpg              | Fastest async PostgreSQL driver  |
 | ORM              | SQLAlchemy 2.0       | Native async, no sync wrapper    |
@@ -232,15 +232,15 @@ Buraq is built on the fastest available Python components at every layer:
 - **Class-based views** — ListView, DetailView, CreateView, UpdateView, DeleteView
 - **ModelForm** with field validation and `await form.save()`
 - **Jinja2 templates** with Django-compatible template tags
-- **Built-in auth** — JWT + session, login/register/logout
+- **Built-in auth** — sessions, login/register/logout, password reset
 - **Built-in admin panel** — auto-CRUD for every model, `buraq createsuperuser`
 - **Flash messages** backed by session storage
 - **Signals** — `post_save`, `pre_delete`, custom signals
-- **Cache backends** — Redis, Memcached, in-memory (all async)
+- **Cache backends** — Redis, Memcached, database, file, in-memory (all async)
 - **Email backends** — SMTP, console, file (all async)
 - **Static files** — WhiteNoise + `buraq collectstatic`
 - **Rate limiting** via SlowAPI
-- **Security headers** via the `secure` package
+- **Security headers** — HSTS, nosniff, frame options, referrer policy, CSP
 - **CORS middleware**
 - **orjson** for all JSON responses
 - **Granian** ASGI server built-in, falls back to uvicorn
@@ -250,7 +250,11 @@ Buraq is built on the fastest available Python components at every layer:
 
 ## Documentation
 
-Full documentation: [buraqproject.com/docs](https://buraqproject.com/docs)
+Full documentation: [buraqproject.com](https://buraqproject.com)
+
+- [Installation](https://buraqproject.com/docs/getting-started/installation)
+- [Quickstart](https://buraqproject.com/docs/getting-started/quickstart)
+- [Migrating from Django](https://buraqproject.com/docs/migrating-from-django)
 
 ---
 
