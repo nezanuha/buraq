@@ -102,6 +102,35 @@ jobs:
             exit 1
           fi
 
+      - name: Check the destination exists
+        env:
+          HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          PORT: ${{ secrets.HOSTINGER_SSH_PORT }}
+          REMOTE: ${{ secrets.HOSTINGER_REMOTE_PATH }}
+        run: |
+          ssh_do() { ssh -i ~/.ssh/deploy_key -p "${PORT:-22}" "$USER@$HOST" "$@"; }
+
+          # rsync creates the last directory but not the ones above it, and
+          # reports the whole path as missing either way. The path is a secret,
+          # so the failure is masked in the log -- listing the real directories
+          # is the only way to see what it should have been.
+          if ssh_do "test -d \"$REMOTE\""; then
+            echo "destination exists"
+            exit 0
+          fi
+
+          echo "HOSTINGER_REMOTE_PATH does not exist on the server."
+          echo "Deliberately not creating it: a typo would be published to a"
+          echo "directory nothing serves, and look like a successful deploy."
+          echo ""
+          echo "Document roots on this account:"
+          ssh_do 'ls -d ~/domains/*/public_html 2>/dev/null || true'
+          echo ""
+          echo "Home directory:"
+          ssh_do 'ls -la ~ | head -20'
+          exit 1
+
       - name: Upload
         env:
           HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
