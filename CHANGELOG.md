@@ -7,14 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **`buraq startproject` installs the project's dependencies** — it wrote the files and left the reader to run `uv sync`, or a three-line venv-and-pip incantation, before anything could run. There was no decision in that step: a project cannot start without its dependencies. It now installs them, using uv when present and a `.venv` with pip otherwise. `--no-install` writes the files alone, and an install that cannot finish leaves the project intact and reports the one step outstanding rather than failing the command.
-- **`buraq migrate` applies every branch** — the default target is `heads` rather than `head`, which fails outright once more than one branch exists. `makemigrations` pins new revisions to the project's own directory and branch; with several version locations Alembic picks one itself, and it chose the installed package.
-- **Scaffolded `alembic.ini` sets `path_separator = newline`** — Alembic's default of `os` means `;` on Windows and `:` elsewhere, so a committed config would not parse on the other platform. One path per line is portable and survives directory names containing spaces.
-- **`makemigrations` says what its argument is** — the positional argument is the migration's description, which reads as an app label to anyone arriving from a framework whose equivalent scopes the run to one app. Buraq keeps a single migration history for the whole project, so `buraq makemigrations posts` would quietly create a migration *described* "posts" containing every pending change. The command now says so when the text matches an installed app, and the help text and reference spell it out.
-- **BREAKING — `render()` is now a coroutine** — `buraq.shortcuts.render()` must be awaited: `return await render(request, "posts/list.html", {"posts": posts})`. It was synchronous while `run_context_processors()` was a coroutine, so the coroutine was never awaited and context processors silently did nothing (see Fixed). Making `render()` async also allows a context processor to query the database, which was previously impossible — every query in the ORM is `await`-only, so a synchronous processor could only read attributes already on the request. All bundled views, the `startapp` scaffold, and every documentation example are updated.
-
 ### Added
 
 - **`buraq --version` and `python -m buraq`** — the conventional ways to check an install and to reach the CLI when its directory is not on `PATH`. Neither existed: `--version` fell through to a usage error and the package had no `__main__`.
@@ -37,8 +29,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Per-concern decorator modules** — `buraq.contrib.auth.decorators`, `buraq.views.decorators.http`, `.cache`, `.csrf`, `.vary` and `.csp`, alongside the flat `buraq.decorators` namespace. `buraq.views.decorators.csp` was documented but did not exist; `buraq.views.decorators` was a plain module, so the submodule import raised `ModuleNotFoundError`.
 - **Documentation: Sync and Async Code** — when a synchronous view is acceptable (and why it cannot reach the ORM), how to call blocking libraries with `asyncio.to_thread()`, and why no sync bridge ships.
 
+### Changed
+
+- **Permission creation issued one INSERT per permission** — plus a SELECT after each. It is now a single bulk insert: 189 ms to 39 ms for 36 permissions, and the gap widens with model count.
+- **Command output has one vocabulary** — every command printed through bare `typer.echo`, so an error read the same as a note, and Alembic's three setup lines appeared on every migration ahead of whatever the command had actually done. Status messages now carry a consistent mark and colour, Alembic's chatter is filtered while its progress is kept, and the commands that emit pipeable data — `dumpdata`, `sqlflush`, `inspectdb` and the rest — are deliberately left unstyled. Symbols fall back to ASCII where the terminal cannot encode them.
+- **`runserver` says what it started, once** — the address was printed three times over, by the banner and then by the server's own startup lines, alongside worker PIDs. Both servers now share one three-line banner and run at `warning` rather than `debug`; startup failures still surface.
+- **`buraq startproject` installs the project's dependencies** — it wrote the files and left the reader to run `uv sync`, or a three-line venv-and-pip incantation, before anything could run. There was no decision in that step: a project cannot start without its dependencies. It now installs them, using uv when present and a `.venv` with pip otherwise. `--no-install` writes the files alone, and an install that cannot finish leaves the project intact and reports the one step outstanding rather than failing the command.
+- **`buraq migrate` applies every branch** — the default target is `heads` rather than `head`, which fails outright once more than one branch exists. `makemigrations` pins new revisions to the project's own directory and branch; with several version locations Alembic picks one itself, and it chose the installed package.
+- **Scaffolded `alembic.ini` sets `path_separator = newline`** — Alembic's default of `os` means `;` on Windows and `:` elsewhere, so a committed config would not parse on the other platform. One path per line is portable and survives directory names containing spaces.
+- **`makemigrations` says what its argument is** — the positional argument is the migration's description, which reads as an app label to anyone arriving from a framework whose equivalent scopes the run to one app. Buraq keeps a single migration history for the whole project, so `buraq makemigrations posts` would quietly create a migration *described* "posts" containing every pending change. The command now says so when the text matches an installed app, and the help text and reference spell it out.
+- **BREAKING — `render()` is now a coroutine** — `buraq.shortcuts.render()` must be awaited: `return await render(request, "posts/list.html", {"posts": posts})`. It was synchronous while `run_context_processors()` was a coroutine, so the coroutine was never awaited and context processors silently did nothing (see Fixed). Making `render()` async also allows a context processor to query the database, which was previously impossible — every query in the ORM is `await`-only, so a synchronous processor could only read attributes already on the request. All bundled views, the `startapp` scaffold, and every documentation example are updated.
+
+### Removed
+
+- **Three dependencies nothing imported** — `pyjwt[crypto]`, `secure` and `aiofiles`. There is no JWT anywhere in Buraq: the only tokens are the ones the password-reset flow generates, and security headers are set by hand from the `SECURE_*` settings. Dropping `pyjwt` takes `cryptography` with it, about 10 MB off every install.
+- **`node_modules` from version control** — 456 files, including platform-specific shims, were committed and no ignore rule covered them. Adding the rule alone does nothing for tracked paths, so they are removed from the index.
+- **MkDocs configuration and source** — the documentation site is Astro + Starlight; `mkdocs.yml`, the old `docs/` tree and the `mkdocs`/`mike` dependency group are gone. The site now lives at `docs/`, and the admin panel stylesheet build moved from `frontend/` to `assets/`.
 ### Fixed
 
+- **The JSON cache backends silently changed values** — `FileCacheBackend` and `RedisCacheBackend` serialized with `json.dumps(value, default=str)`, so a value JSON cannot hold was stored as its repr: a `datetime` went in and a `str` came back, with the mismatch surfacing wherever the value was next used rather than at the call that cached it. They now raise `TypeError` naming the value and the key.
+- **`buraq check` discarded its hints** — every check carries a hint explaining what to do about it, and the command printed only the message.
+- **`clearsessions` reported a missing table as a stack trace** — including the SQL and its parameters. A project using cookie sessions has no such table, which is ordinary rather than exceptional.
 - **A new project rejected its own URL** — `runserver` binds 127.0.0.1 and every banner and guide points there, but the scaffolded `ALLOWED_HOSTS` listed only `localhost`, so the first page a developer opened answered `400 Invalid host header`. Both spellings of the loopback address are now allowed, and `ALLOWED_HOSTS` accepts a comma-separated string as well as JSON so a `.env` entry and a settings module cannot disagree about its format.
 - **A scaffolded `.env` did nothing** — `config/settings.py` read `os.environ`, which never sees `.env` on its own, so `DEBUG=True` in the file left the project running with `DEBUG=False`. Among other things that turned off the API docs the startup banner advertises. The generated settings module now loads `.env` before reading it.
 - **`buraq shell -c` could not run an await** — every ORM call is awaitable, so a useful one-liner nearly always contains `await`, and the command rejected them with `SyntaxError: 'await' outside function`. Top-level await now compiles and runs.
@@ -58,9 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scaffolded projects logged the format string instead of the message** — `alembic.ini` escaped `%` as `%%`, so every Alembic log line read `%(levelname)-5.5s [%(name)s] %(message)s`.
 - **`migrate` on a fresh project printed a traceback** — permission creation ran before the auth tables existed. A database without them is a normal state for a new project and is now skipped quietly.
 
-### Performance
-
-- **Permission creation issued one INSERT per permission** — plus a SELECT after each. It is now a single bulk insert: 189 ms to 39 ms for 36 permissions, and the gap widens with model count.
 - **Scaffolded projects did not start when created on Windows** — `startproject` wrote its files with the locale encoding, so a template containing an em dash landed as cp1252 while Python reads source as UTF-8. The generated `main.py` failed with `SyntaxError: Non-UTF-8 code starting with ''` before the project ever ran. Every file Buraq reads or writes now names UTF-8 explicitly.
 - **Session and cache file backends depended on the machine's locale** — entries were written and read with the platform default encoding, so anything non-ASCII was corrupted between environments and raised `UnicodeEncodeError` outright under the POSIX locale that minimal container images use. Both now use UTF-8.
 - **CI only ran on Linux** — the platform-specific paths (scaffolding, the virtualenv re-execution, shelling out to alembic) were never exercised on the systems where they differ, which is how the Windows scaffolding fault shipped. The suite now runs on Linux, Windows and macOS.
@@ -81,10 +89,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test suite could not run from a clean clone** — the settings layer refuses to import without a real `SECRET_KEY` and `.env` is gitignored, so the documented `pytest` command failed until a developer hand-wrote one. `tests/conftest.py` now sets a test-only environment, keeping the suite hermetic.
 - **Release workflow pointed at a removed directory** — the docs deployment steps still referenced the previous documentation tooling (`website/`, `versioned_docs/`, `npm run docs:version`); none of those paths exist, so the next release would have failed while installing dependencies. The workflow now builds `docs/` and publishes `docs/dist`, adding `.nojekyll` so Pages does not drop the `_astro/` asset directory.
 
-### Removed
+### Security
 
-- **`node_modules` from version control** — 456 files, including platform-specific shims, were committed and no ignore rule covered them. Adding the rule alone does nothing for tracked paths, so they are removed from the index.
-- **MkDocs configuration and source** — the documentation site is Astro + Starlight; `mkdocs.yml`, the old `docs/` tree and the `mkdocs`/`mike` dependency group are gone. The site now lives at `docs/`, and the admin panel stylesheet build moved from `frontend/` to `assets/`.
+- **The database cache interpolated its table name into SQL** — a table name cannot be a bound parameter, so `CACHE_TABLE` is now rejected unless it is a plain identifier. The value comes from settings rather than a request, which makes this a guard rather than a fix, but a setting read from an environment variable is one indirection from somewhere less trusted.
+- **Documented what each cache backend serializes with** — `DatabaseCache` and `MemcachedCacheBackend` read values back with `pickle.loads`, which runs code by design, so anyone able to write to that table or Memcached instance can run code in the application. The trade-off is the same one Django makes, and it is safe only while the store is as trusted as the application; that condition was nowhere in the documentation.
+
 
 ## [1.5.2] - 2026-08-12
 
