@@ -1,4 +1,12 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://buraqproject.com/sitemap-index.xml
+# Every page is also published as raw Markdown at the same path plus .md, for
+# the "Copy page" and "Markdown" actions and for assistants asked to read a
+# page. Those are the same content as the HTML, so leaving them crawlable puts
+# two URLs in the index for every page. They cannot say so themselves -- plain
+# text carries no canonical tag or meta robots -- and a static host sends no
+# X-Robots-Tag, so robots.txt is where it has to be said.
+Disallow: /*.md$
+
+Sitemap: https://buraqproject.com/sitemap.xml
