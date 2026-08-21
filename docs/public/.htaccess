@@ -1,0 +1,59 @@
+# Apache / LiteSpeed configuration for the built documentation site.
+#
+# Shipped from docs/public/, so it lands in dist/ on every build. GitHub Pages
+# ignores it; Hostinger and any other Apache-family host read it.
+
+# ── URLs without a trailing slash ────────────────────────────────────────────
+# The site is built with trailingSlash: 'never', so /docs/x is canonical. Apache
+# would answer that with a 301 to /docs/x/ because a directory of that name
+# exists, redirecting every URL to a form the canonical tags disown. Serving the
+# index directly keeps the address the reader asked for.
+DirectorySlash Off
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # An existing file or the root is served as-is.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_URI} ^/$
+    RewriteRule ^ - [L]
+
+    # /docs/x  ->  /docs/x/index.html, without a redirect.
+    RewriteCond %{DOCUMENT_ROOT}/$1/index.html -f
+    RewriteRule ^(.+?)/?$ /$1/index.html [L]
+</IfModule>
+
+ErrorDocument 404 /404.html
+
+# ── Raw Markdown ─────────────────────────────────────────────────────────────
+# Every page is also published at its path plus .md for the copy and "open in
+# AI" actions. It is the same content as the HTML, so it must not be indexed
+# separately. robots.txt already asks crawlers not to fetch these; this is the
+# instruction they cannot ignore, and the reason it is worth hosting here.
+<FilesMatch "\.md$">
+    Header set X-Robots-Tag "noindex, nofollow"
+</FilesMatch>
+
+# ── Caching ──────────────────────────────────────────────────────────────────
+# Everything under /_astro/ carries a content hash in its name, so it can never
+# go stale. HTML must always be revalidated or a deploy goes unnoticed.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(html|xml|txt)$">
+        Header set Cache-Control "public, max-age=0, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+# ── Compression ──────────────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml \
+        application/javascript application/json image/svg+xml
+</IfModule>
