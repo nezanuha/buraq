@@ -121,6 +121,23 @@ perms = await user.user_permissions()
 groups = await user.groups()
 ```
 
+## Inspecting what will be created
+
+`iter_model_permissions()` yields the `(model, codename, name)` triples that
+`create_permissions()` would write — every concrete model's
+`Meta.default_permissions` plus anything in `Meta.permissions`. Abstract models
+have no table and proxies share their parent's, so neither contributes.
+
+```python
+from buraq.contrib.auth.permissions import iter_model_permissions
+
+for model, codename, name in iter_model_permissions():
+    print(f"{model.__name__:12} {codename:24} {name}")
+```
+
+Useful for checking what a `Meta.permissions` entry will produce before running
+`buraq migrate`, which is what creates the rows.
+
 ## Password utilities
 
 ```python

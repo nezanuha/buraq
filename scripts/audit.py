@@ -33,7 +33,16 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 
 ROOT = Path(__file__).parent.parent
 SRC  = ROOT / "buraq"
-DOCS = ROOT / "docs"
+#: Documentation sources only. The site now builds into docs/dist, which holds a
+#: rendered copy of every page plus a generated .md per route -- scanning those
+#: would let a stale build vouch for a symbol the sources no longer mention.
+DOCS = ROOT / "docs" / "src" / "content"
+
+
+def _doc_files():
+    """Every documentation page, .md and .mdx alike."""
+    yield from sorted(DOCS.rglob("*.md"))
+    yield from sorted(DOCS.rglob("*.mdx"))
 
 GREEN  = "\033[92m"
 RED    = "\033[91m"
@@ -246,7 +255,7 @@ class Finding:
 def check_docs(files: list[FileData]) -> list[Finding]:
     """Every public symbol should appear in at least one docs page."""
     doc_texts: list[tuple[str, str]] = []
-    for df in sorted(DOCS.rglob("*.md")):
+    for df in _doc_files():
         try:
             doc_texts.append((
                 df.relative_to(ROOT).as_posix(),
@@ -420,7 +429,7 @@ def run_audit(
         # Show all symbols with their status
         doc_texts: list[tuple[str, str]] = []
         if "docs" in checks:
-            for df in sorted(DOCS.rglob("*.md")):
+            for df in _doc_files():
                 try:
                     doc_texts.append((
                         df.relative_to(ROOT).as_posix(),

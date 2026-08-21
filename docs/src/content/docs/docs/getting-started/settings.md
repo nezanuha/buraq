@@ -263,6 +263,27 @@ CORS_ALLOW_METHODS      = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 CORS_ALLOW_HEADERS      = ["*"]
 ```
 
+## Loading settings yourself
+
+The application and the CLI both find and apply your settings module on their
+own. A standalone script — a cron job, a data import, `alembic/env.py` — runs in
+a process where nothing has, so it can do the same explicitly:
+
+```python
+from buraq.conf import load_settings_module, settings
+
+load_settings_module()              # or load_settings_module("config.prod_settings")
+print(settings.DATABASE_URL)
+```
+
+With no argument it uses `BURAQ_SETTINGS_MODULE` if set, then looks for
+`config/settings.py`, `./settings.py`, and finally a single top-level package
+containing `settings.py`. `discover_settings_module()` performs that search
+alone and returns the module name, or `None` when the layout is ambiguous.
+
+Most scripts want [`buraq.apps.configure()`](/docs/topics/apps) instead, which
+does this *and* imports your models.
+
 ## Full defaults reference
 
 All settings have defaults. You only need to specify what you want to override.
