@@ -4,12 +4,24 @@ build-backend = "hatchling.build"
 
 [project]
 name = "buraq"
-version = "1.5.2"
-description = "A high-performance Django-like framework built on FastAPI"
+version = "1.6.0"
+description = "Async Python web framework with a Django-style ORM, admin and migrations, built on FastAPI"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
-keywords = ["fastapi", "framework", "async", "web", "django-like", "asgi"]
+keywords = [
+    "web framework",
+    "python web framework",
+    "async",
+    "asgi",
+    "orm",
+    "async orm",
+    "admin",
+    "migrations",
+    "fastapi",
+    "sqlalchemy",
+    "django-style",
+]
 authors = [{ name = "Nezanuha" }]
 maintainers = [{ name = "Nezanuha" }]
 classifiers = [

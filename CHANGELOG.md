@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-08-21
+
 ### Added
 
 - **`buraq --version` and `python -m buraq`** — the conventional ways to check an install and to reach the CLI when its directory is not on `PATH`. Neither existed: `--version` fell through to a usage error and the package had no `__main__`.
@@ -31,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING — `render()` is now a coroutine** — `buraq.shortcuts.render()` must be awaited: `return await render(request, "posts/list.html", {"posts": posts})`. It was synchronous while `run_context_processors()` was a coroutine, so the coroutine was never awaited and context processors silently did nothing (see Fixed). Making `render()` async also allows a context processor to query the database, which was previously impossible — every query in the ORM is `await`-only, so a synchronous processor could only read attributes already on the request. All bundled views, the `startapp` scaffold, and every documentation example are updated.
 - **Permission creation issued one INSERT per permission** — plus a SELECT after each. It is now a single bulk insert: 189 ms to 39 ms for 36 permissions, and the gap widens with model count.
 - **Command output has one vocabulary** — every command printed through bare `typer.echo`, so an error read the same as a note, and Alembic's three setup lines appeared on every migration ahead of whatever the command had actually done. Status messages now carry a consistent mark and colour, Alembic's chatter is filtered while its progress is kept, and the commands that emit pipeable data — `dumpdata`, `sqlflush`, `inspectdb` and the rest — are deliberately left unstyled. Symbols fall back to ASCII where the terminal cannot encode them.
 - **`runserver` says what it started, once** — the address was printed three times over, by the banner and then by the server's own startup lines, alongside worker PIDs. Both servers now share one three-line banner and run at `warning` rather than `debug`; startup failures still surface.
@@ -38,7 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`buraq migrate` applies every branch** — the default target is `heads` rather than `head`, which fails outright once more than one branch exists. `makemigrations` pins new revisions to the project's own directory and branch; with several version locations Alembic picks one itself, and it chose the installed package.
 - **Scaffolded `alembic.ini` sets `path_separator = newline`** — Alembic's default of `os` means `;` on Windows and `:` elsewhere, so a committed config would not parse on the other platform. One path per line is portable and survives directory names containing spaces.
 - **`makemigrations` says what its argument is** — the positional argument is the migration's description, which reads as an app label to anyone arriving from a framework whose equivalent scopes the run to one app. Buraq keeps a single migration history for the whole project, so `buraq makemigrations posts` would quietly create a migration *described* "posts" containing every pending change. The command now says so when the text matches an installed app, and the help text and reference spell it out.
-- **BREAKING — `render()` is now a coroutine** — `buraq.shortcuts.render()` must be awaited: `return await render(request, "posts/list.html", {"posts": posts})`. It was synchronous while `run_context_processors()` was a coroutine, so the coroutine was never awaited and context processors silently did nothing (see Fixed). Making `render()` async also allows a context processor to query the database, which was previously impossible — every query in the ORM is `await`-only, so a synchronous processor could only read attributes already on the request. All bundled views, the `startapp` scaffold, and every documentation example are updated.
 
 ### Removed
 
@@ -92,7 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - **The database cache interpolated its table name into SQL** — a table name cannot be a bound parameter, so `CACHE_TABLE` is now rejected unless it is a plain identifier. The value comes from settings rather than a request, which makes this a guard rather than a fix, but a setting read from an environment variable is one indirection from somewhere less trusted.
-- **Documented what each cache backend serializes with** — `DatabaseCache` and `MemcachedCacheBackend` read values back with `pickle.loads`, which runs code by design, so anyone able to write to that table or Memcached instance can run code in the application. The trade-off is the same one Django makes, and it is safe only while the store is as trusted as the application; that condition was nowhere in the documentation.
+- **Documented what each cache backend serializes with** — `DatabaseCache` and `MemcachedCacheBackend` read values back with `pickle.loads`, which runs code by design, so anyone able to write to that table or Memcached instance can run code in the application. It is the conventional trade-off for a pickle-backed cache, and it is safe only while the store is as trusted as the application; that condition was nowhere in the documentation.
 
 
 ## [1.5.2] - 2026-08-12
@@ -832,7 +834,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Argon2 password hashing via argon2-cffi
 - orjson for high-performance JSON serialization
 
-[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.5.2...HEAD
+[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/nezanuha/buraq/compare/v1.5.2...v1.6.0
 [1.5.2]: https://github.com/nezanuha/buraq/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/nezanuha/buraq/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/nezanuha/buraq/compare/v1.4.0...v1.5.0
