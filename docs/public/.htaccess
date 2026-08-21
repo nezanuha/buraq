@@ -44,18 +44,27 @@ Options -Indexes
     # has no index there, so send it to where a reader would have been going.
     RewriteRule ^docs/?$ /docs/getting-started/installation [R=301,L]
 
+    # An existing file or the root is served as-is. This has to come before the
+    # rules below, which ask whether a path has an index.html and would answer
+    # 404 for a real file like /docs/topics/orm/aggregates.md.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_URI} ^/$
+    RewriteRule ^ - [L]
+
+    # A sidebar grouping — /docs/topics/orm, /docs/reference — is a directory
+    # with no index.html, because Starlight writes no page for it. DirectorySlash
+    # Off is meant to stop the server adding a trailing slash to those, but this
+    # host adds it anyway, and the rule below then takes it off again: the two
+    # bounce off each other until the browser gives up. 404 is the honest answer,
+    # since there is no such page.
+    RewriteCond %{DOCUMENT_ROOT}/$1/index.html !-f
+    RewriteRule ^(.+?)/?$ - [R=404,L]
+
     # The old site put a trailing slash on every URL; this one has none. Old
     # inbound links land on the canonical form rather than being served at an
     # address the page itself disowns.
     RewriteCond %{REQUEST_URI} !^/$
-    RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^(.+)/$ /$1 [R=301,L]
-
-
-    # An existing file or the root is served as-is.
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_URI} ^/$
-    RewriteRule ^ - [L]
 
     # /docs/x  ->  /docs/x/index.html, without a redirect.
     RewriteCond %{DOCUMENT_ROOT}/$1/index.html -f
