@@ -75,9 +75,32 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # Pinning the host key here means a changed fingerprint fails the
-          # deploy instead of being accepted silently.
-          ssh-keyscan -p "${PORT:-22}" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # A truncated or mangled secret is the usual cause of a failure here,
+          # and it reads as a connection problem later if it is not caught now.
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null; then
+            echo "HOSTINGER_SSH_KEY is not a usable private key."
+            echo "Paste the whole file: BEGIN line, body, and END line."
+            exit 1
+          fi
+          echo "key loaded: $(ssh-keygen -l -f ~/.ssh/deploy_key | cut -d' ' -f1-2)"
+
+          # Pinning the host key means a changed fingerprint fails the deploy
+          # rather than being accepted silently. Errors are deliberately kept:
+          # whatever ssh-keyscan prints here is the whole diagnosis.
+          echo "scanning ${HOST}:${PORT:-22}"
+          if ! ssh-keyscan -T 15 -p "${PORT:-22}" -H "$HOST" >> ~/.ssh/known_hosts; then
+            echo "Could not read a host key from ${HOST}:${PORT:-22}."
+            echo "Check HOSTINGER_SSH_HOST and HOSTINGER_SSH_PORT (Hostinger"
+            echo "usually listens on 65002, not 22) and that SSH access is"
+            echo "switched on in hPanel."
+            exit 1
+          fi
+
+          if ! grep -q . ~/.ssh/known_hosts; then
+            echo "Reached ${HOST} but it returned no host key."
+            exit 1
+          fi
 
       - name: Upload
         env:
