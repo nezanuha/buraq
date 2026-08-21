@@ -10,6 +10,28 @@ from buraq.conf import settings
 from buraq.contrib.cache.backends.base import BaseCacheBackend
 
 
+def _to_json(document, key: str, backend: str, subject=None) -> str:
+    """
+    Serialize a cache value, refusing what JSON cannot represent.
+
+    ``default=str`` used to stand in for this, which turned an unserializable
+    value into its repr: a datetime went in and a string came back, and the
+    mismatch surfaced wherever the value was next used rather than at the call
+    that cached it.
+    """
+    try:
+        return json.dumps(document)
+    except TypeError as err:
+        # `document` may be an envelope around the cached value; name the value's
+        # type, which is the part the caller chose.
+        offending = document if subject is None else subject
+        raise TypeError(
+            f"{backend} stores values as JSON and cannot serialize "
+            f"{type(offending).__name__} (key {key!r}). Cache a JSON-friendly "
+            f"value, or use a backend that pickles -- see the cache documentation."
+        ) from err
+
+
 class FileCacheBackend(BaseCacheBackend):
     """
     File-system cache backend.
@@ -34,9 +56,9 @@ class FileCacheBackend(BaseCacheBackend):
             return None
         return data["value"]
 
-    def _write_sync(self, path: Path, payload: dict) -> None:
+    def _write_sync(self, path: Path, document: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, default=str), encoding="utf-8")
+        path.write_text(document, encoding="utf-8")
 
     async def get(self, key: str) -> Any | None:
         path = self._key_path(key)
@@ -49,7 +71,10 @@ class FileCacheBackend(BaseCacheBackend):
             "value": value,
             "expires_at": time.time() + timeout if timeout else None,
         }
-        await asyncio.to_thread(self._write_sync, path, payload)
+        # Serialized here rather than in the thread, so an unserializable value
+        # raises from the call that cached it.
+        document = _to_json(payload, key, "FileCacheBackend", subject=value)
+        await asyncio.to_thread(self._write_sync, path, document)
 
     async def delete(self, key: str) -> None:
         path = self._key_path(key)

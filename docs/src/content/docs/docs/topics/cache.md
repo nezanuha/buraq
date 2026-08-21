@@ -303,3 +303,45 @@ The tag uses the default cache backend configured in `CACHE_BACKEND`. There is n
 | `RedisCacheBackend` | `uv add redis[hiredis]` | Production, multi-worker |
 | `MemcachedCacheBackend` | `uv add aiomcache` | Production, high-throughput |
 | `DatabaseCache` | built-in | Persistent cache, no extra service |
+
+## What each backend can store
+
+Backends do not all serialize the same way, and the difference decides both what
+you can cache and how much you must trust the store.
+
+| Backend | Serialization | Can store |
+|---|---|---|
+| `MemoryCacheBackend` | none — the object itself | anything |
+| `FileCacheBackend` | JSON | JSON-serializable values |
+| `RedisCacheBackend` | JSON | JSON-serializable values |
+| `DatabaseCache` | pickle | any picklable object |
+| `MemcachedCacheBackend` | pickle | any picklable object |
+
+Caching a model instance or a `datetime` works on the pickle backends. The JSON
+backends raise `TypeError` naming the value and the key, so cache `post.id` or an
+ISO string instead:
+
+```python
+await cache.set("created", post.created_at)          # TypeError on JSON backends
+await cache.set("created", post.created_at.isoformat())   # fine everywhere
+```
+
+:::danger[A pickle cache must be as trusted as your application]
+`DatabaseCache` and `MemcachedCacheBackend` call `pickle.loads` on whatever they
+read back. Unpickling runs code by design, so anyone able to write to that table
+or Memcached instance can run code in your application — no exploit needed, that
+is what the format does.
+
+In practice this means:
+
+- Never point them at a Memcached instance reachable from outside your network.
+  Memcached has no authentication.
+- Never share the cache table or Memcached instance with anything less trusted
+  than the application itself.
+- Prefer `RedisCacheBackend` where the values you cache are JSON-serializable;
+  it reads back with `json.loads`, which cannot execute anything.
+
+This is the same trade-off Django makes for the same reason, and it is safe
+under the assumption above. It stops being safe the moment the store is shared
+or exposed.
+:::

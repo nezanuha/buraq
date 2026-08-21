@@ -4,6 +4,28 @@ from typing import Any
 from buraq.contrib.cache.backends.base import BaseCacheBackend
 
 
+def _to_json(document, key: str, backend: str, subject=None) -> str:
+    """
+    Serialize a cache value, refusing what JSON cannot represent.
+
+    ``default=str`` used to stand in for this, which turned an unserializable
+    value into its repr: a datetime went in and a string came back, and the
+    mismatch surfaced wherever the value was next used rather than at the call
+    that cached it.
+    """
+    try:
+        return json.dumps(document)
+    except TypeError as err:
+        # `document` may be an envelope around the cached value; name the value's
+        # type, which is the part the caller chose.
+        offending = document if subject is None else subject
+        raise TypeError(
+            f"{backend} stores values as JSON and cannot serialize "
+            f"{type(offending).__name__} (key {key!r}). Cache a JSON-friendly "
+            f"value, or use a backend that pickles -- see the cache documentation."
+        ) from err
+
+
 class RedisCacheBackend(BaseCacheBackend):
     """
     Redis cache backend using redis.asyncio.
@@ -36,7 +58,7 @@ class RedisCacheBackend(BaseCacheBackend):
 
     async def set(self, key: str, value: Any, timeout: int | None = None) -> None:
         client = await self._get_client()
-        serialized = json.dumps(value, default=str)
+        serialized = _to_json(value, key, "RedisCacheBackend")
         if timeout is not None and timeout > 0:
             await client.setex(self._make_key(key), timeout, serialized)
         else:
@@ -73,7 +95,7 @@ class RedisCacheBackend(BaseCacheBackend):
         client = await self._get_client()
         async with client.pipeline(transaction=False) as pipe:
             for key, value in mapping.items():
-                serialized = json.dumps(value, default=str)
+                serialized = _to_json(value, key, "RedisCacheBackend")
                 if timeout is not None and timeout > 0:
                     pipe.setex(self._make_key(key), timeout, serialized)
                 else:

@@ -22,12 +22,32 @@ from __future__ import annotations
 
 import json
 import pickle
+import re
 import time
 from typing import Any
 
 from buraq.contrib.cache.backends.base import BaseCacheBackend
+from buraq.exceptions import ImproperlyConfigured
 
 DEFAULT_TABLE = "buraq_cache_table"
+
+
+def _checked_table_name(name: str) -> str:
+    """
+    Reject anything that is not a plain SQL identifier.
+
+    A table name cannot be a bound parameter, so it is interpolated into the
+    statements below. The value comes from settings rather than from a request,
+    which makes this a guard rather than a fix -- but a setting read from an
+    environment variable is one indirection away from somewhere less trusted,
+    and the check costs nothing.
+    """
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name or ""):
+        raise ImproperlyConfigured(
+            f"CACHE_TABLE must be a plain identifier (letters, digits, underscore); "
+            f"got {name!r}."
+        )
+    return name
 
 
 class DatabaseCache(BaseCacheBackend):
@@ -44,7 +64,7 @@ class DatabaseCache(BaseCacheBackend):
                 table = getattr(settings, "CACHE_TABLE", None) or DEFAULT_TABLE
             except Exception:
                 table = DEFAULT_TABLE
-        self._table = table
+        self._table = _checked_table_name(table)
         if cull_probability is None:
             try:
                 from buraq.conf import settings
