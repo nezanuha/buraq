@@ -43,6 +43,7 @@ export const currentSidebar = [
           { label: 'Functions', slug: 'docs/topics/orm/functions' },
           { label: 'Relationships', slug: 'docs/topics/orm/relationships' },
           { label: 'Migrations', slug: 'docs/topics/orm/migrations' },
+          { label: 'Databases', slug: 'docs/topics/orm/databases' },
         ],
       },
       {

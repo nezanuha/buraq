@@ -29,7 +29,7 @@ _ASYNC_DRIVERS = {
     "postgresql": ("asyncpg", "postgres"),
     "postgres": ("asyncpg", "postgres"),
     "mysql": ("aiomysql", "mysql"),
-    "mariadb": ("asyncmy", None),
+    "mariadb": ("aiomysql", "mysql"),
 }
 
 #: Drivers that exist but block. Naming one is the same mistake as naming none.
@@ -74,15 +74,30 @@ def _check_database_url(url: str) -> None:
 
 def _make_engine(alias: str = "default"):
     from buraq.conf import settings
-    url = database_urls()[alias]
+
+    url, options = database_config(alias)
     _check_database_url(url)
+
     kwargs = dict(echo=settings.DATABASE_ECHO, pool_pre_ping=True)
     if url.startswith("sqlite"):
+        # One connection reused, so pool sizing and recycling do not apply --
+        # StaticPool rejects them outright.
         kwargs["connect_args"] = {"check_same_thread": False}
         kwargs["poolclass"] = StaticPool
     else:
         kwargs["pool_size"] = getattr(settings, "DATABASE_POOL_SIZE", 10)
         kwargs["max_overflow"] = getattr(settings, "DATABASE_MAX_OVERFLOW", 20)
+        # MySQL drops an idle connection after eight hours by default, and
+        # pool_pre_ping only discovers that by paying a round trip on checkout.
+        # Recycling retires the connection before it goes stale instead.
+        kwargs["pool_recycle"] = getattr(settings, "DATABASE_POOL_RECYCLE", 3600)
+
+    # connect_args is merged rather than replaced: overwriting it wholesale
+    # would silently drop check_same_thread and break SQLite.
+    connect_args = {**kwargs.get("connect_args", {}), **(options.pop("connect_args", None) or {})}
+    kwargs.update(options)
+    if connect_args:
+        kwargs["connect_args"] = connect_args
     return create_async_engine(url, **kwargs)
 
 
@@ -126,18 +141,45 @@ _connections: dict[str, "_LazyEngine"] = {}
 _replica_turn = itertools.count()
 
 
-def database_urls() -> dict[str, str]:
-    """Every configured database, by alias.
+def database_config(alias: str = DEFAULT_DB_ALIAS) -> tuple[str, dict]:
+    """The URL and engine options for *alias*.
 
-    DATABASES is the multi-database form; DATABASE_URL is the single-database
-    one and remains what a project gets by default. Setting both is a mistake
-    worth naming rather than silently resolving.
+    An entry in DATABASES is either the URL on its own, or a mapping with a
+    ``URL`` and an ``OPTIONS`` dict handed straight to SQLAlchemy. The second
+    form exists because no fixed set of settings covers what a driver needs:
+    asyncpg behind PgBouncer needs ``statement_cache_size=0`` or its prepared
+    statements break, SQLite under concurrent writers needs a ``timeout``, and
+    naming each of those forever is a losing game.
     """
+    entry = _database_entries()[alias]
+    if isinstance(entry, str):
+        return entry, {}
+
+    from buraq.exceptions import ImproperlyConfigured
+
+    if "URL" not in entry:
+        raise ImproperlyConfigured(
+            f"DATABASES[{alias!r}] has no 'URL'. Give it the URL on its own, or a "
+            f"mapping with 'URL' and optionally 'OPTIONS'."
+        )
+    unknown = set(entry) - {"URL", "OPTIONS"}
+    if unknown:
+        raise ImproperlyConfigured(
+            f"DATABASES[{alias!r}] has unexpected {sorted(unknown)}. Only 'URL' and "
+            f"'OPTIONS' are read; driver settings belong inside 'OPTIONS'."
+        )
+    return entry["URL"], dict(entry.get("OPTIONS") or {})
+
+
+def _database_entries() -> dict:
+    """Whatever DATABASES holds, or DATABASE_URL as the sole entry."""
     from buraq.conf import settings
 
     configured = dict(getattr(settings, "DATABASES", None) or {})
     if not configured:
-        return {DEFAULT_DB_ALIAS: settings.DATABASE_URL}
+        options = dict(getattr(settings, "DATABASE_OPTIONS", None) or {})
+        entry = {"URL": settings.DATABASE_URL, "OPTIONS": options}
+        return {DEFAULT_DB_ALIAS: entry if options else settings.DATABASE_URL}
     if DEFAULT_DB_ALIAS not in configured:
         from buraq.exceptions import ImproperlyConfigured
 
@@ -146,6 +188,11 @@ def database_urls() -> dict[str, str]:
             f"not name a database uses it, so there has to be one."
         )
     return configured
+
+
+def database_urls() -> dict[str, str]:
+    """Every configured database's URL, by alias."""
+    return {alias: database_config(alias)[0] for alias in _database_entries()}
 
 
 def connection(alias: str = DEFAULT_DB_ALIAS) -> "_LazyEngine":

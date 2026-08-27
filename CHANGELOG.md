@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`OPTIONS` for the database connection.** Anything SQLAlchemy's engine or the
+  driver accepts can now be set, per database, without Buraq needing a named
+  setting for each:
+
+  ```python
+  DATABASES = {
+      "default": {
+          "URL": "postgresql+asyncpg://user:pass@primary/db",
+          "OPTIONS": {"pool_size": 20, "connect_args": {"statement_cache_size": 0}},
+      },
+  }
+  DATABASE_OPTIONS = {...}   # the same, for the DATABASE_URL form
+  ```
+
+  This was a deployment blocker rather than a convenience: asyncpg behind
+  PgBouncer in transaction mode needs `statement_cache_size=0` or its prepared
+  statements break, and there was no way to say so. SQLite's `timeout` and the
+  isolation level had the same problem. `connect_args` is merged with what Buraq
+  sets rather than replacing it, so SQLite's `check_same_thread` survives an
+  entry of your own. A plain URL string stays valid wherever a mapping is
+  accepted.
+- **`DATABASE_POOL_RECYCLE`**, defaulting to an hour. MySQL closes an idle
+  connection after eight; `pool_pre_ping` only discovered that by paying a round
+  trip on checkout, where recycling retires the connection before it goes stale.
+- **MariaDB** named in the driver check, so a URL without an async driver
+  suggests `mariadb+aiomysql` rather than falling through unrecognised.
+- **A Databases page** covering what each backend does differently — SQLite
+  dropping `FOR UPDATE` from the statement rather than raising, MySQL refusing to
+  index a `TEXT` column or a `unique` `VARCHAR` past 255 characters, PgBouncer,
+  isolation levels — and saying plainly that the test suite runs against SQLite
+  only.
+
 - **Several databases, and reads from a replica.** `DATABASES` names them, each
   a URL like `DATABASE_URL` so the async driver still has somewhere to live:
 

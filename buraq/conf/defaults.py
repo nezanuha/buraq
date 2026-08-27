@@ -41,7 +41,12 @@ class BuraqSettings(BaseSettings):
     # Several databases, by alias, each a URL like DATABASE_URL. Leave empty and
     # DATABASE_URL is the only one. A "default" entry is required when set: every
     # query that does not name a database uses it.
-    DATABASES: dict[str, str] = {}
+    # Each value is the URL, or {"URL": ..., "OPTIONS": {...}} where OPTIONS is
+    # handed to SQLAlchemy's create_async_engine -- pool sizing, isolation_level,
+    # or connect_args for the driver itself.
+    DATABASES: dict[str, str | dict] = {}
+    # The same OPTIONS for the single-database DATABASE_URL form.
+    DATABASE_OPTIONS: dict = {}
     # Aliases from DATABASES that reads may be sent to, in rotation. Writes, and
     # reads inside atomic(), always go to "default".
     DATABASE_READ_REPLICAS: list[str] = []
@@ -51,6 +56,9 @@ class BuraqSettings(BaseSettings):
     DEFAULT_AUTO_FIELD: str = "buraq.orm.fields.AutoField"
     DATABASE_POOL_SIZE: int = 10
     DATABASE_MAX_OVERFLOW: int = 20
+    # Retire a pooled connection after this many seconds. Below MySQL's eight-hour
+    # wait_timeout, so a connection is replaced before the server closes it.
+    DATABASE_POOL_RECYCLE: int = 3600
     # Log every statement the engine emits. Tied to DEBUG previously, which
     # meant management commands buried their own output in SQL.
     DATABASE_ECHO: bool = False
