@@ -22,9 +22,59 @@ _on_commit_callbacks: ContextVar[list | None] = ContextVar(
 )
 
 
+#: The async driver to recommend for each backend, and the extra that installs it.
+_ASYNC_DRIVERS = {
+    "sqlite": ("aiosqlite", None),
+    "postgresql": ("asyncpg", "postgres"),
+    "postgres": ("asyncpg", "postgres"),
+    "mysql": ("aiomysql", "mysql"),
+    "mariadb": ("asyncmy", None),
+}
+
+#: Drivers that exist but block. Naming one is the same mistake as naming none.
+_SYNC_DRIVERS = frozenset({
+    "pysqlite", "psycopg2", "psycopg2cffi", "pymysql", "mysqldb",
+    "mysqlconnector", "cx_oracle", "pyodbc",
+})
+
+
+def _check_database_url(url: str) -> None:
+    """Fail with something worth reading when DATABASE_URL names a blocking driver.
+
+    SQLAlchemy catches this on its own, but not always legibly: a bare
+    ``postgresql://`` raises ``ModuleNotFoundError: No module named 'psycopg2'``,
+    which reads like a missing dependency. It is not -- psycopg2 cannot be
+    awaited, so installing it does not help. The driver has to change.
+    """
+    from buraq.exceptions import ImproperlyConfigured
+
+    scheme = url.split("://", 1)[0].lower()
+    backend, _, driver = scheme.partition("+")
+
+    if driver and driver not in _SYNC_DRIVERS:
+        return                              # async, or a driver we do not know
+
+    suggested, extra = _ASYNC_DRIVERS.get(backend, (None, None))
+    if suggested is None:
+        if driver:                          # blocking, on a backend we cannot advise on
+            raise ImproperlyConfigured(
+                f"DATABASE_URL uses {driver!r}, which is a blocking driver. Buraq "
+                f"is async throughout and needs one that can be awaited."
+            )
+        return
+
+    install = f"\n\nInstall it with:  pip install buraq[{extra}]" if extra else ""
+    raise ImproperlyConfigured(
+        f"DATABASE_URL is {scheme!r}, which selects a blocking driver. Buraq is "
+        f"async throughout, so the driver has to be one that can be awaited."
+        f"\n\nUse:  {backend}+{suggested}://...{install}"
+    )
+
+
 def _make_engine():
     from buraq.conf import settings
     url = settings.DATABASE_URL
+    _check_database_url(url)
     kwargs = dict(echo=settings.DATABASE_ECHO, pool_pre_ping=True)
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
