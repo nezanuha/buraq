@@ -81,16 +81,11 @@ urlpatterns = [
 ```
 
 ```python title="config/urls.py"
-from buraq import Buraq
 from buraq.urls import path, include
-
-app = Buraq(settings_module="config.settings")
 
 urlpatterns = [
     path("/posts", include("posts.urls")),
 ]
-
-app.load_urls(urlpatterns)
 ```
 
 ## URL path syntax

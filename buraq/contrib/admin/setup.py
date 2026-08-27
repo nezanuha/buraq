@@ -1,30 +1,31 @@
-from pathlib import Path
+"""Serving the admin's own assets.
 
-from buraq.contrib.admin.site import site
+Mounting the admin itself is done from urlpatterns -- ``path("/admin",
+admin.site.urls)`` -- so where it lives is the project's choice rather than a
+constant inside the router. This is the one part that cannot go through
+urlpatterns, because a static mount is not a route.
+"""
+
+from pathlib import Path
 
 _ADMIN_STATIC_DIR = Path(__file__).parent / "static"
 _ADMIN_STATIC_URL = "/_buraq/static"
 
 
-class BuraqAdmin:
-    """Mount the Buraq built-in admin panel on the given application."""
+def _mount_admin_static(app) -> None:
+    """Serve the admin's CSS, once, however many sites are mounted."""
+    if not _ADMIN_STATIC_DIR.exists():
+        return
+    if any(getattr(route, "path", None) == _ADMIN_STATIC_URL for route in app.routes):
+        return
 
-    def __init__(self, app, admin_site=None):
-        if admin_site is None:
-            admin_site = site
-        self.admin_site = admin_site
-        admin_site.autodiscover()
-        from buraq.contrib.admin.views import get_admin_router
-        app.include_router(get_admin_router(admin_site))
-        self._mount_static(app)
+    from fastapi.staticfiles import StaticFiles
 
-    @staticmethod
-    def _mount_static(app) -> None:
-        if not _ADMIN_STATIC_DIR.exists():
-            return
-        from fastapi.staticfiles import StaticFiles
-        app.mount(
-            _ADMIN_STATIC_URL,
-            StaticFiles(directory=str(_ADMIN_STATIC_DIR)),
-            name="_buraq_static",
-        )
+    app.mount(
+        _ADMIN_STATIC_URL,
+        StaticFiles(directory=str(_ADMIN_STATIC_DIR)),
+        name="_buraq_static",
+    )
+
+
+__all__: list[str] = []

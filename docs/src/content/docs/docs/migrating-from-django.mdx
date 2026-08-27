@@ -476,15 +476,53 @@ Most settings follow the same naming convention. Key differences:
 
 | Django `settings.py` | Buraq `settings.py` |
 |---|---|
-| `DATABASES = {"default": {...}}` | `DATABASE_URL = "postgresql+asyncpg://..."` |
+| `DATABASES = {"default": {...}}` | `DATABASE_URL = "postgresql+asyncpg://..."` — one database only, see [What's Different](#whats-different) |
 | `INSTALLED_APPS` | `INSTALLED_APPS` |
 | `MIDDLEWARE` | `MIDDLEWARE` |
-| `TEMPLATES` | `TEMPLATES` |
+| `TEMPLATES = [{...}]` | `TEMPLATES_DIR`, `APP_DIRS`, `TEMPLATE_OPTIONS` |
 | `STATIC_URL` | `STATIC_URL` |
 | `MEDIA_URL` | `MEDIA_URL` |
 | `SECRET_KEY` | `SECRET_KEY` |
 | `DEBUG` | `DEBUG` |
 | `ALLOWED_HOSTS` | `ALLOWED_HOSTS` |
+
+### Why is `INSTALLED_APPS` shorter?
+
+A new Django project lists six apps; a new Buraq project lists one. Nothing is
+missing — in Django, listing an app is *how you switch it on*, and in Buraq four
+of those five are already on.
+
+| Django lists it because | In Buraq |
+|---|---|
+| `staticfiles` — registers the finders and `collectstatic` | mounted by the application; each app's `static/` is still found through `INSTALLED_APPS`, and `SERVE_STATIC = False` turns the serving off |
+| `admin` — app-directory templates and `AppConfig.ready()` autodiscovery | `path("/admin", admin.site.urls)` in your urlconf does both |
+| `messages` — a context processor and middleware | plain functions over the session; nothing to register |
+| `contenttypes` — models and migrations | the same, and optional: only generic relations need it |
+| `auth` — models, migrations, templates | the same, which is why it *is* listed |
+
+So `INSTALLED_APPS` in Buraq means one thing: **this app contributes models,
+migrations, templates, static files, management commands or a `ready()` hook.**
+Three of Django's five contribute none of those here, and listing them would
+change nothing at all.
+
+Two are worth adding when you use them:
+
+```python
+INSTALLED_APPS = [
+    "buraq.contrib.auth",
+    "buraq.contrib.sessions",      # only for SESSION_ENGINE = "...backends.db"
+    "buraq.contrib.contenttypes",  # only for generic relations
+]
+```
+
+Your own apps go here for the usual reasons — a listed app's models are found by
+`makemigrations`, its `templates/` and `static/` are searched, its
+`management/commands/` become `buraq <name>`, and its `AppConfig.ready()` runs.
+
+:::tip
+`buraq diffsettings --all` prints every setting with the value in force, which
+is the quickest answer to "does Buraq have an equivalent of…".
+:::
 
 ---
 
@@ -578,7 +616,8 @@ The API is identical — only the import path differs.
 
 - **Every ORM call needs `await`** — this is the biggest change
 - **Views must be `async def`** — synchronous views are not supported
-- **Database URL** replaces Django's `DATABASES` dict
+- **A single database URL** replaces Django's `DATABASES` dict — and with it the
+  multi-database features: no routers, no `using()`, no read replica
 - **Jinja2** instead of Django's template engine — syntax is ~95% compatible
 - **JWT auth** is built-in alongside session auth
 - **No `syncdb`** — Alembic handles all migrations via `buraq makemigrations`

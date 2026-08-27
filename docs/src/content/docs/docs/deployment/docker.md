@@ -27,7 +27,7 @@ RUN uv run buraq collectstatic --no-input
 
 EXPOSE 8000
 
-CMD ["uv", "run", "granian", "--interface", "asgi", "config.urls:app", \
+CMD ["uv", "run", "granian", "--interface", "asgi", "main:app", \
      "--workers", "4", \
      "--host", "0.0.0.0", \
      "--port", "8000"]
@@ -53,7 +53,7 @@ services:
         condition: service_started
     command: >
       sh -c "uv run buraq migrate &&
-             uv run granian --interface asgi config.urls:app
+             uv run granian --interface asgi main:app
                --workers 4 --host 0.0.0.0 --port 8000"
 
   db:

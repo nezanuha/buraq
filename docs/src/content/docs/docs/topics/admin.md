@@ -9,18 +9,29 @@ and dark-themed UI powered by Frutjam CSS.
 
 ## Setup
 
-Mount the admin panel once in your URL config:
+Mount the admin in your URL config, like any other set of URLs:
 
 ```python title="config/urls.py"
-from buraq import Buraq
-from buraq.contrib.admin import BuraqAdmin
+from buraq.contrib import admin
+from buraq.urls import path
 
-app   = Buraq(settings_module="config.settings")
-admin = BuraqAdmin(app)
+urlpatterns = [
+    path("/admin", admin.site.urls),
+]
 ```
 
-The panel is now available at `/admin`. Log in with any account that has
-`is_staff = True` or `is_superuser = True`.
+Log in with any account that has `is_staff = True` or `is_superuser = True`.
+
+:::tip[Move it somewhere less obvious]
+`/admin` is the first path a scanner tries. The prefix is whatever you write, and
+everything the admin builds follows it — links, redirects, the login page:
+
+```python
+path("/secret-door-9f2", admin.site.urls)
+```
+
+Leaving the line out altogether is how a deployment ships without an admin.
+:::
 
 Create your first admin user from the command line:
 
@@ -83,8 +94,13 @@ private_site = AdminSite()
 private_site.site_header = "Staff Panel"
 private_site.register(Order, OrderAdmin)
 
-BuraqAdmin(app, admin_site=private_site)
+urlpatterns = [
+    path("/staff", private_site.urls),
+]
 ```
+
+Two sites can be mounted at once, each at its own prefix, each with its own
+registry.
 
 ## Authentication
 

@@ -58,18 +58,13 @@ reverse("posts:post_detail", pk=42)
 ## Including sub-applications
 
 ```python title="config/urls.py"
-from buraq import Buraq
 from buraq.urls import path, include
-
-app = Buraq(settings_module="config.settings")
 
 urlpatterns = [
     path("/auth",   include("buraq.contrib.auth.urls")),
     path("/posts",  include("posts.urls")),
     path("/api/v1", include("api.urls")),
 ]
-
-app.load_urls(urlpatterns)
 ```
 
 ## path() with extra view kwargs
@@ -87,7 +82,7 @@ path("/posts", partial(views.post_list, template="posts/custom.html"), name="pos
 
 ```python
 urlpatterns = [
-    *i18n_patterns(
+    i18n_patterns(
         path("/", views.home, name="home"),
         prefix_default_language=False,  # default language served at /, not /en/
     ),

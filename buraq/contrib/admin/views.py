@@ -27,10 +27,13 @@ def _ensure_admin_templates() -> None:
 
     admin_dir = str(Path(__file__).parent / "templates")
     env = get_templates().env
+    # Last, not first. Ahead of the project's own directory these templates
+    # could not be overridden at all: a project that wrote
+    # templates/admin/login.html to rebrand the admin was silently ignored.
     if hasattr(env.loader, "loaders"):
-        env.loader.loaders.insert(0, FileSystemLoader(admin_dir))
+        env.loader.loaders.append(FileSystemLoader(admin_dir))
     else:
-        env.loader = ChoiceLoader([FileSystemLoader(admin_dir), env.loader])
+        env.loader = ChoiceLoader([env.loader, FileSystemLoader(admin_dir)])
     _admin_loader_added = True
 
 
@@ -52,7 +55,9 @@ def _verify_cookie(cookie: str, secret: str) -> int | None:
 
 
 def get_admin_router(admin_site: AdminSite) -> APIRouter:
-    router = APIRouter(prefix="/admin", tags=["admin"])
+    # No prefix: where the admin lives is chosen at the mount point, so a
+    # deployment can move it off the first path every scanner tries.
+    router = APIRouter(tags=["admin"])
 
     async def _auth(request: Request):
         from buraq.conf import settings
@@ -89,7 +94,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         return HTMLResponse(get_templates().get_template(template).render(ctx))
 
     def _redirect_login() -> RedirectResponse:
-        return RedirectResponse("/admin/login", status_code=303)
+        return RedirectResponse(f"{admin_site.prefix}/login", status_code=303)
 
     def _find_ma(app_label: str, model_name: str):
         for ma in admin_site._registry.values():
@@ -124,7 +129,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             return _render(request, "admin/login.html", {"error": error})
 
         secret = getattr(settings, "SECRET_KEY", "buraq-admin-secret")
-        response = RedirectResponse("/admin/", status_code=303)
+        response = RedirectResponse(f"{admin_site.prefix}/", status_code=303)
         response.set_cookie(
             "_buraq_admin",
             _make_cookie(user.id, secret),
@@ -136,7 +141,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
 
     @router.get("/logout")
     async def logout():
-        resp = RedirectResponse("/admin/login", status_code=303)
+        resp = RedirectResponse(f"{admin_site.prefix}/login", status_code=303)
         resp.delete_cookie("_buraq_admin")
         return resp
 
@@ -275,7 +280,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         action = form.get("action", "")
         selected = [v for v in form.getlist("select") if str(v).isdigit()]
 
-        redirect_url = f"/admin/{app_label}/{model_name}/"
+        redirect_url = f"{admin_site.prefix}/{app_label}/{model_name}/"
 
         if action == "delete_selected" and ma.can_delete and selected:
             from buraq.orm.query import Q
@@ -338,16 +343,16 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             obj_id = getattr(obj, "id", None)
             if save_action == "_continue" and obj_id:
                 return RedirectResponse(
-                    f"/admin/{app_label}/{model_name}/{obj_id}/change/?success=created",
+                    f"{admin_site.prefix}/{app_label}/{model_name}/{obj_id}/change/?success=created",
                     status_code=303,
                 )
             if save_action == "_addanother":
                 return RedirectResponse(
-                    f"/admin/{app_label}/{model_name}/add/?success=created",
+                    f"{admin_site.prefix}/{app_label}/{model_name}/add/?success=created",
                     status_code=303,
                 )
             return RedirectResponse(
-                f"/admin/{app_label}/{model_name}/?success=created", status_code=303
+                f"{admin_site.prefix}/{app_label}/{model_name}/?success=created", status_code=303
             )
         except Exception as e:
             return _render(request, "admin/change.html", {
@@ -423,16 +428,16 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             await obj.save()
             if save_action == "_continue":
                 return RedirectResponse(
-                    f"/admin/{app_label}/{model_name}/{obj_id}/change/?success=saved",
+                    f"{admin_site.prefix}/{app_label}/{model_name}/{obj_id}/change/?success=saved",
                     status_code=303,
                 )
             if save_action == "_addanother":
                 return RedirectResponse(
-                    f"/admin/{app_label}/{model_name}/add/",
+                    f"{admin_site.prefix}/{app_label}/{model_name}/add/",
                     status_code=303,
                 )
             return RedirectResponse(
-                f"/admin/{app_label}/{model_name}/?success=saved", status_code=303
+                f"{admin_site.prefix}/{app_label}/{model_name}/?success=saved", status_code=303
             )
         except Exception as e:
             return _render(request, "admin/change.html", {
@@ -493,12 +498,12 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         except Exception:
             # Already deleted — treat as success
             return RedirectResponse(
-                f"/admin/{app_label}/{model_name}/?success=deleted", status_code=303
+                f"{admin_site.prefix}/{app_label}/{model_name}/?success=deleted", status_code=303
             )
 
         await obj.delete()
         return RedirectResponse(
-            f"/admin/{app_label}/{model_name}/?success=deleted", status_code=303
+            f"{admin_site.prefix}/{app_label}/{model_name}/?success=deleted", status_code=303
         )
 
     return router

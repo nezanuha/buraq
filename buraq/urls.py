@@ -120,7 +120,9 @@ def path(
     path('/posts/',          views.post_list, {'flag': True})  # extra view kwargs
     path('/posts/',          views.post_list, methods=["GET", "POST"])  # explicit
     """
-    if isinstance(view_or_include, URLInclude):
+    from buraq.contrib.admin.site import _AdminURLs
+
+    if isinstance(view_or_include, (URLInclude, _AdminURLs)):
         view_or_include._prefix = _to_fastapi_path(url_path)
         return view_or_include
     view = view_or_include
@@ -430,6 +432,21 @@ def register_urlpatterns(
                 _namespace=_namespace,
                 _prefix_default_language=item.prefix_default_language,
             )
+
+        elif type(item).__name__ == "_AdminURLs":
+            # Mounting the admin is three things -- importing each app's
+            # admin.py, adding its routes, serving its assets -- and only here
+            # is the application available to do them.
+            from buraq.contrib.admin.views import get_admin_router
+
+            item.site.prefix = (prefix + item._prefix).rstrip("/") or "/admin"
+            item.site.autodiscover()
+            app.include_router(
+                get_admin_router(item.site), prefix=prefix + item._prefix
+            )
+            from buraq.contrib.admin.setup import _mount_admin_static
+
+            _mount_admin_static(app)
 
         elif isinstance(item, URLInclude):
             if item.module_path is None:

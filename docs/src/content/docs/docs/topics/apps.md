@@ -87,7 +87,7 @@ apps.ready                 # True once apps are loaded
 ## Loading Buraq outside the app
 
 `configure()` loads the settings module and imports every installed app's models
-from a synchronous entry point. It is what `alembic/env.py` calls, and it suits any
+from a synchronous entry point. It is what a migration run calls, and it suits any
 standalone script that needs the ORM without starting the server:
 
 ```python

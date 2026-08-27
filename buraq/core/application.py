@@ -1,10 +1,11 @@
 import importlib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 
 from buraq.conf import settings
 from buraq.contrib.staticfiles import StaticFilesHandler
+from buraq.exceptions import ImproperlyConfigured
 
 
 class Buraq(FastAPI):
@@ -47,10 +48,72 @@ class Buraq(FastAPI):
         )
 
         self._register_builtin_middleware()
-        self.middleware("http")(self._security_headers_middleware)
         StaticFilesHandler(self).mount()
-        self._register_apps()
         self._register_exception_handlers()
+        self._load_root_urlconf()
+        self._register_welcome_page()
+
+    def _register_welcome_page(self) -> None:
+        """
+        Answer a 404 at ``/`` with a "it works" page while DEBUG is on.
+
+        A new project would otherwise reply ``{"detail":"Not Found"}`` at its own
+        root, which reads as a broken install. The alternative -- scaffolding a
+        placeholder view into config/urls.py -- puts a view in a URL
+        configuration and leaves something to delete.
+
+        Answering the 404 rather than claiming the route matters: urls can be
+        registered after the application is built, via ``app.load_urls()``, and a
+        route taken here would win over the project's own.
+        """
+        if not settings.DEBUG:
+            return
+
+        from starlette.exceptions import HTTPException as _StarletteHTTPException
+        from starlette.requests import Request
+        from starlette.responses import HTMLResponse, JSONResponse
+
+        from buraq.core.welcome import welcome_html
+
+        @self.exception_handler(404)
+        async def _not_found(request: Request, exc: _StarletteHTTPException):
+            if request.url.path == "/":
+                return HTMLResponse(
+                    welcome_html(
+                        project=self.title, docs_url=self.docs_url or "/api/docs"
+                    )
+                )
+            return JSONResponse(
+                {"detail": getattr(exc, "detail", "Not Found")}, status_code=404
+            )
+
+    def _load_root_urlconf(self) -> None:
+        """
+        Register the URLs named by ROOT_URLCONF, if there are any.
+
+        Without this a project had to reach back for the application to load its
+        own URLs -- ``app.load_urls(urlpatterns)`` at the bottom of urls.py --
+        which is why the application ended up being built there rather than in
+        the entry point. Naming the module in settings lets urls.py hold nothing
+        but urlpatterns.
+        """
+        module_path = getattr(settings, "ROOT_URLCONF", None)
+        if not module_path:
+            return
+
+        try:
+            module = importlib.import_module(module_path)
+        except ImportError as exc:
+            raise ImproperlyConfigured(
+                f"ROOT_URLCONF is {module_path!r}, which could not be imported: {exc}"
+            ) from exc
+
+        urlpatterns = getattr(module, "urlpatterns", None)
+        if urlpatterns is None:
+            raise ImproperlyConfigured(
+                f"ROOT_URLCONF is {module_path!r}, which defines no urlpatterns."
+            )
+        self.load_urls(urlpatterns)
 
     def load_urls(self, urlpatterns: list) -> None:
         """
@@ -72,21 +135,6 @@ class Buraq(FastAPI):
         }
         for key, value in user_settings.items():
             object.__setattr__(settings, key, value)
-
-    def _register_apps(self) -> None:
-        """Auto-register URLs from INSTALLED_APPS — supports both router and urlpatterns styles."""
-        from buraq.urls import register_urlpatterns
-        for app_name in settings.INSTALLED_APPS:
-            try:
-                urls_module = importlib.import_module(f"{app_name}.urls")
-                if hasattr(urls_module, "router"):
-                    self.include_router(urls_module.router)
-                elif hasattr(urls_module, "urlpatterns"):
-                    # Optional `prefix` on the urls module
-                    app_prefix = getattr(urls_module, "prefix", "")
-                    register_urlpatterns(self, urls_module.urlpatterns, prefix=app_prefix)
-            except ModuleNotFoundError:
-                pass
 
     def _register_exception_handlers(self) -> None:
         from starlette.requests import Request
@@ -111,65 +159,61 @@ class Buraq(FastAPI):
             from buraq.core.debug import render_debug_page
             return HTMLResponse(content=render_debug_page(request, exc), status_code=500)
 
-    def _register_builtin_middleware(self) -> None:
-        from fastapi.middleware.cors import CORSMiddleware
-        from fastapi.middleware.gzip import GZipMiddleware
-        from fastapi.middleware.trustedhost import TrustedHostMiddleware
+    #: Paths that no longer belong in MIDDLEWARE, and what replaced them. Each
+    #: would otherwise fail quietly rather than loudly: Starlette's CORS class
+    #: installs happily with no arguments and then applies no policy at all, so
+    #: CORS_ORIGINS would be ignored and nothing would say so until a browser
+    #: started refusing requests.
+    _MIDDLEWARE_MOVED = {
+        "fastapi.middleware.cors.CORSMiddleware": "buraq.middleware.cors.CORSMiddleware",
+        "starlette.middleware.cors.CORSMiddleware": "buraq.middleware.cors.CORSMiddleware",
+        "buraq.contrib.csrf.CsrfViewMiddleware": "buraq.middleware.csrf.CsrfViewMiddleware",
+        "buraq.middleware.common.MessageMiddleware": (
+            "buraq.contrib.messages.middleware.MessageMiddleware"
+        ),
+    }
 
+    def _register_builtin_middleware(self) -> None:
+        """
+        Install the middleware named in the MIDDLEWARE setting.
+
+        Starlette applies the last-added wrapper outermost, so the list is walked
+        in reverse: that makes MIDDLEWARE[0] the first to see a request and the
+        last to touch the response, which is the order the list reads in.
+        """
+        self._register_rate_limiter()
+
+        for dotted in reversed(list(settings.MIDDLEWARE)):
+            replacement = self._MIDDLEWARE_MOVED.get(dotted)
+            if replacement:
+                raise ImproperlyConfigured(
+                    f"MIDDLEWARE names {dotted!r}, which Buraq no longer configures. "
+                    f"Use {replacement!r} instead."
+                )
+            module_path, _, name = dotted.rpartition(".")
+            try:
+                middleware = getattr(importlib.import_module(module_path), name)
+            except (ImportError, AttributeError) as exc:
+                raise ImproperlyConfigured(
+                    f"MIDDLEWARE names {dotted!r}, which could not be imported: {exc}"
+                ) from exc
+            # No arguments: Buraq's middleware reads its own settings, which is
+            # the only way a dotted path in MIDDLEWARE can be configured at all.
+            self.add_middleware(middleware)
+
+    def _register_rate_limiter(self) -> None:
+        """Wire slowapi's limiter when it is installed; it is an optional extra."""
         try:
             from slowapi import Limiter, _rate_limit_exceeded_handler
             from slowapi.errors import RateLimitExceeded
             from slowapi.util import get_remote_address
-            limiter = Limiter(key_func=get_remote_address, default_limits=[settings.RATE_LIMIT])
-            self.state.limiter = limiter
-            self.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
         except ImportError:
-            pass
+            return
 
-        self.add_middleware(GZipMiddleware, minimum_size=1000)
-
-        cors_origins = settings.CORS_ORIGINS
-        cors_credentials = bool(cors_origins) and settings.CORS_ALLOW_CREDENTIALS
-        self.add_middleware(
-            CORSMiddleware,
-            allow_origins=cors_origins,
-            allow_credentials=cors_credentials,
-            allow_methods=settings.CORS_ALLOW_METHODS,
-            allow_headers=settings.CORS_ALLOW_HEADERS,
+        self.state.limiter = Limiter(
+            key_func=get_remote_address, default_limits=[settings.RATE_LIMIT]
         )
-
-        from buraq.contrib.sessions.middleware import SessionMiddleware
-        self.add_middleware(
-            SessionMiddleware,
-            secret_key=settings.SECRET_KEY,
-            https_only=not settings.DEBUG,
-        )
-
-        if settings.ALLOWED_HOSTS != ["*"]:
-            self.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
-
-    @staticmethod
-    async def _security_headers_middleware(request: Request, call_next):
-        response = await call_next(request)
-        if settings.SECURE_CONTENT_TYPE_NOSNIFF:
-            response.headers["X-Content-Type-Options"] = "nosniff"
-        if settings.X_FRAME_OPTIONS:
-            response.headers["X-Frame-Options"] = settings.X_FRAME_OPTIONS
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        if settings.SECURE_REFERRER_POLICY:
-            response.headers["Referrer-Policy"] = settings.SECURE_REFERRER_POLICY
-        if settings.SECURE_CROSS_ORIGIN_OPENER_POLICY:
-            response.headers["Cross-Origin-Opener-Policy"] = (
-                settings.SECURE_CROSS_ORIGIN_OPENER_POLICY
-            )
-        if settings.SECURE_HSTS_SECONDS > 0:
-            hsts = f"max-age={settings.SECURE_HSTS_SECONDS}"
-            if settings.SECURE_HSTS_INCLUDE_SUBDOMAINS:
-                hsts += "; includeSubDomains"
-            if settings.SECURE_HSTS_PRELOAD:
-                hsts += "; preload"
-            response.headers["Strict-Transport-Security"] = hsts
-        return response
+        self.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     def on_startup(self, func):
         """

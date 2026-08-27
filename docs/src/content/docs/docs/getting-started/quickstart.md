@@ -94,16 +94,11 @@ urlpatterns = [
 ```
 
 ```python title="config/urls.py"
-from buraq import Buraq
 from buraq.urls import include, path
-
-app = Buraq(settings_module="config.settings")
 
 urlpatterns = [
     path("/posts", include("posts.urls")),
 ]
-
-app.load_urls(urlpatterns)
 ```
 
 ## 7. Install the app
