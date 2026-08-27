@@ -41,6 +41,121 @@ Oracle and SQL Server. `oracledb` does have an asyncio mode, so Oracle is
 possible in principle; it is not implemented and has never been run.
 :::
 
+## Configurations
+
+Every shape, shortest first. All of these go in `config/settings.py`.
+
+### One database
+
+```python
+# SQLite — the default; a new project needs none of this
+DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
+
+# PostgreSQL
+DATABASE_URL = "postgresql+asyncpg://user:pass@localhost:5432/mydb"
+
+# MySQL or MariaDB
+DATABASE_URL = "mysql+aiomysql://user:pass@localhost:3306/mydb"
+```
+
+### One database, tuned
+
+```python
+# SQLite, when writers overlap and you get "database is locked"
+DATABASE_OPTIONS = {"connect_args": {"timeout": 20}}
+
+# PostgreSQL with a larger pool and stricter isolation
+DATABASE_OPTIONS = {
+    "pool_size": 30,
+    "max_overflow": 10,
+    "isolation_level": "SERIALIZABLE",
+}
+
+# PostgreSQL behind PgBouncer in transaction mode — required, not optional
+DATABASE_OPTIONS = {"connect_args": {"statement_cache_size": 0}}
+```
+
+### A read replica
+
+```python
+DATABASES = {
+    "default": "postgresql+asyncpg://user:pass@primary/db",
+    "replica": "postgresql+asyncpg://user:pass@replica/db",
+}
+DATABASE_READ_REPLICAS = ["replica"]
+```
+
+Reads go to `replica`, writes to `default`, and nothing in your queries changes.
+
+### Several replicas, sized separately
+
+```python
+DATABASES = {
+    "default": {"URL": "postgresql+asyncpg://u:p@primary/db",
+                "OPTIONS": {"pool_size": 10}},
+    "eu":      {"URL": "postgresql+asyncpg://u:p@eu/db",
+                "OPTIONS": {"pool_size": 40}},
+    "us":      {"URL": "postgresql+asyncpg://u:p@us/db",
+                "OPTIONS": {"pool_size": 40}},
+}
+DATABASE_READ_REPLICAS = ["eu", "us"]
+```
+
+Reads rotate between `eu` and `us`. The replicas take the read traffic, so they
+get the larger pools.
+
+### A second database, no automatic routing
+
+```python
+DATABASES = {
+    "default": "postgresql+asyncpg://u:p@main/db",
+    "legacy":  "mysql+aiomysql://u:p@old/db",
+}
+```
+
+With no `DATABASE_READ_REPLICAS`, everything goes to `default` and the second is
+reached only when asked for:
+
+```python
+await LegacyRow.objects.using("legacy").filter(archived=False)
+```
+
+Note the backends differ — nothing requires them to match.
+
+### From the environment
+
+`DATABASE_URL` is read from the environment before the value in the file, so a
+deployment redirects it without an edit:
+
+```python
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./db.sqlite3")
+```
+
+This is what a scaffolded project already has. `DATABASES` has no equivalent —
+build it from `os.environ` yourself if a deployment needs to vary it.
+
+### Two mistakes, and what they say
+
+```python
+DATABASES = {"default": "postgresql+asyncpg://u:p@main/db"}
+DATABASE_READ_REPLICAS = ["replica"]
+```
+```
+ImproperlyConfigured: DATABASE_READ_REPLICAS names ['replica'], which
+DATABASES does not define. Known: default.
+```
+
+```python
+DATABASE_URL = "postgresql://user:pass@localhost/mydb"
+```
+```
+ImproperlyConfigured: DATABASE_URL is 'postgresql', which selects a blocking
+driver. Buraq is async throughout, so the driver has to be one that can be
+awaited.
+
+Use:  postgresql+asyncpg://...
+```
+
 ## Connection options
 
 `OPTIONS` is handed to SQLAlchemy's engine, so anything it or the driver accepts
