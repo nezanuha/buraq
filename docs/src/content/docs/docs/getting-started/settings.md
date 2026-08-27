@@ -27,9 +27,21 @@ INSTALLED_APPS = [
 DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
 
 # TEMPLATES
-TEMPLATES_DIR = str(BASE_DIR / "templates")
+TEMPLATES_DIR = str(BASE_DIR / "templates")   # one path, or a list of them
+APP_DIRS      = True                          # also search each installed app's templates/
+
+# Anything Jinja's Environment accepts. "undefined" and "extensions" take
+# dotted paths so this file never has to import jinja2; everything else is
+# passed straight through.
+TEMPLATE_OPTIONS = {
+    "undefined": "jinja2.StrictUndefined",      # a typo raises instead of rendering ""
+    "trim_blocks": True,
+    "extensions": ["jinja2.ext.loopcontrols"],  # enables {% break %} / {% continue %}
+}
 
 # STATIC FILES
+SERVE_STATIC     = True                            # False for an API, or when a
+                                                   # web server in front serves files
 STATIC_URL       = "/static/"
 STATIC_ROOT      = str(BASE_DIR / "staticfiles")  # destination for collectstatic
 STATICFILES_DIRS = [str(BASE_DIR / "static")]      # source directories
@@ -54,6 +66,31 @@ DATABASE_URL = "postgresql+asyncpg://user:password@localhost:5432/mydb"
 # MySQL
 DATABASE_URL = "mysql+aiomysql://user:password@localhost:3306/mydb"
 ```
+
+The driver is named in the scheme — `+aiosqlite`, `+asyncpg`, `+aiomysql` — and
+it has to be an async one. Leaving it out, or naming a blocking driver, is
+refused at startup:
+
+```
+ImproperlyConfigured: DATABASE_URL is 'postgresql', which selects a blocking
+driver. Buraq is async throughout, so the driver has to be one that can be
+awaited.
+
+Use:  postgresql+asyncpg://...
+
+Install it with:  pip install buraq[postgres]
+```
+
+Left to SQLAlchemy this surfaces as `ModuleNotFoundError: No module named
+'psycopg2'`, which reads like a missing dependency and is not — installing
+psycopg2 cannot help, because it cannot be awaited.
+
+:::caution[One database]
+`DATABASE_URL` is a single connection, and Buraq has no equivalent of a
+`DATABASES` dict, database routers, or `QuerySet.using()` — that method exists
+but raises `NotImplementedError`. If your application needs to read from a
+replica or split tables across servers, that is not available yet.
+:::
 
 ### URL handling
 
@@ -187,6 +224,17 @@ TEMPLATE_CONTEXT_PROCESSORS = [
 
 See [Context Processors](../topics/context-processors.md) for writing custom processors.
 
+## Seeing every setting
+
+Buraq has far more settings than a project names — anything absent keeps its
+default, which is why a scaffolded `config/settings.py` is short. To see the
+full list with the values actually in force:
+
+```bash
+buraq diffsettings --all     # every setting; ### marks the ones you changed
+buraq diffsettings           # only what differs from the defaults
+```
+
 ## Authentication
 
 ```python
@@ -257,7 +305,7 @@ SESSION_COOKIE_SAMESITE = "lax"
 ## CORS
 
 ```python
-CORS_ALLOW_ORIGINS      = ["https://myfrontend.com"]
+CORS_ORIGINS            = ["https://myfrontend.com"]
 CORS_ALLOW_CREDENTIALS  = True
 CORS_ALLOW_METHODS      = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 CORS_ALLOW_HEADERS      = ["*"]
@@ -266,7 +314,7 @@ CORS_ALLOW_HEADERS      = ["*"]
 ## Loading settings yourself
 
 The application and the CLI both find and apply your settings module on their
-own. A standalone script — a cron job, a data import, `alembic/env.py` — runs in
+own. A standalone script — a cron job, a data import, a migration run — runs in
 a process where nothing has, so it can do the same explicitly:
 
 ```python

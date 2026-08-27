@@ -38,13 +38,17 @@ class BuraqSettings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./db.sqlite3"
+    # Ignored by SQLite, which uses a StaticPool.
+    # The implicit primary key on every model. Integer runs out near two
+    # billion rows; set "buraq.orm.fields.BigAutoField" to start wider.
+    DEFAULT_AUTO_FIELD: str = "buraq.orm.fields.AutoField"
+    DATABASE_POOL_SIZE: int = 10
+    DATABASE_MAX_OVERFLOW: int = 20
     # Log every statement the engine emits. Tied to DEBUG previously, which
     # meant management commands buried their own output in SQL.
     DATABASE_ECHO: bool = False
 
     # Auth
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
-    ALGORITHM: str = "HS256"
     AUTH_USER_MODEL: str = "buraq.contrib.auth.models.User"
     PASSWORD_RESET_TIMEOUT: int = 259200  # 3 days in seconds
     AUTHENTICATION_BACKENDS: list[str] = ["buraq.contrib.auth.backends.ModelBackend"]
@@ -52,6 +56,24 @@ class BuraqSettings(BaseSettings):
         {"NAME": "buraq.contrib.auth.password_validation.MinimumLengthValidator"},
         {"NAME": "buraq.contrib.auth.password_validation.CommonPasswordValidator"},
         {"NAME": "buraq.contrib.auth.password_validation.NumericPasswordValidator"},
+    ]
+
+    # Middleware, outermost first -- the entry at the top sees a request before
+    # every entry below it, and its response last. Order carries meaning: a
+    # middleware reading request.session must sit below SessionMiddleware.
+    MIDDLEWARE: list[str] = [
+        "buraq.middleware.security.SecurityMiddleware",
+        "buraq.middleware.cors.CORSMiddleware",
+        "buraq.contrib.sessions.middleware.SessionMiddleware",
+        # Reads the session, so it has to sit inside SessionMiddleware. Without
+        # it request.user raises rather than returning AnonymousUser.
+        "buraq.contrib.auth.middleware.AuthenticationMiddleware",
+        # On by default, the way it is in the frameworks this follows: sessions
+        # are cookie-based, so an unguarded POST is forgeable. A view that is
+        # authenticated some other way -- a webhook, a bearer token -- opts out
+        # with @csrf_exempt.
+        "buraq.middleware.csrf.CsrfViewMiddleware",
+        "buraq.middleware.gzip.GZipMiddleware",
     ]
 
     # CORS
@@ -64,6 +86,16 @@ class BuraqSettings(BaseSettings):
     RATE_LIMIT: str = "100/minute"
 
     # Static & templates
+    # Whether the application serves static and media files itself. False for a
+    # project that serves no files -- a JSON API -- or one where a web server
+    # in front handles them.
+    SERVE_STATIC: bool = True
+    # Cache-Control lifetime for static files in production. collectstatic
+    # writes content-hashed names, so a changed file arrives under a new URL
+    # and a long lifetime is safe.
+    # None picks by storage: a year (immutable) when names are hashed, a
+    # minute when they are not, since the same URL then serves new bytes.
+    STATIC_MAX_AGE: int | None = None
     STATIC_URL: str = "/static/"
     STATIC_DIR: str | None = None          # single source dir (legacy; prefer STATICFILES_DIRS)
     STATICFILES_DIRS: list[str] = []       # additional static source directories
@@ -72,7 +104,9 @@ class BuraqSettings(BaseSettings):
         "buraq.contrib.staticfiles.finders.AppDirectoriesFinder",
     ]
     STATICFILES_STORAGE: str = "buraq.contrib.staticfiles.storage.StaticFilesStorage"
-    TEMPLATES_DIR: str | None = None
+    # One path, or several when a project has more than one template root
+    # -- its own beside a shared theme, say. Searched in the order given.
+    TEMPLATES_DIR: str | list[str] | None = None
     MEDIA_URL: str = "/media/"
     MEDIA_DIR: str | None = None
 
@@ -104,17 +138,31 @@ class BuraqSettings(BaseSettings):
     CACHES: dict = {}
 
     # Sessions
+    # JSON Web Tokens, signed with SECRET_KEY. HMAC only -- an asymmetric
+    # algorithm needs a keypair rather than a secret.
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRY_MINUTES: int = 60
     SESSION_ENGINE: str = "buraq.contrib.sessions.backends.db"
+    SESSION_COOKIE_NAME: str = "session"
+    SESSION_COOKIE_MAX_AGE: int = 60 * 60 * 24 * 14  # 2 weeks
+    SESSION_COOKIE_SAMESITE: str = "lax"
+    SESSION_COOKIE_HTTPONLY: bool = True
     SESSION_CACHE_ALIAS: str = "default"
     SESSION_FILE_PATH: str | None = None
 
     # URLs
     ROOT_URLCONF: str | None = None
-    APPEND_SLASH: bool = True
+    # Buraq registers every route without a trailing slash, so there is
+    # nothing to append one to. Kept for projects that route both ways.
+    APPEND_SLASH: bool = False
     PREPEND_WWW: bool = False
 
     # Templates
     APP_DIRS: bool = True
+    # Passed to the Jinja environment: undefined, trim_blocks, lstrip_blocks,
+    # autoescape, and an "extensions" list of dotted paths. Anything Jinja's
+    # Environment accepts works here.
+    TEMPLATE_OPTIONS: dict = {}
 
     # Content Security Policy
     CONTENT_SECURITY_POLICY: dict | None = None
