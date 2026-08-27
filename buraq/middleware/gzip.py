@@ -21,6 +21,9 @@ class GZipMiddleware:
     - The client sends ``Accept-Encoding: gzip``
     - The response is larger than ``min_length`` bytes (default 200)
     - The response ``Content-Type`` is compressible (text/*, application/json, etc.)
+
+    Responses that fail any of those tests are streamed straight through rather
+    than buffered, so a large download does not sit in memory on its way past.
     """
 
     compressible_types = frozenset({
@@ -44,47 +47,77 @@ class GZipMiddleware:
             await self.app(scope, receive, send)
             return
 
+        start_message: dict | None = None
         body_chunks: list[bytes] = []
-        initial_response = {}
+        state = {"streaming": False, "started": False}
 
         async def capture_send(message):
-            if message["type"] == "http.response.start":
-                initial_response["status"] = message["status"]
-                initial_response["headers"] = list(message.get("headers", []))
-            elif message["type"] == "http.response.body":
+            nonlocal start_message
+            message_type = message["type"]
+
+            if message_type == "http.response.start":
+                start_message = message
+                content_type = ""
+                already_encoded = False
+                for k, v in message.get("headers", []):
+                    key = k.lower()
+                    if key == b"content-type":
+                        content_type = v.decode().split(";")[0].strip()
+                    elif key == b"content-encoding" and v.strip():
+                        # Something downstream already compressed this -- a
+                        # pre-compressed static file, say. Compressing it again
+                        # produces "content-encoding: gzip, gzip", which a
+                        # browser has to unpack twice, for a body that is now
+                        # larger than the single-encoded one.
+                        already_encoded = True
+                if already_encoded or not any(
+                    content_type.startswith(ct) for ct in self.compressible_types
+                ):
+                    # Nothing to gain by holding this. Let it stream.
+                    state["streaming"] = True
+                    state["started"] = True
+                    await send(message)
+
+            elif message_type == "http.response.pathsend":
+                # The server sends this file from disk itself, so no body ever
+                # reaches this middleware. Buffering here would swallow the
+                # response whole -- the client gets 200 and zero bytes. Forward
+                # it untouched and let the server do its job.
+                if not state["started"]:
+                    state["started"] = True
+                    await send(start_message)
+                state["streaming"] = True
+                await send(message)
+
+            elif state["streaming"]:
+                await send(message)
+
+            else:
                 body_chunks.append(message.get("body", b""))
 
         await self.app(scope, receive, capture_send)
 
+        if state["streaming"] or start_message is None:
+            return
+
         body = b"".join(body_chunks)
-        content_type = ""
-        for k, v in initial_response.get("headers", []):
-            if k.lower() == b"content-type":
-                content_type = v.decode().split(";")[0].strip()
-                break
-
-        should_compress = (
-            len(body) >= self.min_length
-            and any(content_type.startswith(ct) for ct in self.compressible_types)
-        )
-
-        if should_compress:
+        if len(body) >= self.min_length:
             buf = io.BytesIO()
             with gzip.GzipFile(fileobj=buf, mode="wb") as gz:
                 gz.write(body)
             body = buf.getvalue()
             headers = [
-                (k, v) for k, v in initial_response.get("headers", [])
-                if k.lower() not in (b"content-length",)
+                (k, v) for k, v in start_message.get("headers", [])
+                if k.lower() != b"content-length"
             ]
             headers.append((b"content-encoding", b"gzip"))
             headers.append((b"content-length", str(len(body)).encode()))
         else:
-            headers = initial_response.get("headers", [])
+            headers = start_message.get("headers", [])
 
         await send({
             "type": "http.response.start",
-            "status": initial_response.get("status", 200),
+            "status": start_message.get("status", 200),
             "headers": headers,
         })
         await send({"type": "http.response.body", "body": body})

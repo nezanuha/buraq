@@ -316,3 +316,59 @@ def test_an_explicit_cache_table_beats_the_setting(monkeypatch):
     monkeypatch.setattr(settings, "CACHE_TABLE", "from_settings")
 
     assert DatabaseCache(table="from_options")._table == "from_options"
+
+
+def test_static_serving_can_be_turned_off(monkeypatch):
+    """
+    Every other built-in can be removed -- the admin from urlpatterns, sessions
+    and auth from MIDDLEWARE -- but static mounting had no switch: STATIC_DIR =
+    None falls back to ./static, which a scaffolded project has.
+    """
+    from buraq.conf import settings
+    from buraq.core.application import Buraq
+
+    monkeypatch.setattr(settings, "DATABASE_URL", "sqlite+aiosqlite:///:memory:", raising=False)
+    monkeypatch.setattr(settings, "SECRET_KEY", "x" * 32, raising=False)
+    monkeypatch.setattr(settings, "INSTALLED_APPS", [], raising=False)
+    monkeypatch.setattr(settings, "ROOT_URLCONF", None, raising=False)
+    monkeypatch.setattr(settings, "SERVE_STATIC", False, raising=False)
+
+    mounts = [r.path for r in Buraq().routes if type(r).__name__ == "Mount"]
+
+    assert mounts == []
+
+
+def test_production_static_actually_serves(tmp_path, monkeypatch):
+    """
+    The production path used to mount WhiteNoise, which is WSGI: mounting it in
+    an ASGI application raised TypeError on the first request. Nobody hit it
+    because whitenoise was not a dependency, so the ImportError fallback ran.
+    """
+    from fastapi.testclient import TestClient
+
+    from buraq.conf import settings
+    from buraq.core.application import Buraq
+
+    static = tmp_path / "static"
+    static.mkdir()
+    (static / "a.css").write_text("body{}", encoding="utf-8")
+
+    monkeypatch.setattr(settings, "DATABASE_URL", "sqlite+aiosqlite:///:memory:", raising=False)
+    monkeypatch.setattr(settings, "SECRET_KEY", "x" * 32, raising=False)
+    monkeypatch.setattr(settings, "INSTALLED_APPS", [], raising=False)
+    monkeypatch.setattr(settings, "ROOT_URLCONF", None, raising=False)
+    monkeypatch.setattr(settings, "DEBUG", False, raising=False)
+    monkeypatch.setattr(settings, "SERVE_STATIC", True, raising=False)
+    monkeypatch.setattr(settings, "STATIC_DIR", str(static), raising=False)
+
+    with TestClient(Buraq()) as client:
+        response = client.get("/static/a.css")
+
+    assert response.status_code == 200
+    # Cache-Control is the point: ETag alone still costs a round trip per asset.
+    cache_control = response.headers["cache-control"]
+    assert "max-age=" in cache_control
+    # This settings fixture leaves the default storage in place, which does not
+    # hash names, so the same URL will serve new bytes after the next deploy and
+    # the response must not promise otherwise.
+    assert "immutable" not in cache_control

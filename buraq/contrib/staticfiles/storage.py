@@ -13,11 +13,81 @@ import logging
 import os
 import shutil
 from collections.abc import Iterator
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from buraq.conf import settings
 
 _log = logging.getLogger(__name__)
+
+
+#: Extensions worth compressing. Images, fonts and archives are already
+#: compressed; running gzip over them costs CPU and produces a larger file.
+_COMPRESSIBLE = frozenset({
+    ".css", ".js", ".mjs", ".map", ".json", ".xml", ".svg",
+    ".txt", ".html", ".htm", ".csv", ".ico",
+})
+
+#: Below this, the gzip header costs more than the compression saves.
+_COMPRESS_MIN_BYTES = 512
+
+
+def _is_absolute_url(url: str) -> bool:
+    """True for a URL served by somebody else -- a CDN, or another host.
+
+    Covers the scheme-relative form too (``//cdn.example.com/static/``), which a
+    site that serves both http and https uses.
+    """
+    if not url:
+        return False
+    return url.startswith("//") or "://" in url
+
+
+def _normalize_url_prefix(url: str) -> str:
+    """Return *url* as a URL prefix that works wherever it is used.
+
+    A leading slash is added when it is missing: ``STATIC_URL = "static/"`` reads
+    like it means ``/static/``, but left alone it produced a *relative* href that
+    resolved differently on every page, and Starlette refused it as a mount path
+    -- "Routed paths must start with '/'", which named nothing useful.
+
+    A trailing slash is neither required nor removed; callers add one where they
+    need it.
+    """
+    if not url or _is_absolute_url(url):
+        return url
+    return url if url.startswith("/") else "/" + url
+
+
+def compress_file(path: str) -> bool:
+    """
+    Write ``<path>.gz`` beside a file so it never has to be compressed again.
+
+    GZipMiddleware compresses each response as it is sent -- about 4.5 ms of CPU
+    for a 97 KB stylesheet, repeated on every request for bytes that never
+    change. Doing it once here at collectstatic time removes that entirely: the
+    static handler serves the .gz directly to any client that accepts it.
+
+    Returns whether a file was written.
+    """
+    import gzip
+
+    if os.path.splitext(path)[1].lower() not in _COMPRESSIBLE:
+        return False
+    try:
+        if os.path.getsize(path) < _COMPRESS_MIN_BYTES:
+            return False
+        with open(path, "rb") as source:
+            data = source.read()
+        # Level 9: this runs once, so the slowest setting is free.
+        compressed = gzip.compress(data, 9)
+        # A file that does not shrink would only cost a decompression.
+        if len(compressed) >= len(data):
+            return False
+        with open(f"{path}.gz", "wb") as target:
+            target.write(compressed)
+    except OSError:
+        return False
+    return True
 
 
 class StaticFilesStorage:
@@ -31,7 +101,7 @@ class StaticFilesStorage:
         self.location = location or (
             settings.STATIC_ROOT or str(Path.cwd() / "staticfiles")
         )
-        self.base_url = (base_url or settings.STATIC_URL).rstrip("/") + "/"
+        self.base_url = _normalize_url_prefix(base_url or settings.STATIC_URL).rstrip("/") + "/"
 
     def path(self, name: str) -> str:
         """Absolute filesystem path for ``name``."""
@@ -114,8 +184,8 @@ class ManifestStaticFilesStorage(StaticFilesStorage):
 
     def url(self, name: str) -> str:
         """Return the hashed URL from the manifest, falling back to the original name."""
-        hashed = self._manifest.get(name.lstrip("/"), name.lstrip("/"))
-        return self.base_url + hashed
+        key = name.lstrip("/").replace("\\", "/")
+        return self.base_url + self._manifest.get(key, key)
 
     # ── Post-processing ───────────────────────────────────────────────────────
 
@@ -158,7 +228,10 @@ class ManifestStaticFilesStorage(StaticFilesStorage):
 
     @staticmethod
     def _hashed_name(name: str, file_hash: str) -> str:
-        p = Path(name)
+        # PurePosixPath, not Path: this becomes a URL. Path yields a backslash
+        # separator on Windows, which put "css\site.abc123.css" in the manifest
+        # and in every rendered href.
+        p = PurePosixPath(name.replace("\\", "/"))
         return str(p.parent / f"{p.stem}.{file_hash}{p.suffix}")
 
 
@@ -190,7 +263,7 @@ class InMemoryStorage:
         raise NotImplementedError("InMemoryStorage has no filesystem path.")
 
     def url(self, name: str) -> str:
-        return self.base_url + name.lstrip("/")
+        return self.base_url + name.lstrip("/").replace("\\", "/")
 
     def exists(self, name: str) -> bool:
         return name.lstrip("/") in self._files

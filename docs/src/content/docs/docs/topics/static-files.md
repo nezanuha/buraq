@@ -6,7 +6,7 @@ description: "Both forms return the same URL. When ManifestStaticFilesStorage is
 ## Configuration
 
 ```python title="config/settings.py"
-STATIC_URL  = "/static/"                     # URL prefix (trailing slash required)
+STATIC_URL  = "/static/"                     # URL prefix; a trailing slash is optional
 STATIC_ROOT = str(BASE_DIR / "staticfiles")  # destination for collectstatic
 
 # One or more source directories (in priority order)
@@ -75,23 +75,271 @@ Pass `--clear` to wipe `STATIC_ROOT` before collecting:
 buraq collectstatic --clear
 ```
 
-## Production serving with WhiteNoise
+## Production serving
 
-Install WhiteNoise:
+When `DEBUG=False`, Buraq serves static files with a `Cache-Control` header, so a
+browser stops asking for a file it already has, and the pre-compressed copy
+`collectstatic` wrote, so nothing is compressed per request:
+
+```
+cache-control   : public, max-age=31536000, immutable
+content-encoding: gzip
+etag            : "fb2b605e7c9e81719c9f…"
+```
+
+How long that header lasts depends on whether filenames are hashed, because
+`immutable` means *never revalidate* — a browser will not re-request the file
+even when the reader hits reload:
+
+| storage | `Cache-Control` |
+|---|---|
+| hashed names (`ManifestStaticFilesStorage`) | `public, max-age=31536000, immutable` |
+| plain names (the default) | `public, max-age=60` |
+
+With hashed names a changed file arrives under a different URL, so caching the
+old one forever is harmless. With plain names the same URL serves new bytes after
+a deploy, and a year-long `immutable` would keep your edit from anyone who had
+already loaded the page.
+
+Set `STATIC_MAX_AGE` to override the lifetime; `SERVE_STATIC = False` turns
+serving off entirely when something in front handles it.
+
+:::tip
+Turning on [hashed filenames](#hashed-filenames-cache-busting) is what makes the
+year-long cache safe. It is one setting, and on a site with any repeat traffic it
+is the single biggest thing you can do for load time.
+:::
+
+### Pre-compression
+
+`collectstatic` writes a `.gz` beside every compressible file, and the static
+handler serves it to any client that accepts gzip:
 
 ```bash
-uv add whitenoise
+buraq collectstatic
+# Done. Copied: 1, Skipped (unchanged): 0, Post-processed: 0, compressed: 1
 ```
 
-That's it. When `DEBUG=False`, Buraq automatically mounts WhiteNoise instead of the development file server. WhiteNoise compresses all files (gzip + brotli) once at startup, serves from memory, and sets far-future `Cache-Control` headers — no Nginx layer needed.
+Without it, `GZipMiddleware` compresses each response as it is sent — about
+2.8 ms of CPU for a 97 KB stylesheet, repeated for bytes that never change.
+Measured on one worker:
 
-Set `STATIC_ROOT` to the directory WhiteNoise should serve from (after `collectstatic`):
+| | throughput | per request |
+|---|---|---|
+| compressed on every request | 386 req/s | 2.59 ms |
+| pre-compressed | **458 req/s** | **2.18 ms** |
+
+Images, fonts and archives are skipped — they are already compressed — as are
+files under 512 bytes, where the gzip header costs more than it saves.
+
+`collectstatic` does this for you. To compress a file yourself — a custom
+storage backend, say, or a build step that writes into `STATIC_ROOT` afterwards:
+
+```python
+from buraq.contrib.staticfiles.storage import compress_file
+
+compress_file("staticfiles/css/site.css")   # writes site.css.gz beside it
+```
+
+It returns `True` if it wrote a `.gz`, and `False` if the file was one of the
+kinds not worth compressing.
+
+### Letting Granian serve them
+
+Granian — Buraq's default server — serves static files itself, in Rust, without
+the request entering Python at all. It costs no extra dependency, since Granian
+is already one:
 
 ```python title="config/settings.py"
-STATIC_ROOT = str(BASE_DIR / "staticfiles")
+SERVE_STATIC = False        # the application stops mounting them
 ```
 
-If WhiteNoise is not installed, Buraq logs a warning and falls back to the development file server.
+```bash
+granian --interface asgi main:app --static-path-mount /srv/app/staticfiles
+```
+
+```
+server: granian
+cache-control: max-age=86400
+```
+
+`--static-path-expires` sets the lifetime and `--static-path-route` the URL
+prefix, which defaults to `/static`.
+
+#### What you give up
+
+Granian serves the file on disk it was asked for. It does not know about the
+`.gz` variants `collectstatic` wrote, so a browser gets the uncompressed file
+even though it said it accepts gzip — and its `Cache-Control` is a day rather
+than a year. For the stylesheet above:
+
+| | on the wire | cache-control |
+|---|---|---|
+| Granian built-in | 3,040 bytes | `max-age=86400` |
+| Buraq's handler | **115 bytes** | `max-age=31536000, immutable` |
+
+Granian wins on CPU per request; Buraq's handler wins on bytes and on how often
+the browser asks again. Which matters more is a question about your traffic, not
+about the servers — but on a public site over real networks, sending 26× the
+bytes is usually the larger cost, so **keep `SERVE_STATIC = True` unless you have
+measured otherwise**.
+
+The arrangement that gives up neither is a CDN or Nginx in front: it does its own
+compression and caching, and then nothing behind it is serving static files on
+the hot path at all.
+
+### Serving from a CDN
+
+A CDN is not something the server is pointed at — it is something the *browser*
+is pointed at. There is no `--static-path-mount` for it; that flag takes a
+directory on disk and refuses a hostname:
+
+```bash
+# wrong -- granian will not start
+granian --interface asgi main:app --static-path-mount cdn.example.com/staticfiles
+#   Error: Invalid value for '--static-path-mount':
+#   Directory 'cdn.example.com/staticfiles' does not exist.
+```
+
+Which of three arrangements you are in decides what to configure — for one of
+them, nothing at all:
+
+| | `STATIC_URL` | `SERVE_STATIC` |
+|---|---|---|
+| [In front of your own domain](#in-front-of-your-own-domain) | `/static/` | `True` |
+| [Separate hostname, CDN pulls from you](#separate-hostname-the-cdn-pulls-from-you) | the CDN | `True` |
+| [Separate hostname, you upload](#separate-hostname-you-upload) | the CDN | `False` |
+
+The mistake that is hard to spot is the middle row with `SERVE_STATIC = False`:
+the CDN has nothing to pull, so it caches your 404 and serves that instead.
+
+#### In front of your own domain
+
+The CDN sits in front of your whole site: the same hostname, the same paths,
+traffic routed through the CDN before it reaches you. Cloudflare's proxy works
+this way by default, and so does a CDN configured as a reverse proxy.
+
+Static files are already flowing through it, so there is nothing to point
+anywhere:
+
+```python title="config/settings.py"
+STATIC_URL   = "/static/"    # unchanged
+SERVE_STATIC = True          # unchanged
+```
+
+Caching is configured at the CDN rather than here. Give it a rule that caches
+`/static/*` for a long time — the hashed filenames make that safe (see
+[Hashed filenames](#hashed-filenames-cache-busting)).
+
+If this is your setup, stop here. The two below are for a CDN on a *separate*
+hostname, and doing them anyway adds a hostname you do not need.
+
+#### Separate hostname: the CDN pulls from you
+
+The CDN has its own host — `my-zone.b-cdn.net`, `d111.cloudfront.net`, a `cdn.`
+subdomain — and templates have to point at it. That is `STATIC_URL`, and it is
+the same setting for both of the arrangements below:
+
+```python title="config/settings.py"
+STATIC_URL = "https://my-zone.b-cdn.net/static/"
+```
+
+`{{ static('css/site.css') }}` now renders
+`https://my-zone.b-cdn.net/static/css/site.css`. `MEDIA_URL` works the same way.
+
+What differs is how the files get onto that host.
+
+The CDN has no copy until somebody asks for one; on a miss it fetches from your
+server and caches the result. Your server must therefore keep serving `/static/`,
+so leave `SERVE_STATIC` alone:
+
+```python title="config/settings.py"
+STATIC_URL   = "https://my-zone.b-cdn.net/static/"
+SERVE_STATIC = True          # the default -- the CDN pulls from here
+```
+
+Buraq mounts at the *path* of `STATIC_URL` and ignores the host, so `/static/`
+stays reachable for the CDN even though templates point away from it.
+
+Nothing to upload and nothing to invalidate: run `collectstatic`, deploy, and
+change the hashed filenames (see [Hashed filenames](#hashed-filenames-cache-busting))
+so a new deploy is a new URL rather than a stale cache entry.
+
+#### Separate hostname: you upload
+
+You copy the files to the CDN's own storage, and your server never serves them:
+
+```bash
+buraq collectstatic
+# then upload staticfiles/ to the CDN's storage
+```
+
+```python title="config/settings.py"
+STATIC_URL   = "https://my-zone.b-cdn.net/static/"
+SERVE_STATIC = False         # nothing is served from this process
+```
+
+This is the arrangement for object storage in general — an S3 bucket behind
+CloudFront is the same two settings.
+
+To upload as part of `collectstatic` rather than as a separate step, subclass the
+storage. `post_process` runs after the files are collected and hashed:
+
+```python title="config/storage.py"
+import os
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+from buraq.contrib.staticfiles.storage import ManifestStaticFilesStorage
+
+
+class BunnyStorage(ManifestStaticFilesStorage):
+    """Hash filenames as usual, then PUT everything to the storage zone."""
+
+    zone = os.environ["BUNNY_STORAGE_ZONE"]
+    key = os.environ["BUNNY_STORAGE_KEY"]
+    # Regional zones have their own host -- ny.storage.bunnycdn.com, and so on.
+    endpoint = os.environ.get("BUNNY_STORAGE_ENDPOINT", "https://storage.bunnycdn.com")
+
+    def post_process(self, collected):
+        yield from super().post_process(collected)
+        root = Path(self.location)
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and path.name != self.manifest_name:
+                self._upload(path.relative_to(root).as_posix(), path)
+                yield path.name, path.name, True
+
+    def _upload(self, name: str, path: Path) -> None:
+        request = Request(
+            f"{self.endpoint}/{self.zone}/{name}",
+            data=path.read_bytes(),
+            method="PUT",
+            headers={"AccessKey": self.key, "Content-Type": "application/octet-stream"},
+        )
+        with urlopen(request) as response:
+            if response.status not in (200, 201):
+                raise RuntimeError(f"Bunny upload failed for {name}: {response.status}")
+```
+
+```python title="config/settings.py"
+STATICFILES_STORAGE = "config.storage.BunnyStorage"
+STATIC_URL          = "https://my-zone.b-cdn.net/static/"
+SERVE_STATIC        = False
+```
+
+`buraq collectstatic` now collects, hashes, compresses and uploads in one step.
+The `.gz` files go up with everything else, and the manifest stays local — it is
+read by this process, not by the CDN.
+
+Nothing here is Bunny-specific beyond the URL and the auth header. The same
+shape works for S3, R2, Spaces or any other object store: swap `_upload`.
+
+:::tip
+Upload the `.gz` files too. `collectstatic` writes them, most CDNs will serve a
+pre-compressed object when the client accepts it, and it saves the CDN doing the
+same work on every miss.
+:::
+
 
 ## Hashed filenames (cache-busting)
 
@@ -122,7 +370,7 @@ Because the filename changes when the content changes, browsers always load the 
 ```bash
 # After every deploy:
 buraq collectstatic --clear
-# Restart the app — WhiteNoise picks up the new hashed files on startup
+# Restart the app — it picks up the new hashed files on startup
 ```
 
 ## App-level static files
@@ -162,20 +410,6 @@ STATICFILES_FINDERS = [
     "buraq.contrib.staticfiles.finders.FileSystemFinder",
     "buraq.contrib.staticfiles.finders.AppDirectoriesFinder",
     "myapp.finders.NodeModulesFinder",
-]
-```
-
-## Cache-Control headers (optional middleware)
-
-`CacheControlMiddleware` sets `Cache-Control` headers on static file responses:
-
-- `DEBUG=True` → `Cache-Control: no-cache`
-- `DEBUG=False` → `Cache-Control: public, max-age=31536000, immutable`
-
-```python title="config/settings.py"
-MIDDLEWARE = [
-    ...
-    "buraq.contrib.staticfiles.middleware.CacheControlMiddleware",
 ]
 ```
 
@@ -249,6 +483,6 @@ def in_memory_static():
 
 | `DEBUG` | Static backend | Media backend |
 |---|---|---|
-| `True` | FastAPI `StaticFiles` (reads from disk) | FastAPI `StaticFiles` |
-| `False` + whitenoise installed | WhiteNoise (memory, compressed) | FastAPI `StaticFiles` |
-| `False` + whitenoise missing | FastAPI `StaticFiles` + warning logged | FastAPI `StaticFiles` |
+| `True` | `StaticFiles`, read from disk, no cache header | `StaticFiles` |
+| `False` | `StaticFiles` + `Cache-Control: max-age=STATIC_MAX_AGE, immutable` | `StaticFiles` |
+| `SERVE_STATIC = False` | nothing mounted | nothing mounted |

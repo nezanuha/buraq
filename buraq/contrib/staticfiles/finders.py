@@ -48,7 +48,7 @@ class FileSystemFinder:
             for file_path in root_path.rglob("*"):
                 if not file_path.is_file():
                     continue
-                rel = str(file_path.relative_to(root_path))
+                rel = file_path.relative_to(root_path).as_posix()
                 if rel not in seen:
                     seen.add(rel)
                     yield rel, str(file_path)
@@ -80,7 +80,7 @@ class AppDirectoriesFinder:
             for file_path in static_path.rglob("*"):
                 if not file_path.is_file():
                     continue
-                rel = str(file_path.relative_to(static_path))
+                rel = file_path.relative_to(static_path).as_posix()
                 if rel not in seen:
                     seen.add(rel)
                     yield rel, str(file_path)
