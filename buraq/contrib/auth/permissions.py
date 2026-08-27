@@ -39,7 +39,10 @@ async def create_permissions(verbosity: int = 1) -> int:
     from buraq.contrib.auth.models import Permission
 
     try:
-        existing = {p.codename for p in await Permission.objects.all()}
+        # Keyed by (content_type, codename): the codename alone is not unique,
+        # so two apps each defining a Post both need their own "add_post" and
+        # deduplicating on the codename gave the second one the first one's row.
+        existing = {(p.content_type, p.codename) for p in await Permission.objects.all()}
     except (OperationalError, ProgrammingError):
         # A brand new project runs migrate before it has any migrations, so the
         # auth tables legitimately do not exist yet. Nothing to create, and
@@ -50,13 +53,14 @@ async def create_permissions(verbosity: int = 1) -> int:
 
     missing = []
     for model, codename, name in iter_model_permissions():
-        if codename in existing:
-            continue
         opts = model._meta
+        key = (opts.label_lower, codename)
+        if key in existing:
+            continue
         missing.append(
             {"name": name, "codename": codename, "content_type": opts.label_lower}
         )
-        existing.add(codename)
+        existing.add(key)
         if verbosity > 1:
             print(f"  created permission {opts.app_label}.{codename}")
 

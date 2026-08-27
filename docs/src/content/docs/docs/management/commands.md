@@ -38,7 +38,7 @@ buraq runserver 8080
 buraq runserver 0.0.0.0:8080
 
 # Custom app path
-buraq runserver config.urls:app
+buraq runserver main:app
 
 # Options
 buraq runserver --no-reload      # disable auto-reload
@@ -354,7 +354,7 @@ This is generated automatically when you run `buraq startproject`.
 buraq listurls
 
 # Use a specific app
-buraq listurls --app config.urls:app
+buraq listurls --app main:app
 ```
 
 Output:
@@ -388,7 +388,7 @@ Run this after removing an app or model from `INSTALLED_APPS` to clean up orphan
 buraq testserver fixtures/posts.json fixtures/users.json
 buraq testserver fixtures/initial.json --port 8001
 buraq testserver fixtures/initial.json --no-input        # skip confirmation
-buraq testserver fixtures/initial.json --app config.urls:app  # custom app path
+buraq testserver fixtures/initial.json --app main:app  # custom app path
 ```
 
 Clears the database, loads the given fixture files, then starts the dev server. Useful for manual QA sessions with realistic data without touching the production database.

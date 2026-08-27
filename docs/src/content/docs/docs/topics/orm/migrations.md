@@ -29,15 +29,16 @@ buraq showmigrations
 
 ## How it works
 
-`makemigrations` runs `alembic revision --autogenerate`, which compares your model definitions to the current database schema and generates a migration file in `alembic/versions/`.
+`makemigrations` runs `alembic revision --autogenerate`, which compares your model definitions to the current database schema and generates a migration file in the owning app's `migrations/` directory — the app whose models the change belongs to.
 
 The argument is the migration's **description**, not an app. It becomes part of the
 revision filename — `buraq makemigrations initial` produces something like
 `622dec772435_initial.py`.
 
 :::caution[Coming from Django]
-There `makemigrations <app_label>` limits the run to one app. Buraq keeps a single
-migration history for the whole project, so there is nothing to scope to and the
+There `makemigrations <app_label>` limits the run to one app; here the argument is
+the description and `--app` does the scoping. Otherwise the model is the same — each
+app owns its migrations, and the
 argument is used as the description instead. `buraq makemigrations posts` therefore
 creates a migration *described* "posts" that contains every pending change; the
 command warns when the text matches an installed app.
@@ -81,27 +82,22 @@ they ship their migrations inside the package rather than expecting each project
 to generate them. Every app gets its own Alembic branch, applied only when the
 app is in `INSTALLED_APPS`:
 
-```ini title="alembic.ini"
-path_separator = newline
-version_locations =
-    %(here)s/alembic/versions
-    buraq.contrib.auth:migrations/versions
+There is no `alembic.ini`. Where to look for migrations is derived from
+`INSTALLED_APPS` — every installed app that has a `migrations` package
+contributes one location, resolved as a package path so your own apps and
+Buraq's are found the same way:
+
+```python
+>>> from buraq.db.migrations import version_locations
+>>> version_locations()
+["blog:migrations", "buraq.contrib.auth:migrations"]
 ```
 
-The first path is yours. The rest are resolved against the installed package, so
-nothing is copied into your project and upgrading Buraq brings any schema change
-with it — `buraq migrate` applies it like any other migration.
-
-Add a line when you install another contrib app that owns tables
-(`contenttypes`, `flatpages`, `redirects`, `sites`). Leaving it out means that
-app's tables are never created; that is deliberate, since an app you have not
-installed should not add tables to your database.
-
-:::note[Why `path_separator = newline`]
-Alembic's default is `os`, which means `;` on Windows and `:` elsewhere — an
-`alembic.ini` written on one would not parse on the other. Listing one path per
-line is portable and survives directory names containing spaces.
-:::
+Nothing is copied into your project, so upgrading Buraq brings any schema change
+with it and `buraq migrate` applies it like any other migration. Installing
+another contrib app that owns tables (`contenttypes`, `flatpages`, `redirects`,
+`sites`) is enough on its own; an app you have not installed adds no tables,
+which is deliberate.
 
 Because there is now more than one branch, `buraq migrate` targets `heads`
 rather than `head`, and `buraq makemigrations` writes into your own directory on
@@ -118,14 +114,14 @@ see in your models is one it would otherwise drop:
   (`CACHE_TABLE` and `buraq_sessions`)
 - the framework's own tables, whose migrations ship with Buraq (above)
 
-This is the `include_object` filter in `alembic/env.py`, which calls
+This is the `include_object` filter in `buraq.db.migrations`, which calls
 `buraq.core.db.tables_migrations_ignore()`.
 
 ## Manual migrations
 
 For complex changes (data migrations, custom SQL), edit the generated migration file directly:
 
-```python title="alembic/versions/001_add_slug.py"
+```python title="blog/migrations/001_add_slug.py"
 def upgrade() -> None:
     op.add_column("posts", sa.Column("slug", sa.String(200), nullable=True))
     # custom data migration
@@ -139,19 +135,22 @@ def downgrade() -> None:
 
 ## Alembic configuration
 
-The `alembic.ini` and `alembic/env.py` files are pre-configured by `startproject`.
-`env.py` reads `DATABASE_URL` from your Buraq settings automatically.
+There is none to write. A project has no `alembic.ini` and no `alembic/`
+directory: the configuration is built when a migration command runs, from the
+settings you already have. `DATABASE_URL` gives the database and `INSTALLED_APPS`
+gives the migration locations, so there is no second copy of either to keep in
+step.
 
-It also calls `buraq.apps.configure()`, which loads your settings module and imports
-every installed app's `models`. Alembic runs in its own process, where nothing else
-has configured Buraq — without that call `Base.metadata` would be empty and
-autogeneration would find nothing to create.
+Before anything is read, `buraq.apps.configure()` loads your settings module and
+imports every installed app's `models` — without it `Base.metadata` would be
+empty and autogeneration would find nothing to create.
 
-```python title="alembic/env.py"
-from buraq.apps import configure
+Adding an app to `INSTALLED_APPS` is therefore the only step: its models are
+picked up, and its `migrations` package is searched. There is no list of imports
+and no list of paths to maintain.
 
-configure()
-```
-
-Adding an app to `INSTALLED_APPS` is therefore enough for its models to be picked
-up; there is no separate list of imports to maintain.
+:::note[Coming from a project made before this]
+An `alembic.ini` left over from an earlier version is simply ignored — the
+configuration is built regardless, so nothing needs migrating. You can delete
+that file and the `alembic/` directory beside it.
+:::

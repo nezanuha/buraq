@@ -24,6 +24,7 @@ Then run:
 """
 import argparse
 import asyncio
+import inspect
 import sys
 from typing import Any
 
@@ -129,14 +130,20 @@ class BaseCommand:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
                 loop = None
+            result = self.handle(*args, **options)
+            if not inspect.isawaitable(result):
+                # handle() was written with `def` rather than `async def`. It has
+                # already run and returned; awaiting the result would fail with
+                # "a coroutine is required" after the command had done its work.
+                return result
             if loop and loop.is_running():
                 # Inside an already-running loop (e.g., tests with pytest-asyncio).
                 # Run in a dedicated thread with its own event loop to avoid conflicts.
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    fut = pool.submit(asyncio.run, self.handle(*args, **options))
+                    fut = pool.submit(asyncio.run, result)
                     return fut.result()
-            return asyncio.run(self.handle(*args, **options))
+            return asyncio.run(result)
         except CommandError as e:
             self.stderr.write(self.style.error(f"CommandError: {e}"))
             raise SystemExit(e.returncode) from e

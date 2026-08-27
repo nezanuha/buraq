@@ -6,7 +6,7 @@ on PATH — which it is not for a pip install into an unactivated environment. T
 module form always works, because you name the interpreter yourself.
 """
 
-from buraq.management.cli import app
+from buraq.management.cli import main
 
 if __name__ == "__main__":
-    app()
+    main()

@@ -384,7 +384,9 @@ def test_foreign_key_on_abstract_base_is_copied_to_each_subclass():
     assert Car.__table__.c.owner_id is not Boat.__table__.c.owner_id
     for model in (Car, Boat):
         targets = {fk.target_fullname for fk in model.__table__.foreign_keys}
-        assert targets == {"owners.id"}
+        # Read the name off the model rather than spelling it: table names carry
+        # the app label, which here is whatever module the test lives in.
+        assert targets == {f"{Owner.__tablename__}.id"}
 
 
 def test_reverse_accessors_created_for_inherited_foreign_keys():

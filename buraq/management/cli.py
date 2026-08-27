@@ -1,3 +1,7 @@
+import contextlib
+import importlib
+import io
+import logging
 import os
 import shutil
 import subprocess
@@ -185,7 +189,7 @@ def runserver(
             host = _h or host
             port = int(_p)
         else:
-            # module:attr — e.g. main:app or config.urls:app
+            # module:attr — e.g. main:app
             app_path = bind
     else:
         app_path = bind
@@ -344,19 +348,6 @@ def _install_dependencies(project_dir: Path) -> bool:
     return subprocess.run([str(pip), "install", "buraq"], cwd=project_dir).returncode == 0
 
 
-def _scaffold_version_locations(apps: list[str] | None = None) -> str:
-    """
-    The `version_locations` line for a new project's alembic.ini.
-
-    The project's own directory comes first, then one entry per installed Buraq
-    app that ships migrations.
-    """
-    locations = ["%(here)s/alembic/versions"]
-    for app in apps if apps is not None else ["buraq.contrib.auth"]:
-        locations.append(f"{app}:migrations/versions")
-    return "\n".join(f"    {loc}" for loc in locations)
-
-
 #: Alembic announces its own setup on every run. None of it says anything about
 #: the migration, and it buried the lines that do.
 _ALEMBIC_NOISE = (
@@ -366,119 +357,171 @@ _ALEMBIC_NOISE = (
 )
 
 
-def _run_alembic(args: list[str]) -> int:
+def _report_alembic_line(message: str, prefix: str = "", is_error: bool = False) -> None:
     """
-    Run alembic, reporting only the lines that carry information.
+    Print one line of Alembic's progress in Buraq's own output vocabulary.
 
-    Returns the exit code. Output is relayed as it arrives rather than collected,
-    so a long migration still shows progress.
+    Alembic reports on two channels -- the logging module, and writes straight
+    to sys.stdout -- so both are collected and passed through here rather than
+    each being formatted where it arrives.
     """
-    process = subprocess.Popen(
-        [sys.executable, "-m", "alembic", *args],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        bufsize=1,
-    )
+    message = message.strip()
+    if not message or any(noise in message for noise in _ALEMBIC_NOISE):
+        return
+    if message.startswith("Generating"):
+        # The absolute path Alembic prints pushes the useful part off the
+        # terminal, and the caller names the file it kept.
+        return
+    if message.startswith(("Running upgrade", "Running downgrade")):
+        console.step(message)
+    elif message.startswith("Detected"):
+        if prefix:
+            message = f"{prefix}: {message[0].lower()}{message[1:]}"
+        console.item(message)
+    elif is_error:
+        console.error(message)
+    else:
+        typer.echo(message)
 
-    assert process.stdout is not None
-    for raw in process.stdout:
-        line = raw.rstrip()
-        if not line or any(noise in line for noise in _ALEMBIC_NOISE):
-            continue
 
-        message = line.split("] ", 1)[-1] if line.startswith("INFO") else line
-        if "Running upgrade" in message or "Running downgrade" in message:
-            console.step(message)
-        elif message.startswith("Detected") or message.startswith("Generating"):
-            console.item(message)
-        elif line.startswith("ERROR") or line.startswith("FAILED"):
-            console.error(message)
-        else:
-            typer.echo(message)
+class _AlembicOutput(logging.Handler):
+    """
+    Collect Alembic's log records rather than printing them as they arrive.
 
-    return process.wait()
+    Printing during the command is not an option: stdout is redirected for the
+    duration to catch what Alembic writes there directly, so anything printed
+    would land in that buffer and be processed twice.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.records: list[tuple[str, bool]] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append((record.getMessage(), record.levelno >= logging.ERROR))
+
+
+@contextlib.contextmanager
+def _alembic_output(prefix: str = ""):
+    """
+    Capture both channels Alembic reports on, and replay them once it is done.
+
+    Nothing reaches the terminal until stdout is restored, so the command's own
+    output cannot be swallowed by the buffer that is catching Alembic's.
+    """
+    logger = logging.getLogger("alembic")
+    handler = _AlembicOutput()
+    previous_level, previous_propagate = logger.level, logger.propagate
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    buffer = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buffer):
+            yield buffer
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(previous_level)
+        logger.propagate = previous_propagate
+        for message, is_error in handler.records:
+            _report_alembic_line(message, prefix, is_error)
+        for line in buffer.getvalue().splitlines():
+            _report_alembic_line(line, prefix)
+
+
+def _alembic_config(stdout=None):
+    """
+    This project's Alembic configuration, built from its settings.
+
+    Nothing is read from disk: the database comes from settings and the version
+    locations from INSTALLED_APPS, so there is no alembic.ini to keep in step
+    with the apps a project actually has.
+    """
+    from buraq.db.migrations import config
+
+    _load_apps()
+    cfg = config()
+    if stdout is not None:
+        # Alembic writes some progress straight to stdout rather than logging
+        # it, so it has to be captured here to be filtered like the rest.
+        cfg.stdout = stdout
+    return cfg
+
+
+def _run_alembic_command(fn, *args, **kwargs) -> int:
+    """
+    Run one alembic.command function, reporting failures the way Buraq does.
+
+    Returns an exit code so callers keep the shape they had when this shelled
+    out to a subprocess.
+    """
+    from alembic.util import CommandError
+
+    with _alembic_output() as buffer:
+        try:
+            fn(_alembic_config(buffer), *args, **kwargs)
+        except CommandError as exc:
+            console.error(str(exc))
+            return 1
+    return 0
 
 
 def _require_alembic() -> None:
     """
-    Fail with something actionable when the project has no Alembic setup.
+    Fail with something actionable when migrations cannot run here.
 
-    Alembic's own message for this is "No 'script_location' key found in
-    configuration", which does not tell you that the file is simply missing.
-    Projects created by `buraq startproject` are scaffolded with it; older or
-    hand-made projects may not be.
+    A project needs settings that name a database and at least one app with a
+    migrations package. Alembic's own message for a missing configuration says
+    only that ``script_location`` was not found, which describes none of that.
     """
-    if Path("alembic.ini").exists():
-        return
+    from buraq.db.migrations import version_locations
 
-    console.error("No alembic.ini found in this directory.")
-    typer.echo(
-        "Migrations need an Alembic setup: alembic.ini plus an alembic/ directory.\n"
-        "`buraq startproject` scaffolds both. To add them to an existing project, "
-        "run `alembic init alembic`, then point alembic/env.py at "
-        "buraq.core.db:Base metadata."
-    )
-    raise typer.Exit(1)
+    try:
+        _load_apps()
+        from buraq.conf import settings
+    except ModuleNotFoundError as exc:
+        # Nothing to import means no settings module, which usually means the
+        # command was run somewhere other than a project.
+        console.error(f"Could not load this project's settings: {exc}")
+        console.hint("Run this from a project directory, beside manage.py.")
+        raise typer.Exit(1) from exc
+    except Exception as exc:
+        # Settings were found; something in the apps themselves failed. Saying
+        # "run this from a project directory" would send the reader to the one
+        # place the problem is not.
+        console.error(f"Loading this project's apps failed: {exc}")
+        raise typer.Exit(1) from exc
+
+    if not getattr(settings, "DATABASE_URL", ""):
+        console.error("DATABASE_URL is not set.")
+        console.hint("Set it in config/settings.py or the project's .env.")
+        raise typer.Exit(1)
+
+    if not version_locations():
+        # A directory with no settings module reads as a project with no apps,
+        # which is the same symptom from a very different cause.
+        if not Path("manage.py").exists() and not Path("config").is_dir():
+            console.error("This does not look like a Buraq project.")
+            console.hint("Run the command from the directory containing manage.py.")
+            raise typer.Exit(1)
+
+        console.error("No app has migrations.")
+        console.hint(
+            "Add an app to INSTALLED_APPS. `buraq startapp <name>` creates one "
+            "with a migrations package."
+        )
+        raise typer.Exit(1)
 
 
 def _script_directory():
     """This project's Alembic ScriptDirectory, or None if it cannot be read."""
     try:
-        from alembic.config import Config
         from alembic.script import ScriptDirectory
 
-        return ScriptDirectory.from_config(Config("alembic.ini"))
+        return ScriptDirectory.from_config(_alembic_config())
     except Exception:
         return None
-
-
-def _versions_dir() -> Path | None:
-    """
-    The project's own versions directory.
-
-    Installed Buraq apps contribute version locations inside the package, so the
-    project's directory is the one under the working directory. Picking the
-    wrong one wrote a project's migration into site-packages.
-    """
-    script = _script_directory()
-    if script is None:
-        return None
-
-    cwd = Path.cwd().resolve()
-    for location in script.version_locations:
-        path = Path(location).resolve()
-        if path == cwd or cwd in path.parents:
-            return path
-    return Path(script.dir) / "versions"
-
-
-def _project_revision_args(versions: Path | None) -> list[str]:
-    """
-    Pin a new revision to the project's own directory and branch.
-
-    With more than one version location Alembic picks a directory on its own,
-    and it chose the installed package. It equally needs telling which head to
-    follow, since the framework's branches are heads too.
-    """
-    if versions is None:
-        return []
-
-    args = ["--version-path", str(versions)]
-    script = _script_directory()
-    if script is None:
-        return args
-
-    own = [rev for rev in script.walk_revisions() if Path(rev.path).parent.resolve() == versions]
-    if not own:
-        # First migration here: start a branch rather than extending one of the
-        # framework's.
-        return [*args, "--head", "base", "--branch-label", "project"]
-
-    heads = [rev.revision for rev in own if rev.is_head] or [own[0].revision]
-    return [*args, "--head", heads[0]]
 
 
 def _is_empty_migration(path: Path) -> bool:
@@ -513,91 +556,181 @@ def _names_an_installed_app(text: str) -> bool:
     return text in labels
 
 
+class _DatabaseBehind(Exception):
+    """Autogenerate cannot diff: the database is behind the history on disk."""
+
+
+def _migration_targets(app: str | None) -> list[tuple[str, Path]]:
+    """
+    The apps a makemigrations run should generate for, and where each writes.
+
+    An app owns its migrations, so a run visits one app at a time. Framework
+    apps are skipped: their migrations ship with Buraq and a project must never
+    regenerate them. An installed app with no migrations directory is skipped
+    too -- it predates per-app migrations, or has no models.
+    """
+    from buraq.conf import settings
+
+    installed = list(getattr(settings, "INSTALLED_APPS", None) or [])
+    if app:
+        if app not in installed:
+            console.error(f"{app!r} is not in INSTALLED_APPS.")
+            raise typer.Exit(1)
+        installed = [app]
+
+    targets = []
+    for name in installed:
+        if name.startswith("buraq."):
+            continue
+        directory = Path(name.replace(".", "/")) / "migrations"
+        if directory.is_dir():
+            targets.append((name, directory))
+    return targets
+
+
+def _app_revision_kwargs(app: str, versions: Path) -> dict:
+    """
+    Pin a new revision to one app's directory and branch.
+
+    With several version locations Alembic picks a directory on its own, and it
+    chose the installed package. It equally needs telling which head to follow,
+    since every other app's branch is a head too.
+    """
+    args = {"version_path": str(versions)}
+    script = _script_directory()
+    if script is None:
+        return args
+
+    resolved = versions.resolve()
+    own = [
+        rev for rev in script.walk_revisions()
+        if Path(rev.path).parent.resolve() == resolved
+    ]
+    if not own:
+        # First migration for this app: start its branch rather than extending
+        # somebody else's.
+        return {**args, "head": "base", "branch_label": app}
+
+    heads = [rev.revision for rev in own if rev.is_head] or [own[0].revision]
+    return {**args, "head": heads[0]}
+
+
+def _autogenerate(app: str, versions: Path, message: str) -> list[Path]:
+    """
+    Run one scoped autogenerate and return the migration files it kept.
+
+    BURAQ_MIGRATIONS_APP tells the migration environment to consider only this
+    app's tables, so the revision describes its own schema and nothing else.
+    Alembic writes a file even when it found no changes, and an empty revision
+    left in the history is indistinguishable from a real one -- so it is dropped.
+    """
+    from alembic.util import CommandError
+
+    from alembic import command
+    from buraq.db.migrations import _APP_ENV_VAR
+
+    before = set(versions.glob("*.py"))
+    kwargs = _app_revision_kwargs(app, versions)
+
+    previous = os.environ.get(_APP_ENV_VAR)
+    os.environ[_APP_ENV_VAR] = app
+    try:
+        with _alembic_output(prefix=app) as buffer:
+            command.revision(
+                _alembic_config(buffer), message=message, autogenerate=True, **kwargs
+            )
+    except CommandError as exc:
+        if "not up to date" in str(exc):
+            # Alembic will not diff against a database that is behind its own
+            # history, because the pending revisions would be generated twice.
+            # A revision written earlier in this same run puts it behind, so the
+            # caller decides whether that is a failure or a place to stop.
+            raise _DatabaseBehind from exc
+        console.error(str(exc))
+        raise typer.Exit(1) from exc
+    finally:
+        if previous is None:
+            os.environ.pop(_APP_ENV_VAR, None)
+        else:
+            os.environ[_APP_ENV_VAR] = previous
+
+    written = sorted(set(versions.glob("*.py")) - before)
+    kept = []
+    for path in written:
+        if _is_empty_migration(path):
+            path.unlink()
+        else:
+            kept.append(path)
+    return kept
+
+
 @app.command()
 def makemigrations(
     message: str = typer.Argument(
         "auto",
         help="Description of the change, e.g. 'add slug to post'. Not an app name.",
     ),
+    app: str = typer.Option(
+        None, "--app", "-a", help="Generate for one app only, instead of every installed app."
+    ),
 ):
     """
-    Generate a new database migration.
+    Generate database migrations.
 
-    The argument is the migration's description, which becomes part of the
-    revision filename. Buraq keeps one migration history for the whole project,
-    so there is no app to scope a run to -- every model change is included.
+    Each app keeps its own migrations, next to the models they describe, so a
+    run visits every installed app and writes at most one revision per app.
+    Pass --app to narrow it to one.
     """
     _require_alembic()
 
-    if _names_an_installed_app(message):
-        console.warn(f"Note: {message!r} is being used as the migration's description, not "
-            "as an app to migrate. Buraq migrates the whole project at once.")
+    if app is None and _names_an_installed_app(message):
+        console.warn(
+            f"Note: {message!r} is being used as the migration's description. "
+            f"To generate for that app alone, pass --app {message}."
+        )
 
-    console.step(f"Generating migration: {message}")
+    targets = _migration_targets(app)
+    if not targets:
+        console.warn("No app has a migrations directory to write to.")
+        console.hint(
+            "`buraq startapp <name>` creates one. Framework apps ship their own "
+            "migrations and are never regenerated."
+        )
+        return
 
-    versions = _versions_dir()
-    before = set(versions.glob("*.py")) if versions and versions.is_dir() else set()
+    console.step(f"Generating migrations: {message}")
 
-    result = subprocess.run(
-        [
-            sys.executable, "-m", "alembic", "revision", "--autogenerate",
-            "-m", message, *_project_revision_args(versions),
-        ],
-        capture_output=True,
-        text=True,
-        # Alembic emits paths and model names; decoding those with whatever the
-        # locale happens to be fails outright under the POSIX locale that minimal
-        # container images default to.
-        encoding="utf-8",
-        errors="replace",
-    )
-    for raw in (result.stderr or "").splitlines():
-        line = raw.rstrip()
-        if not line or any(noise in line for noise in _ALEMBIC_NOISE):
-            continue
-        body = line.split("] ", 1)[-1] if line.startswith("INFO") else line
-        if body.startswith("Detected"):
-            console.item(body)
-        elif body.startswith("Generating"):
-            # Alembic prints the absolute path; the file name is the useful part.
-            console.item(f"Wrote {Path(body.split()[1]).name}")
-        elif line.startswith("ERROR") or line.startswith("FAILED"):
-            console.error(body)
-        else:
-            console.error(body)
+    created: list[Path] = []
+    stopped_at = None
+    for name, versions in targets:
+        try:
+            created.extend(_autogenerate(name, versions, message))
+        except _DatabaseBehind:
+            stopped_at = name
+            break
 
-    if result.returncode != 0:
-        if "not up to date" in result.stderr:
-            # Alembic will not diff against a database that is behind its own
-            # history, because the pending revisions would be generated twice.
+    for path in created:
+        console.success(f"Created {path.parent.parent.name}/migrations/{path.name}")
+
+    if stopped_at is not None:
+        if created:
+            # Autogenerate diffs against the database, and the revisions just
+            # written are not in it yet, so the remaining apps cannot be read
+            # until these are applied.
             console.hint(
-                "The database is behind the migrations already on disk. "
-                "Run `buraq migrate` first, then makemigrations again."
+                f"Apply these with `buraq migrate`, then run makemigrations again "
+                f"for the remaining apps (stopped at {stopped_at!r})."
             )
-        raise typer.Exit(result.returncode)
+            return
+        console.error("Target database is not up to date.")
+        console.hint(
+            "The database is behind the migrations already on disk. "
+            "Run `buraq migrate` first, then makemigrations again."
+        )
+        raise typer.Exit(1)
 
-    # Autogenerate always writes a file, even when it found nothing to put in
-    # it. Left behind, empty revisions pile up in the history indistinguishable
-    # from real ones -- so drop it and say plainly that nothing changed.
-    new_files = (set(versions.glob("*.py")) - before) if versions and versions.is_dir() else set()
-    empty = [path for path in new_files if _is_empty_migration(path)]
-    for path in empty:
-        path.unlink()
-
-    if empty:
-        # Suppress alembic's "Generating ... done" for a file that no longer exists.
+    if not created:
         console.success("No changes detected - nothing to migrate")
-    elif result.stdout:
-        for raw in result.stdout.splitlines():
-            line = raw.strip()
-            if not line:
-                continue
-            if line.startswith("Generating"):
-                # Alembic prints the absolute path; the file name is the part
-                # worth reading, and the rest pushes the line off the terminal.
-                console.success(f"Created {Path(line.split()[1]).name}")
-            else:
-                console.item(line)
 
 
 @app.command()
@@ -616,7 +749,9 @@ def migrate(
     _require_alembic()
     console.step(f"Applying migrations to {revision}")
     _fire_signal("pre_migrate", revision=revision, verbosity=1)
-    code = _run_alembic(["upgrade", revision])
+    from alembic import command
+
+    code = _run_alembic_command(command.upgrade, revision)
     if code != 0:
         raise typer.Exit(code)
     _fire_signal("post_migrate", revision=revision, verbosity=1)
@@ -629,9 +764,11 @@ def rollback(steps: int = typer.Argument(1, help="Number of migrations to roll b
     _require_alembic()
     console.step(f"Rolling back {steps} migration(s)")
     _fire_signal("pre_migrate", revision=f"-{steps}", verbosity=1)
-    result = subprocess.run([sys.executable, "-m", "alembic", "downgrade", f"-{steps}"])
-    if result.returncode != 0:
-        raise typer.Exit(result.returncode)
+    from alembic import command
+
+    code = _run_alembic_command(command.downgrade, f"-{steps}")
+    if code != 0:
+        raise typer.Exit(code)
     _fire_signal("post_migrate", revision=f"-{steps}", verbosity=1)
 
 
@@ -639,9 +776,11 @@ def rollback(steps: int = typer.Argument(1, help="Number of migrations to roll b
 def showmigrations():
     """List all migrations and their status."""
     _require_alembic()
-    result = subprocess.run([sys.executable, "-m", "alembic", "history", "--verbose"])
-    if result.returncode != 0:
-        raise typer.Exit(result.returncode)
+    from alembic import command
+
+    code = _run_alembic_command(command.history, verbose=True)
+    if code != 0:
+        raise typer.Exit(code)
 
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
@@ -790,6 +929,9 @@ def startapp(name: str = typer.Argument(..., help="App name")):
     for filename, content in files.items():
         (base / filename).write_text(content, encoding="utf-8")
 
+    (base / "migrations").mkdir(exist_ok=True)
+    (base / "migrations" / "__init__.py").write_text("", encoding="utf-8")
+
     console.success(f"App {name!r} created")
     console.hint(f"Add {name!r} to INSTALLED_APPS in config/settings.py")
 
@@ -811,7 +953,7 @@ def collectstatic(
     typer.echo(
         f"Done. Copied: {result['copied']}, "
         f"Skipped (unchanged): {result['skipped']}, "
-        f"Post-processed: {result['post_processed']}"
+        f"Post-processed: {result['post_processed']}, compressed: {result.get('compressed', 0)}"
     )
 
 
@@ -1044,7 +1186,6 @@ def startproject(
         project_dir / "templates",
         project_dir / "static" / "css",
         project_dir / "static" / "js",
-        project_dir / "alembic" / "versions",
     ]
     for d in dirs:
         d.mkdir(parents=True)
@@ -1109,102 +1250,9 @@ def startproject(
     # .gitignore — uv.lock must NOT be ignored, it should be committed
     (project_dir / ".gitignore").write_text(
         "__pycache__/\n*.py[cod]\n.venv/\n.env\n*.sqlite3\n*.db\n"
-        ".ruff_cache/\n.mypy_cache/\n.pytest_cache/\nalembic/versions/*.py\n"
-        "!alembic/versions/.gitkeep\nstaticfiles/\nsent_emails/\n.cache/\nmedia/\n"
+        ".ruff_cache/\n.mypy_cache/\n.pytest_cache/\n"
+        "staticfiles/\nsent_emails/\n.cache/\nmedia/\n"
         "# uv.lock is intentionally NOT listed here — commit it to version control\n"
-    , encoding="utf-8")
-
-    # alembic.ini
-    (project_dir / "alembic.ini").write_text(
-        "[alembic]\nscript_location = alembic\nprepend_sys_path = .\n"
-        # Buraq's contrib apps ship their own migrations; alembic resolves
-        # package:path against the installed package, so nothing is copied in.
-        # One path per line: path_separator = os would make this file mean
-        # different things on Windows and Linux, and newline survives paths
-        # that contain spaces.
-        "path_separator = newline\n"
-        f"version_locations =\n{_scaffold_version_locations()}\n\n"
-        f"sqlalchemy.url = {db_url}\n\n"
-        "[loggers]\nkeys = root,sqlalchemy,alembic,alembic_plugins\n\n"
-        "[handlers]\nkeys = console\n\n"
-        "[formatters]\nkeys = generic\n\n"
-        "[logger_root]\nlevel = WARN\nhandlers = console\nqualname =\n\n"
-        "[logger_sqlalchemy]\nlevel = WARN\nhandlers =\nqualname = sqlalchemy.engine\n\n"
-        "[logger_alembic]\nlevel = INFO\nhandlers =\nqualname = alembic\n\n"
-        # Plugin setup is announced on every autogenerate run and says
-        # nothing about the migration itself.
-        "[logger_alembic_plugins]\nlevel = WARN\nhandlers =\n"
-        "qualname = alembic.runtime.plugins\n\n"
-        "[handler_console]\nclass = StreamHandler\nargs = (sys.stderr,)\n"
-        "level = NOTSET\nformatter = generic\n\n"
-        "[formatter_generic]\nformat = %(levelname)-5.5s [%(name)s] %(message)s\n"
-        "datefmt = %H:%M:%S\n"
-    , encoding="utf-8")
-
-    # alembic/versions/.gitkeep
-    (project_dir / "alembic" / "versions" / ".gitkeep").touch()
-
-    # alembic/env.py
-    (project_dir / "alembic" / "env.py").write_text(
-        "import asyncio\n"
-        "from logging.config import fileConfig\n"
-        "from sqlalchemy import pool\n"
-        "from sqlalchemy.engine import Connection\n"
-        "from sqlalchemy.ext.asyncio import async_engine_from_config\n"
-        "from alembic import context\n"
-        "from buraq.core.db import Base\n\n"
-        "from buraq.apps import configure\n"
-        "\n"
-        "# Loads settings and imports every app's models, so Base.metadata reflects\n"
-        "# INSTALLED_APPS. Without it autogenerate sees no tables and a new project\n"
-        "# can never generate its first migration.\n"
-        "configure()\n"
-        "config = context.config\n"
-        "if config.config_file_name is not None:\n"
-        "    fileConfig(config.config_file_name)\n\n"
-        "target_metadata = Base.metadata\n\n\n"
-        "def include_object(obj, name, type_, reflected, compare_to):\n"
-        "    from buraq.core.db import tables_migrations_ignore\n\n"
-        "    if type_ == 'table' and name in tables_migrations_ignore():\n"
-        "        return False\n"
-        "    return True\n\n\n"
-        "def do_run_migrations(connection: Connection) -> None:\n"
-        "    context.configure(\n"
-        "        connection=connection,\n"
-        "        target_metadata=target_metadata,\n"
-        "        include_object=include_object,\n"
-        "    )\n"
-        "    with context.begin_transaction():\n"
-        "        context.run_migrations()\n\n\n"
-        "async def run_async_migrations() -> None:\n"
-        "    from buraq.conf import settings\n"
-        "    configuration = config.get_section(config.config_ini_section, {})\n"
-        "    configuration['sqlalchemy.url'] = settings.DATABASE_URL\n"
-        "    connectable = async_engine_from_config(\n"
-        "        configuration, prefix='sqlalchemy.', poolclass=pool.NullPool\n"
-        "    )\n"
-        "    async with connectable.connect() as connection:\n"
-        "        await connection.run_sync(do_run_migrations)\n"
-        "    await connectable.dispose()\n\n\n"
-        "def run_migrations_online() -> None:\n"
-        "    asyncio.run(run_async_migrations())\n\n\n"
-        "if context.is_offline_mode():\n"
-        "    pass\n"
-        "else:\n"
-        "    run_migrations_online()\n"
-    , encoding="utf-8")
-
-    # alembic/script.py.mako
-    (project_dir / "alembic" / "script.py.mako").write_text(
-        '"""${message}\n\nRevision ID: ${up_revision}\nRevises: ${down_revision | comma,n}\n'
-        'Create Date: ${create_date}\n\n"""\nfrom typing import Sequence, Union\n'
-        'from alembic import op\nimport sqlalchemy as sa\n${imports if imports else ""}\n\n'
-        'revision: str = ${repr(up_revision)}\n'
-        'down_revision: Union[str, None] = ${repr(down_revision)}\n'
-        'branch_labels: Union[str, Sequence[str], None] = ${repr(branch_labels)}\n'
-        'depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}\n\n\n'
-        'def upgrade() -> None:\n    ${upgrades if upgrades else "pass"}\n\n\n'
-        'def downgrade() -> None:\n    ${downgrades if downgrades else "pass"}\n'
     , encoding="utf-8")
 
     # config/__init__.py
@@ -1212,6 +1260,18 @@ def startproject(
 
     # config/settings.py
     (project_dir / "config" / "settings.py").write_text(
+        '"""\n'
+        f"Settings for {name}.\n\n"
+        "Only UPPERCASE names are read as settings. Anything lowercase is ignored,\n"
+        "so imports and helpers can live here freely, and a setting not named here\n"
+        "keeps its default. `buraq diffsettings --all` lists every one with the\n"
+        "value in force.\n\n"
+        "Values come from the .env loaded below, so a deployment changes DEBUG,\n"
+        "SECRET_KEY and DATABASE_URL without editing this file.\n\n"
+        "Settings of your own work the same way -- NAME = value, read anywhere with\n"
+        "`from buraq.conf import settings`.\n\n"
+        "Full reference: https://buraqproject.com/docs/getting-started/settings\n"
+        '"""\n\n'
         "import os\n"
         "from pathlib import Path\n\n"
         "from dotenv import load_dotenv\n\n"
@@ -1227,12 +1287,36 @@ def startproject(
         "# have to be allowed or a new project answers its own URL with 400.\n"
         "# Override with a comma-separated ALLOWED_HOSTS environment variable.\n"
         "ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')\n\n"
+        "ROOT_URLCONF = 'config.urls'\n\n"
         "INSTALLED_APPS = [\n"
         "    'buraq.contrib.auth',\n"
         "]\n\n"
+        "# Middleware, outermost first: the entry at the top sees a request before\n"
+        "# every entry below it, and its response last.\n"
+        "MIDDLEWARE = [\n"
+        "    'buraq.middleware.security.SecurityMiddleware',\n"
+        "    'buraq.middleware.cors.CORSMiddleware',\n"
+        "    'buraq.contrib.sessions.middleware.SessionMiddleware',\n"
+        "    'buraq.contrib.auth.middleware.AuthenticationMiddleware',\n"
+        "    'buraq.middleware.csrf.CsrfViewMiddleware',\n"
+        "    'buraq.middleware.gzip.GZipMiddleware',\n"
+        "]\n\n"
         f"DATABASE_URL = '{db_url}'\n\n"
+        "# Searched first; each installed app's templates/ is searched after,\n"
+        "# so a file here overrides one an app ships. Takes a list too.\n"
         "TEMPLATES_DIR = str(BASE_DIR / 'templates')\n"
         "STATIC_DIR = str(BASE_DIR / 'static')\n\n"
+        "\n"
+        "# Internationalization\n"
+        "LANGUAGE_CODE = 'en'\n"
+        "TIME_ZONE = 'UTC'\n\n"
+        "# Password policy, applied wherever a password is set. Tune or shorten it;\n"
+        "# an empty list turns validation off entirely.\n"
+        "AUTH_PASSWORD_VALIDATORS = [\n"
+        "    {'NAME': 'buraq.contrib.auth.password_validation.MinimumLengthValidator'},\n"
+        "    {'NAME': 'buraq.contrib.auth.password_validation.CommonPasswordValidator'},\n"
+        "    {'NAME': 'buraq.contrib.auth.password_validation.NumericPasswordValidator'},\n"
+        "]\n\n"
         "# Email\n"
         "# EMAIL_BACKEND = 'buraq.contrib.email.backends.smtp.SMTPEmailBackend'\n"
         "# EMAIL_HOST = 'smtp.gmail.com'\n"
@@ -1244,27 +1328,39 @@ def startproject(
 
     # config/urls.py
     (project_dir / "config" / "urls.py").write_text(
-        "from buraq import Buraq\n"
-        "from buraq.urls import path, include\n"
-        "from buraq.contrib.admin import BuraqAdmin\n\n"
-        "app = Buraq(settings_module='config.settings')\n"
-        "admin = BuraqAdmin(app)\n\n\n"
-        "# ── URL Configuration ───────────────────────────────────────────────\n"
-        "# Add your apps here after running: python manage.py startapp <name>\n"
+        '"""\n'
+        f"URL configuration for {name}.\n\n"
+        "The `urlpatterns` list routes URLs to views. Every path begins with a\n"
+        "slash, and the framework strips any trailing one: '/posts' and '/posts/'\n"
+        "are the same route.\n\n"
+        "Function views\n"
+        "    1. Import it:  from blog import views\n"
+        "    2. Add a route:  path('/', views.home, name='home')\n\n"
+        "Class-based views\n"
+        "    1. Import it:  from blog.views import Home\n"
+        "    2. Add a route:  path('/', Home.as_view(), name='home')\n\n"
+        "Including another URLconf\n"
+        "    1. Import include:  from buraq.urls import include, path\n"
+        "    2. Add a route:  path('/blog', include('blog.urls'))\n\n"
+        "One method only -- get/post/put/patch/delete take the same arguments\n"
+        "    get('/posts', views.list_posts, name='post_list')\n"
+        "    post('/posts', views.create_post, name='post_create')\n\n"
+        "Which module is read comes from ROOT_URLCONF in config/settings.py.\n"
+        "Full guide: https://buraqproject.com/docs/topics/urls\n"
+        '"""\n\n'
+        "from buraq.contrib import admin\n"
+        "from buraq.urls import path, include\n\n"
         "urlpatterns = [\n"
+        "    path('/admin', admin.site.urls),\n"
         "    path('/auth', include('buraq.contrib.auth.urls')),\n"
         "    # path('/posts', include('posts.urls')),\n"
-        "]\n\n"
-        "app.load_urls(urlpatterns)\n\n\n"
-        "@app.get('/')\n"
-        "async def index():\n"
-        f"    return {{\"message\": \"Welcome to {name}!\", \"docs\": \"/api/docs\"}}\n"
+        "]\n"
     , encoding="utf-8")
 
-    # main.py — entry point so `main:app` (the runserver default) resolves correctly
+    # main.py — builds the application; `buraq runserver` looks for `main:app`
     (project_dir / "main.py").write_text(
-        "# Entry point — exposes `app` at the module level so `buraq runserver` works.\n"
-        "from config.urls import app  # noqa: F401\n"
+        "from buraq import Buraq\n\n"
+        "app = Buraq(settings_module='config.settings')\n"
     , encoding="utf-8")
 
     # manage.py — auto-detects .venv so `python manage.py` just works
@@ -1338,7 +1434,7 @@ def listurls(
     app_path: str = typer.Option(
         "main:app",
         "--app",
-        help="ASGI app to inspect, e.g. 'main:app' or 'config.urls:app'",
+        help="ASGI app to inspect, e.g. 'main:app'",
     ),
     no_color: bool = typer.Option(False, "--no-color", help="Disable coloured output"),
 ):
@@ -1349,7 +1445,7 @@ def listurls(
 
     Example:
         python manage.py listurls
-        python manage.py listurls --app config.urls:app
+        python manage.py listurls --app main:app
     """
     import importlib
 
@@ -2598,11 +2694,101 @@ def worker(
     asyncio.run(_run())
 
 
+def _iter_app_command_modules():
+    """
+    Yield ``(command_name, module_path)`` for every installed app's commands.
+
+    An app puts them in ``<app>/management/commands/<name>.py``, the layout
+    BaseCommand's own docstring describes. Nothing read that layout before, so a
+    command written to it could be imported but never run.
+    """
+    import importlib.util
+    import pkgutil
+
+    from buraq.conf import settings
+
+    for app_name in getattr(settings, "INSTALLED_APPS", None) or []:
+        package = f"{app_name}.management.commands"
+        try:
+            spec = importlib.util.find_spec(package)
+        except (ImportError, AttributeError, ValueError):
+            continue
+        if spec is None or not spec.submodule_search_locations:
+            continue
+        for _, name, is_pkg in pkgutil.iter_modules(spec.submodule_search_locations):
+            if not is_pkg and not name.startswith("_"):
+                yield name, f"{package}.{name}"
+
+
+def _register_app_command(name: str, module_path: str) -> None:
+    """Expose one app command as ``buraq <name>``."""
+
+    @app.command(
+        name=name,
+        context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    )
+    def _run(ctx: typer.Context) -> None:
+        command = importlib.import_module(module_path).Command()
+        # BaseCommand parses with argparse, so the raw arguments are handed
+        # straight over rather than being redeclared as typer parameters.
+        parser = command.create_parser("buraq", name)
+        options = vars(parser.parse_args(ctx.args))
+        _load_apps()
+        command.execute(**options)
+
+    _run.__doc__ = getattr(
+        importlib.import_module(module_path).Command, "help", ""
+    ) or f"Run the {name} command."
+
+
+def _register_app_commands() -> None:
+    """
+    Add every installed app's commands to the CLI.
+
+    Called before the CLI parses its arguments. A directory that is not a
+    project has no settings to read, and `buraq startproject` has to work there,
+    so failure is silent rather than fatal.
+    """
+    try:
+        from buraq.conf import load_settings_module
+
+        # Discovering the module path is not enough: INSTALLED_APPS is empty
+        # until the module is actually read.
+        load_settings_module(_discover_settings_module())
+    except Exception:
+        return
+
+    # Typer leaves `name` unset when the function name is the command name, so
+    # both have to be consulted -- checking only `.name` found 4 of 42 and let a
+    # project command called "migrate" silently replace the real one.
+    taken = {
+        info.name or getattr(info.callback, "__name__", "")
+        for info in app.registered_commands
+    }
+    for name, module_path in _iter_app_command_modules():
+        if name in taken:
+            # A project command must not quietly replace one of Buraq's own.
+            console.warn(
+                f"Ignoring {module_path}: {name!r} is already a Buraq command."
+            )
+            continue
+        try:
+            _register_app_command(name, module_path)
+        except Exception as exc:
+            console.warn(f"Could not load command {module_path}: {exc}")
+
 def execute_from_command_line(argv=None):
     """Entry point for manage.py."""
     import sys
+    _register_app_commands()
     app(args=(argv or sys.argv)[1:], standalone_mode=True)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entry point for the `buraq` console script."""
+    _register_app_commands()
     app()
+
+
+if __name__ == "__main__":
+    main()

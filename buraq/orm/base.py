@@ -1,8 +1,10 @@
+import importlib
 import re
 
 import sqlalchemy as sa
 
 from buraq.core.db import Base
+from buraq.exceptions import ImproperlyConfigured
 from buraq.orm.fields import Field, ManyToManyField
 from buraq.orm.manager import DoesNotExist, Manager, _ReverseFKDescriptor
 from buraq.orm.options import Options
@@ -19,10 +21,47 @@ class _ModelState:
         self.fields_cache: dict = {}
 
 
-def _to_table_name(class_name: str) -> str:
-    """PostComment → post_comments"""
+def _auto_pk_column() -> sa.Column:
+    """
+    The implicit ``id`` column, per DEFAULT_AUTO_FIELD.
+
+    Integer runs out at about two billion rows, which is a migration nobody
+    enjoys, so a project can choose BigAutoField up front. Resolved on each
+    model rather than at import so a settings module read later still applies.
+    """
+    from buraq.conf import settings
+
+    path = getattr(settings, "DEFAULT_AUTO_FIELD", "") or ""
+    if not path:
+        return sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+
+    module_path, _, name = path.rpartition(".")
+    try:
+        field_class = getattr(importlib.import_module(module_path), name)
+    except (ImportError, AttributeError, ValueError) as exc:
+        raise ImproperlyConfigured(
+            f"DEFAULT_AUTO_FIELD is {path!r}, which could not be imported: {exc}"
+        ) from exc
+    try:
+        return field_class().to_sa_column("id")
+    except Exception as exc:
+        raise ImproperlyConfigured(
+            f"DEFAULT_AUTO_FIELD is {path!r}, which is not an auto field: {exc}"
+        ) from exc
+
+
+def _to_table_name(class_name: str, app_label: str = "") -> str:
+    """
+    ``PostComment`` in app ``blog`` -> ``blog_post_comments``.
+
+    The app label is part of the name because a model name is not unique across
+    a project: two apps may each define ``Post``, and without the prefix both
+    claim the same table -- SQLAlchemy rejects the second outright, so the two
+    apps cannot be installed together at all.
+    """
     s = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", class_name)
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower() + "s"
+    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower() + "s"
+    return f"{app_label}_{name}" if app_label else name
 
 
 class Index:
@@ -163,11 +202,19 @@ class Model(Base):
 
         # ── 1. Auto __tablename__ ──────────────────────────────────────────
         if "__tablename__" not in cls.__dict__:
-            cls.__tablename__ = opts.db_table or _to_table_name(cls.__name__)
+            cls.__tablename__ = opts.db_table or _to_table_name(cls.__name__, opts.app_label)
 
         # ── 2. Auto primary key ────────────────────────────────────────────
-        if "id" not in cls.__dict__:
-            cls.id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+        # Only when the model declares none of its own. A natural key -- a
+        # session's key, a country's ISO code -- is the primary key, and adding
+        # an id beside it would make a second, meaningless one.
+        declares_pk = any(
+            getattr(value, "primary_key", False)
+            for value in cls.__dict__.values()
+            if isinstance(value, sa.Column)
+        )
+        if "id" not in cls.__dict__ and not declares_pk:
+            cls.id = _auto_pk_column()
 
         # ── 2b. order_with_respect_to adds an implicit _order column ───────
         if opts.order_with_respect_to and "_order" not in cls.__dict__:

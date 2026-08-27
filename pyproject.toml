@@ -93,7 +93,9 @@ dev = [
 ]
 
 [project.scripts]
-buraq = "buraq.management.cli:app"
+# main() rather than app(): it registers each installed app's own commands
+# before the CLI parses its arguments.
+buraq = "buraq.management.cli:main"
 
 # ─── uv configuration ─────────────────────────────────────────────────────────
 [tool.uv]

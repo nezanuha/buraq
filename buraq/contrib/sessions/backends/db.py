@@ -1,18 +1,15 @@
 """
 Database-backed session backend.
 
-Stores session data in a ``buraq_sessions`` table.  Create it once with::
-
-    python manage.py createcachetable  # or run the SQL below
-
-    CREATE TABLE buraq_sessions (
-        session_key  VARCHAR(64)  NOT NULL PRIMARY KEY,
-        session_data TEXT         NOT NULL,
-        expire_date  DOUBLE PRECISION NOT NULL
-    );
+Stores session data in a ``buraq_sessions`` table, which arrives with the app's
+own migration -- add ``buraq.contrib.sessions`` to INSTALLED_APPS and run
+``buraq migrate``. It used to be a block of CREATE TABLE in this docstring for
+you to run by hand, which was the one table Buraq owned that it would not
+create for you.
 
 Settings::
 
+    INSTALLED_APPS = [..., "buraq.contrib.sessions"]
     SESSION_ENGINE = "buraq.contrib.sessions.backends.db"
 """
 from __future__ import annotations
@@ -24,6 +21,25 @@ from buraq.contrib.sessions.backends.base import SessionBase
 _TABLE = "buraq_sessions"
 
 
+def _explain_missing_table(exc: Exception) -> None:
+    """
+    Turn "no such table: buraq_sessions" into something actionable.
+
+    The table arrives with the app's migration, so the cause is almost always
+    that the app is not installed -- which the database driver has no way to
+    know and no way to say.
+    """
+    from buraq.exceptions import ImproperlyConfigured
+
+    text = str(exc).lower()
+    if _TABLE in text and ("no such table" in text or "does not exist" in text):
+        raise ImproperlyConfigured(
+            f"SESSION_ENGINE uses the database backend, but the {_TABLE!r} table "
+            "does not exist. Add 'buraq.contrib.sessions' to INSTALLED_APPS and "
+            "run `buraq migrate`."
+        ) from exc
+
+
 class DatabaseSessionBackend(SessionBase):
     """Stores session data in the database."""
 
@@ -32,7 +48,11 @@ class DatabaseSessionBackend(SessionBase):
 
         from buraq.core.db import SessionLocal
         async with SessionLocal() as db:
-            result = await db.execute(sa.text(sql), params)
+            try:
+                result = await db.execute(sa.text(sql), params)
+            except Exception as exc:
+                _explain_missing_table(exc)
+                raise
             await db.commit()
             return result
 
@@ -41,7 +61,11 @@ class DatabaseSessionBackend(SessionBase):
 
         from buraq.core.db import SessionLocal
         async with SessionLocal() as db:
-            result = await db.execute(sa.text(sql), params)
+            try:
+                result = await db.execute(sa.text(sql), params)
+            except Exception as exc:
+                _explain_missing_table(exc)
+                raise
             return result.fetchone()
 
     async def exists(self, session_key: str) -> bool:

@@ -176,11 +176,15 @@ class Permission(models.Model):
     """
 
     name        = models.CharField(max_length=255)
-    codename    = models.CharField(max_length=100, unique=True)
+    # Unique per content type, not globally: two apps may each define a Post,
+    # and both legitimately need an "add_post". A global unique silently gave
+    # the second one the first one's row.
+    codename    = models.CharField(max_length=100)
     content_type = models.CharField(max_length=100, null=True)
 
     class Meta:
         table_name = "buraq_permissions"
+        unique_together = [["content_type", "codename"]]
 
     def __str__(self):
         return self.codename

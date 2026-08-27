@@ -2,7 +2,7 @@
 Buraq ships migrations for its own tables.
 
 The framework defines ten tables across five contrib apps. With a single
-migration history they landed in each project's own alembic/versions, so a
+migration history they landed in each project's own directory, so a
 release that changed buraq.contrib.auth forced every project to autogenerate and
 review a schema it does not own -- and Buraq could not ship a data migration at
 all.
@@ -27,7 +27,7 @@ PACKAGE = Path(__file__).resolve().parents[1] / "buraq"
 
 
 def _revision(app: str) -> Path:
-    return PACKAGE / "contrib" / app / "migrations" / "versions" / "0001_initial.py"
+    return PACKAGE / "contrib" / app / "migrations" / "0001_initial.py"
 
 
 @pytest.mark.parametrize("app", APPS_WITH_MIGRATIONS)
@@ -100,7 +100,7 @@ def test_only_installed_apps_contribute_version_locations(monkeypatch):
 
     locations = migration_version_locations()
 
-    assert locations == ["buraq.contrib.auth:migrations/versions"]
+    assert locations == ["buraq.contrib.auth:migrations"]
 
 
 def test_a_config_path_entry_still_counts(monkeypatch):
@@ -108,7 +108,7 @@ def test_a_config_path_entry_still_counts(monkeypatch):
 
     monkeypatch.setattr(settings, "INSTALLED_APPS", ["buraq.contrib.auth.apps.AuthConfig"])
 
-    assert migration_version_locations() == ["buraq.contrib.auth:migrations/versions"]
+    assert migration_version_locations() == ["buraq.contrib.auth:migrations"]
 
 
 def test_no_apps_installed_yields_no_locations(monkeypatch):
