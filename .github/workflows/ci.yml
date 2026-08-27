@@ -75,3 +75,78 @@ jobs:
           done
           echo 'granian never served a request — the default server is broken on this platform'
           exit 1
+
+  # The matrix above runs against SQLite, which is what a fresh clone uses. These
+  # two run the same suite against a real server, because the differences that
+  # bite -- sequences, locking, collation, what a driver accepts -- are exactly
+  # the ones SQLite cannot show. Linux only: GitHub service containers do not run
+  # on the Windows or macOS images. One Python version, since this is testing the
+  # database rather than the interpreter.
+
+  postgres:
+    name: PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: buraq
+          POSTGRES_PASSWORD: buraq
+          POSTGRES_DB: buraq_test
+        ports: ["5432:5432"]
+        # Without this the suite can connect before the server is accepting.
+        options: >-
+          --health-cmd "pg_isready -U buraq"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv python install 3.12
+      - name: Install dependencies
+        run: uv sync --group dev --extra postgres
+      - name: Run tests
+        run: uv run pytest
+        env:
+          SECRET_KEY: "ci-test-secret-key-not-for-production-use"
+          DATABASE_URL: "postgresql+asyncpg://buraq:buraq@127.0.0.1:5432/buraq_test"
+
+  mysql:
+    name: MySQL
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: buraq
+          MYSQL_DATABASE: buraq_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pburaq"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv python install 3.12
+      - name: Install dependencies
+        run: uv sync --group dev --extra mysql
+      # utf8mb4, not utf8: the latter is three bytes and cannot store every
+      # character, which shows up as a truncation error rather than as encoding.
+      - name: Use utf8mb4
+        run: >-
+          mysql -h 127.0.0.1 -uroot -pburaq -e
+          "ALTER DATABASE buraq_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+      - name: Run tests
+        run: uv run pytest
+        env:
+          SECRET_KEY: "ci-test-secret-key-not-for-production-use"
+          DATABASE_URL: "mysql+aiomysql://root:buraq@127.0.0.1:3306/buraq_test"

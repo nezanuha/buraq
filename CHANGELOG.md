@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CI runs the suite against PostgreSQL and MySQL**, not only SQLite. The
+  differences that actually bite — sequences, locking, collation, what a driver
+  accepts — are the ones SQLite cannot show, so passing on it proved less than
+  it appeared to. Two jobs, Linux only, since service containers do not run on
+  the Windows or macOS images.
+
+  This needed the suite to be portable first: `tests/test_auth.py` and
+  `tests/test_auth_permissions.py` set `DATABASE_URL` to in-memory SQLite
+  themselves, so they would have gone on testing SQLite whatever CI configured.
+  They now use the database under test, and changing `DATABASE_URL` mid-suite
+  forgets the cached engine rather than leaving queries pointed at the old one.
+
 - **`OPTIONS` for the database connection.** Anything SQLAlchemy's engine or the
   driver accepts can now be set, per database, without Buraq needing a named
   setting for each:

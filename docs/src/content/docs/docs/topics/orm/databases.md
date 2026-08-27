@@ -26,12 +26,14 @@ DATABASE_URL = "postgresql+asyncpg://user:password@localhost:5432/mydb"
 The `+driver` part is required. A URL without it selects a blocking driver and is
 refused at startup — see [Settings](../../getting-started/settings.md#database).
 
-:::caution[What is actually tested]
-Buraq's test suite runs against SQLite only. PostgreSQL, MySQL and MariaDB are
-supported in the sense that the queries Buraq generates are ordinary SQLAlchemy
-and the drivers are async — not in the sense that every release is verified
-against them. Treat the notes below as the known differences, not as an
-exhaustive list, and run your own suite against the backend you deploy on.
+:::note[What is actually tested]
+CI runs the whole suite three times: against SQLite on Linux, Windows and macOS,
+and against a real PostgreSQL and a real MySQL server on Linux. MariaDB is not
+in CI — it uses the same dialect and driver as MySQL, which is the reason to
+expect it to work and not a substitute for testing it.
+
+Treat the notes below as the differences known to bite, not as an exhaustive
+list, and run your own suite against the backend you deploy on.
 :::
 
 :::note[Not supported]

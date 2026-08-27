@@ -7,7 +7,9 @@ from buraq.core.db import Base, engine
 @pytest.fixture
 async def app():
     from buraq.conf import settings
-    settings.DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+    from tests.conftest import use_test_database
+
+    use_test_database(settings)
     settings.DEBUG = True
     settings.SECRET_KEY = "test-secret-key-for-auth-tests"
     settings.INSTALLED_APPS = ["buraq.contrib.auth"]
