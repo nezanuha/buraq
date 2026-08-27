@@ -47,7 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   trip on checkout, where recycling retires the connection before it goes stale.
 - **MariaDB** named in the driver check, so a URL without an async driver
   suggests `mariadb+aiomysql` rather than falling through unrecognised.
-- **A Databases page** covering what each backend does differently — SQLite
+- **A Databases page** covering which other databases are reachable at all —
+  CockroachDB, YugabyteDB and TiDB through wire compatibility, SQL Server
+  through `aioodbc`, and Oracle, Firebird, Spanner and Snowflake not at all,
+  because SQLAlchemy 2.0 exposes no async dialect for them — and what each
+  supported backend does differently — SQLite
   dropping `FOR UPDATE` from the statement rather than raising, MySQL refusing to
   index a `TEXT` column or a `unique` `VARCHAR` past 255 characters, PgBouncer,
   isolation levels — and saying plainly that the test suite runs against SQLite

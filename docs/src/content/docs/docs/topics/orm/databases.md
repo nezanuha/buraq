@@ -36,9 +36,37 @@ Treat the notes below as the differences known to bite, not as an exhaustive
 list, and run your own suite against the backend you deploy on.
 :::
 
-:::note[Not supported]
-Oracle and SQL Server. `oracledb` does have an asyncio mode, so Oracle is
-possible in principle; it is not implemented and has never been run.
+### Everything else
+
+Whether another database is reachable at all is decided by SQLAlchemy, not by
+Buraq: it needs an *async* dialect, and most do not have one.
+
+| | | |
+|---|---|---|
+| CockroachDB | `postgresql+asyncpg` | speaks the PostgreSQL wire protocol |
+| YugabyteDB | `postgresql+asyncpg` | speaks the PostgreSQL wire protocol |
+| TiDB | `mysql+aiomysql` | speaks the MySQL wire protocol |
+| SQL Server | `mssql+aioodbc` | an async dialect exists |
+| **Oracle** | — | **no async dialect in SQLAlchemy 2.0** |
+| **Firebird** | — | community dialect, synchronous only |
+| **Cloud Spanner** | — | community dialect, synchronous only |
+| **Snowflake** | — | community dialect, synchronous only |
+| **MongoDB** | — | not SQL; SQLAlchemy does not address it |
+
+The first four will connect. Nothing more than that is claimed: the wire
+protocol matching is what lets a driver talk to them, and it says nothing about
+whether the SQL Buraq generates or the migrations it writes behave the same way.
+If you deploy on one of these, your own test suite is the only thing that will
+tell you.
+
+The rest cannot work today at any level of effort inside Buraq — a synchronous
+driver cannot be awaited, and there is nothing to configure that changes it.
+`oracledb` does ship an asyncio mode, but SQLAlchemy 2.0 exposes no async Oracle
+dialect to reach it through.
+:::note
+Buraq's driver check leaves backends it does not recognise alone, so an
+unrecognised URL is passed to SQLAlchemy rather than rejected — you get
+SQLAlchemy's own error, which is the accurate one.
 :::
 
 ## Configurations
