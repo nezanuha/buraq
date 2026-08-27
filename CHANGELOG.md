@@ -7,6 +7,195 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`DATABASE_URL` is checked for an async driver at startup.** A blocking one —
+  or none at all — now raises `ImproperlyConfigured` naming the driver to use and
+  the extra that installs it. SQLAlchemy caught these already, but a bare
+  `postgresql://` surfaced as `ModuleNotFoundError: No module named 'psycopg2'`,
+  which reads like a missing dependency and sends you to install the one package
+  that cannot help.
+
+- **Static files are compressed once, not on every request** — `GZipMiddleware` compressed each response as it was sent, about 2.8 ms of CPU for a 97 KB stylesheet, repeated for bytes that never change. `collectstatic` now writes a `.gz` beside every compressible file and the static handler serves it directly, with the original content type and `Vary: Accept-Encoding`. Measured on a single worker: 386 req/s before, 458 after. Images, fonts and files under 512 bytes are skipped.
+
+- **`SERVE_STATIC`** — every other built-in can be removed: the admin by dropping its line from `urlpatterns`, sessions and authentication by dropping theirs from `MIDDLEWARE`. Static and media mounting had no switch at all — `STATIC_DIR = None` falls back to `./static`, which a scaffolded project has — so an API that serves no files mounted them anyway. `SERVE_STATIC = False` turns it off.
+
+- **`TEMPLATE_OPTIONS`** — the Jinja environment was built by Starlette with no way to alter it, so `undefined`, `trim_blocks`, `lstrip_blocks` and the extension list were unreachable: a mistyped variable rendered as empty text rather than raising, and a project could not load `jinja2.ext.loopcontrols` or an extension of its own. Buraq builds the environment now, and anything Jinja's `Environment` accepts can be set here. `undefined` and `extensions` take dotted paths so a settings file never has to import jinja2, while options that are legitimately strings — `block_start_string` and the rest — are passed through untouched. `autoescape` keeps its default whatever else is set — without it every variable interpolated into a page is a cross-site scripting hole.
+
+- **A new project is greeted rather than 404'd** — with nothing routed at `/`, a freshly scaffolded project answered `{"detail":"Not Found"}` at its own root, which reads as a broken install rather than an empty one. Buraq answers that one 404 with a page confirming the install works and pointing at the API docs and the admin. It is shown only while `DEBUG` is on, and it steps aside the moment the project routes `/` itself. The scaffold no longer writes a placeholder view into `config/urls.py`: a URL configuration is not where views belong, and a placeholder that has to be deleted is worse than a page that removes itself.
+
+- **An app's own management commands can be run** — `BaseCommand` existed and its docstring described `myapp/management/commands/send_reminders.py`, but nothing ever looked in that directory, so a command written to the documented layout could be imported and never invoked. Each installed app's commands are now registered before the CLI parses its arguments: `buraq send_reminders --days 30` works, the command appears in `--help` with its `help` text, and its `add_arguments()` parser handles its own options. A command whose name is already Buraq's is refused with a message rather than replacing it.
+
+- **`buraq.contrib.sessions` ships a migration** — the database session backend needed a `buraq_sessions` table, and the only instructions for creating it were a block of `CREATE TABLE` in the backend's docstring and the documentation for you to run by hand. It was the one table Buraq owned that Buraq would not create. The app now has a model and a migration like every other table-owning app: add it to `INSTALLED_APPS` and `buraq migrate` makes the table.
+
+- **Token authentication** — the documentation described JWT settings, an `access_token` cookie and a bearer flow, none of which existed: there was no JWT code in the framework at all, and `pyjwt` had been dropped as a dependency nothing imported. `buraq.contrib.auth.tokens` now signs and verifies tokens with HMAC over `SECRET_KEY` — the same primitive the framework already signs with, so no dependency was added back. Signing in sets `access_token` beside the session cookie, and a request authenticates with either that cookie or `Authorization: Bearer`. `JWT_ALGORITHM` accepts the HMAC family and `JWT_EXPIRY_MINUTES` sets the lifetime.
+
+  Verification is HMAC and nothing else, so a forged or expired token is rejected without a database query — 200 rejected tokens cost zero queries, which keeps an invalid token from being a way to make the database work. The algorithm inside a token is never trusted, only the configured one: a token claiming `"alg": "none"` is rejected rather than honoured, and signatures are compared in constant time. Logging out clears the cookie, which a session logout alone would not have done.
+
+- **`DEFAULT_AUTO_FIELD`** — documented but unread, so the implicit `id` was always a 32-bit integer and a project that expected `BigAutoField` silently got a column that runs out near two billion rows. The setting is now honoured, and an unimportable path raises `ImproperlyConfigured` rather than being ignored.
+
+- **`MIDDLEWARE`** — the middleware stack was hardcoded in `Buraq.__init__`, so none of it could be removed, reordered, or have anything inserted between its entries: a JSON-only API got cookie sessions whether it wanted them or not. The setting lists dotted paths outermost first, the same order the list reads in, and defaults to exactly the stack that was hardcoded. Buraq shipped seven middleware classes (`CommonMiddleware`, `ConditionalGetMiddleware`, `ContentSecurityPolicyMiddleware`, the cache pair, and more) that nothing could install, and six documentation pages already described a `MIDDLEWARE` setting that did not exist — both are now true.
+
+- **`@register.global(takes_context=True)` / `@register.filter(takes_context=True)`** — the current render context (`request`, `SITE_FULL_URL`, and anything else a context processor added) can now be received as a global's or filter's first argument, wrapping `jinja2.pass_context`. There was previously no way for a templatetags.py helper to reach the request at all.
+
+### Changed
+
+- **`TEMPLATES_DIR` takes several paths, not one** — it was typed `str`, so a project with more than one template root — its own beside a shared theme — could name only one of them, and passing a list raised `TypeError: argument should be a str or an os.PathLike object`. It now accepts either, searched in the order given.
+
+- **A scaffolded `config/urls.py` and `config/settings.py` explain themselves** — the two files a new project opens first said only "Add your apps here" and nothing at all. It now carries a header covering the three ways to add a route (function view, class-based view, another URLconf), the per-method helpers, that every path begins with a slash and a trailing one is ignored, and that which module is read comes from `ROOT_URLCONF`. `settings.py` now also shows `LANGUAGE_CODE`, `TIME_ZONE` and `AUTH_PASSWORD_VALIDATORS` — the first two because nearly every project changes them, the third because three validators were enforcing a password policy that appeared nowhere a reader would look. It gained a header covering the rule that only UPPERCASE names are read, that anything unnamed keeps its default, that values come from `.env`, and that a project's own settings work the same way.
+
+- **BREAKING — `ROOT_URLCONF` is read, and a project's urls.py holds only urlpatterns** — the setting was declared and one management command read it; the application never did. So a project had to reach back for the application to load its own URLs (`app.load_urls(urlpatterns)` at the bottom of urls.py), which is why the application ended up being *built* there — `config/urls.py` created the app, declared the routes, registered them, and defined a view. The application now loads the module named by `ROOT_URLCONF`, so the scaffold splits into one job per file: `main.py` builds the application, `config/urls.py` is `urlpatterns`, `config/settings.py` names the urlconf. `app.load_urls()` still works for a project that would rather wire it by hand.
+
+- **BREAKING — the admin is mounted from `urlpatterns`** — `BuraqAdmin(app)` was a call whose return value nothing read, made for its side effects, and it hid where the admin lived: the prefix was the string `"/admin"` inside the router, with no setting, argument or override, so the admin could not be moved off the first path a scanner tries. It is now `path("/admin", admin.site.urls)` — a line in `urlpatterns` like every other set of URLs, where the prefix is yours to choose and everything the admin builds follows it. `BuraqAdmin` is removed rather than kept alongside; two ways to mount the same thing is what made the prefix invisible in the first place.
+
+  A second site can now be mounted at its own prefix — `path("/staff", private_site.urls)` — which the single hardcoded router could not express.
+
+- **A model that declares its own primary key no longer gets an `id` beside it** — the implicit `id` was added whenever the model had no attribute called `id`, so a natural key — a session's key, a country's ISO code — ended up alongside a surrogate that meant nothing. It is now added only when the model declares no primary key of its own.
+
+- **CORS is `buraq.middleware.cors.CORSMiddleware`** — the default stack named `fastapi.middleware.cors.CORSMiddleware`, the one entry that was not Buraq's own, and it leaked an implementation detail into every project's settings (FastAPI's class is Starlette's, re-exported). More than tidiness: Starlette's takes its configuration as constructor arguments, which a dotted path cannot supply, so the application kept a table mapping that one path to keyword arguments built from settings. Buraq's subclass reads `CORS_*` itself, and that table is gone — every entry in MIDDLEWARE is now constructed the same way, with no arguments.
+
+  Leaving the old path in place would have failed silently rather than loudly: Starlette's class installs happily with no arguments and then applies no policy, so `CORS_ORIGINS` would be ignored and nothing would say so until a browser began refusing requests. A path Buraq no longer configures now raises `ImproperlyConfigured` naming its replacement — the same for `buraq.contrib.csrf.CsrfViewMiddleware` and `buraq.middleware.common.MessageMiddleware`, which moved.
+
+- **BREAKING — CSRF protection is on by default** — sessions are cookie-based, so an unguarded POST is forgeable, and the check was opt-in. `CsrfViewMiddleware` is now in the default `MIDDLEWARE`. A client posting JSON must be issued the token first: make one safe request, read the `csrftoken` cookie, and send it back in `X-CSRFToken`. An endpoint authenticated some other way — a webhook signature, a bearer token — is decorated `@csrf_exempt`; removing the middleware from `MIDDLEWARE` turns the check off everywhere.
+
+- **`CsrfViewMiddleware` moved to `buraq.middleware.csrf`, `MessageMiddleware` to `buraq.contrib.messages.middleware`** — core middleware belongs under `buraq.middleware`, an app's own middleware with the app; the two were the wrong way round, and `MessageMiddleware` sat in `common.py` beside three middlewares it has nothing to do with. The old paths are gone rather than aliased: two import paths for one class is the ambiguity that put them in the wrong place to begin with.
+
+- **`APPEND_SLASH` now defaults to `False`** — Buraq registers every route without a trailing slash, so there was nothing for it to append one to.
+
+- **A project has no `alembic.ini` and no `alembic/` directory** — both restated things the project already knew. The database came from settings and the version locations from `INSTALLED_APPS`, yet a second copy sat in a config file that went stale the moment an app was added; `env.py` was 59 lines without one reference to the project that owned it. The configuration is now built when a migration command runs, `script_location` resolves to `buraq.db:alembic` inside the installed package, and the locations are derived from `INSTALLED_APPS` — so adding an app to that list is the only step, with nothing to register. A leftover alembic.ini is ignored rather than read, so existing projects keep working and can delete it when convenient.
+
+  Migration commands now call Alembic in process instead of spawning `python -m alembic` and reading its stdout. That parsing was matching on log wording (`Running upgrade`, `Detected`, a noise list), so a reworded Alembic message silently changed what the command printed; failures now arrive as `CommandError` rather than a returncode and a guess.
+
+- **BREAKING — migrations live in the app that owns them** — a project kept one shared `alembic/versions/` for every model it had, so a migration's filename said nothing about which app it belonged to, deleting an app left orphans nobody could identify, and two people adding migrations on separate branches wrote into the same directory. Each app now keeps its own `<app>/migrations/`, next to the models the migrations describe, and `buraq startapp` creates the directory and adds the app to `version_locations` in alembic.ini. `makemigrations` visits each installed app in turn and writes at most one revision per app; `--app` narrows it to one. Without this nobody could publish a reusable Buraq app with models, since an installing project cannot invent the schema — which is exactly why the framework's own contrib apps already shipped per-app migrations.
+
+  Autogenerate diffs against the database, so a revision written earlier in the same run leaves it behind and the apps after it cannot be read yet. The run stops there, reports what it wrote, and says to apply those and run again rather than failing outright.
+
+- **The `versions/` directory level is gone** — Alembic's default layout puts migrations in a subdirectory because `script_location` also holds `env.py` and `script.py.mako`. An app directory holds neither, so the level separated nothing: framework migrations move from `buraq/contrib/<app>/migrations/versions/0001_initial.py` to `buraq/contrib/<app>/migrations/0001_initial.py`, and a project's are `blog/migrations/0001_initial.py` — the same shape the framework this borrows from uses.
+
+### Removed
+
+- **`CacheControlMiddleware`** — it set `Cache-Control` with `=` rather than
+  `setdefault`, so adding it overwrote the static handler's header and put back
+  the unconditional `immutable` described above. It was also a
+  `BaseHTTPMiddleware`, which costs a task per request, and its path test could
+  never match a `STATIC_URL` pointing at a CDN. The static handler sets these
+  headers itself, correctly; remove the middleware from `MIDDLEWARE` if you
+  listed it.
+
+### Fixed
+
+- **Nothing said Buraq is single-database.** The migration guide called
+  `DATABASE_URL` a replacement for the older framework's `DATABASES` dict, which
+  reads as a change of syntax; it is a change of capability. There are no
+  database routers and no read replica, and `QuerySet.using()` exists but raises
+  `NotImplementedError`. The settings page and the migration guide now say so.
+- **Three form widgets were in no documentation** — `PasswordInput`, and the
+  `ChoiceWidget` and `FormatWidget` base classes. The widgets page now lists
+  `PasswordInput` in its table, explains why it blanks the value on redisplay,
+  and documents the two base classes with an example of subclassing each.
+
+- **Static responses claimed `immutable` even when filenames were not hashed.**
+  `immutable` tells a browser never to revalidate — not even on reload — and it
+  was sent on every static response, including under the default storage, which
+  does not hash. An edited stylesheet therefore did not reach anyone who had
+  already loaded the old one until their cache entry expired a year later. The
+  header now follows the storage: `max-age=31536000, immutable` when names are
+  hashed, `max-age=60` when they are not. `STATIC_MAX_AGE` overrides the number
+  and now defaults to `None`, meaning "choose by storage".
+
+- **`STATIC_URL` without a leading slash crashed at startup.** `"static/"` reads
+  like it means `/static/`, but it was passed through untouched: Starlette
+  refused it as a mount path — `Routed paths must start with '/'` — and, where
+  it did not crash, it rendered a *relative* href that resolved differently on
+  every page. A leading slash is now added when missing. A trailing slash was
+  never required, contrary to the comment in the docs, which said the opposite of
+  the truth.
+
+- **Hashed filenames did nothing on Windows.** Static names are URL paths, but
+  they were built with `str(Path(...))`, which separates with a backslash there.
+  The manifest was written keyed on `css\site.css`, every
+  `{{ static('css/site.css') }}` lookup missed it, and the *unhashed* name was
+  returned — so cache-busting was silently off, with nothing logged to notice.
+  Had a lookup hit, the backslash went into the rendered href, which a CDN
+  answers with a 404. Names are now POSIX everywhere they are produced or looked
+  up.
+
+- **Pointing `STATIC_URL` at a CDN crashed the application at startup.** The
+  mount was attempted with the CDN host as its route path, and Starlette
+  rejected it — `AssertionError: Routed paths must start with '/'`, naming
+  neither the setting nor the CDN. The host is now dropped and the path kept, so
+  a pull zone — which fetches from your origin on a cache miss — still finds the
+  files where it expects them. Uploading to the CDN instead is `SERVE_STATIC =
+  False`. The scheme-relative form (`//cdn.example.com/static/`) is recognised
+  too, and a URL with no path left to mount (`https://cdn.example.com/`) mounts
+  nothing rather than claiming `/`.
+- **Static files and downloads returned an empty body on Granian.** Granian
+  advertises the `http.response.pathsend` ASGI extension, so a file response
+  hands the path to the server rather than writing a body. `GZipMiddleware`
+  buffered only body messages and dropped the pathsend message, so the client
+  received `200` with zero bytes. Every browser sends `Accept-Encoding: gzip`,
+  so this affected every file served to every real client. The middleware now
+  forwards pathsend untouched.
+- `GZipMiddleware` no longer buffers responses it cannot compress. An
+  incompressible or already-encoded response now streams through in its original
+  chunks instead of being held in memory whole, so a large download no longer
+  costs RAM proportional to its size.
+- **The CSRF token repeated in every compressed response** — Buraq compresses by default, and a secret that appears unchanged in every response is the BREACH precondition: an attacker able to get reflected input onto a page reads the secret a character at a time from the response's compression ratio. The framework this borrows from ships compression *off* for exactly this reason and masks its token when you turn it on; Buraq shipped compression on and an unmasked token. The rendered token and the `csrftoken` cookie now carry the secret combined with a fresh random mask, so no two responses repeat it, and what is submitted is unmasked before comparison. Any token issued for the current session still validates.
+
+- **`GZipMiddleware` compressed responses that were already compressed** — it never checked for an existing `Content-Encoding`, so a pre-encoded body came back as `content-encoding: gzip, gzip`: larger than the singly-encoded one, and the browser unpacks it twice.
+
+- **Serving static files in production crashed** — the production path mounted WhiteNoise, which is WSGI: its `__call__(environ, start_response)` met an ASGI application's `(scope, receive, send)` and raised `TypeError: takes 3 positional arguments but 4 were given` on the first request for a file. Nobody hit it because whitenoise was not a dependency, so the `ImportError` fallback quietly served through `StaticFiles` instead — the broken branch was unreachable and untested.
+
+  Production now serves through `StaticFiles` deliberately, with a `Cache-Control` header (`STATIC_MAX_AGE`, a year by default, `immutable` because collectstatic writes content-hashed names). Compression is not repeated: `GZipMiddleware` is in the default stack and already compresses these responses, which was WhiteNoise's main draw. Starlette's ETag and Last-Modified still give conditional requests a 304; the cache header is what saves the round trip entirely.
+
+  For production at any size, Granian — already the default server — serves static files itself in Rust, with `SERVE_STATIC = False` and `--static-path-mount`. That is documented now, along with the fact that passing `--static-path-route` beside a single mount fails with a length mismatch.
+
+- **The migration guide claimed a `TEMPLATES` setting** — its settings table mapped the older framework's `TEMPLATES` to a Buraq setting of the same name, which does not exist. The row now names the three that do: `TEMPLATES_DIR`, `APP_DIRS` and `TEMPLATE_OPTIONS`. The page also gained a section on why a new project's `INSTALLED_APPS` lists one app where the older framework's lists six.
+
+- **`APP_DIRS` appeared in no documentation** — the setting that decides whether each installed app's `templates/` directory is searched was findable only by reading the source or running `diffsettings --all`. It is in the settings reference now, and the scaffolded `config/settings.py` header points at `buraq diffsettings --all` for the rest. The templates topic gained the `TEMPLATE_OPTIONS` section and the rule that a project's own directory is searched before an app's, so a file in `templates/` overrides one an app ships.
+
+- **A command with a synchronous `handle()` failed after doing its work** — `execute()` passed the result of `handle()` to `asyncio.run()` unconditionally, so a command written with `def` rather than `async def` ran to completion and then raised `TypeError: a coroutine is required`. The result is only awaited when it is awaitable.
+
+- **Admin templates could not be overridden** — the admin inserts its template directory into the Jinja environment rather than being discovered through `INSTALLED_APPS`, and it inserted it *first*. A project writing `templates/admin/login.html` to rebrand the admin was silently ignored, because the framework's copy was always found before it. The directory is appended now, so it is the fallback it was meant to be and a project template wins.
+
+- **Six documented settings did nothing** — `SESSION_COOKIE_NAME`, `SESSION_COOKIE_MAX_AGE`, `SESSION_COOKIE_SAMESITE`, `SESSION_COOKIE_HTTPONLY`, `DATABASE_POOL_SIZE` and `DATABASE_MAX_OVERFLOW` appear in the settings documentation, but nothing read any of them: the session cookie and the connection pool used hardcoded values. All six are now declared and honoured.
+
+- **Switching language never persisted** — `LocaleMiddleware` looks for the cookie named by `LANGUAGE_COOKIE_NAME`, and nothing ever set it: `set_language` redirected to the language-prefixed URL and left no trace, so cookie detection could not fire and `LANGUAGE_COOKIE_AGE` was unreachable. The view now sets the cookie.
+
+- **Two settings for a feature that does not exist** — `ALGORITHM` and `ACCESS_TOKEN_EXPIRE_MINUTES` described JWT signing. There is no JWT code in the framework; `pyjwt` was dropped as a dependency nothing imported. Both removed.
+
+- **Every static file request loaded the user from the database** — `AuthenticationMiddleware` runs before routing, so a logged-in visitor fetching a stylesheet did a user lookup for a response that cannot read `request.user`. In development, where Buraq serves static files itself, a page with twenty assets was twenty needless queries. Paths under `STATIC_URL`, `MEDIA_URL` and the admin's own mount now skip it.
+
+- **CSRF could never validate a token** — the middleware generated one, put it in the `csrftoken` cookie, and stored it in `scope["_csrf_token"]`, which lasts one request. Nothing was written to the session, so the next request had nothing to compare against and every unsafe request was rejected, correct token or not. It also read `scope.get("session") or {}` — a new session is empty, which is falsy, so the fallback replaced the live session with a throwaway the token could not be written back through.
+
+- **`@csrf_exempt` did nothing once the middleware was in the stack** — the decorator set `_csrf_exempt` on the view, and `CsrfViewMiddleware` never read it: it runs before routing, so it did not know which view a request would reach. It now resolves the route first, leaving a project a way to exempt the one endpoint that needs it. Without this there was no escape hatch, and the check could not have been made the default.
+
+- **`CommonMiddleware` redirected forever** — with `APPEND_SLASH` on, it matched routes registered *without* a trailing slash, which is every route Buraq has, and redirected `/auth/register` to `/auth/register/`; Starlette's own `redirect_slashes` sent it straight back. Any project that added the middleware got `TooManyRedirects` on every request. It now redirects only when a route genuinely exists at the slashed path.
+
+- **`request.user` raised on every request** — `AuthenticationMiddleware` reads the session and sets `request.user`, `@login_required` depends on it, and the middleware documentation listed it among the built-ins; nothing ever installed it. Touching `request.user` failed with Starlette's `AssertionError: AuthenticationMiddleware must be installed`. It is now in the default `MIDDLEWARE`, below `SessionMiddleware` because it reads the session, and an anonymous request gets `AnonymousUser` as documented.
+
+- **The CORS setting was documented under a name that does not exist** — three pages showed `CORS_ALLOW_ORIGINS`; the setting is `CORS_ORIGINS`, so anyone copying the example configured nothing and got no CORS headers.
+
+- **BREAKING — two apps could not both define a model of the same name** — a table was named after the model alone, so `Post` in `blog` and `Post` in `shop` both claimed `posts` and SQLAlchemy refused the second outright: `Table 'posts' is already defined for this MetaData instance`. The two apps could not be installed together at all. Table names now carry the app label — `blog_posts`, `shop_posts` — which is what makes a model name unique in the first place. `Meta.table_name` still overrides it, and the framework's own tables were already explicit, so only project models are affected: an existing project needs a migration renaming its tables, or a `Meta.table_name` pinning each one to the name it has.
+
+- **A permission was unique across the whole database, not per model** — `codename` carried a global unique constraint, so `add_post` could exist only once. With two apps each defining a `Post`, the creation loop deduplicated on the codename and silently skipped the second, leaving one row shared between two models: granting it granted both, with no way to tell them apart. The constraint is now on (`content_type`, `codename`), which is the pair that is actually unique, and creation keys on the same pair. Migration `buraq_auth_0002` swaps it on existing databases.
+
+- **BREAKING — `INSTALLED_APPS` no longer registers an app's URLs** — `Buraq.__init__` imported `<app>.urls` for every entry in `INSTALLED_APPS` and registered its `urlpatterns` under `getattr(urls_module, "prefix", "")`. Exactly one module in the framework declared a prefix, so every other app — including every app a project writes — was mounted at the site root, *in addition to* wherever the project's own `urlpatterns` put it. Following the scaffold's own instructions (`startapp posts`, add `'posts'` to `INSTALLED_APPS`, uncomment the `include`) bound each of its routes twice: once at `/posts/…` and once at `/`, where the list view shadowed the project's index view and `/<int:pk>` became a catch-all at the root. `buraq.contrib.auth` was the only app whose auto-registration landed anywhere sensible, and there it collided with the `include()` the scaffold writes — so every new project logged five `Duplicate Operation ID` warnings on startup.
+
+  URLs now come from `urlpatterns` only, which is what the scaffold, every docstring and every documentation page already showed. `INSTALLED_APPS` keeps driving models, migrations, admin registration and `AppConfig.ready()`. A project relying on the old behaviour needs an explicit `path(..., include("<app>.urls"))` — the form it was already being shown.
+- **The auth endpoint tables documented a route that does not exist** — `GET /auth/me` appears in two pages and in a `curl` example; `buraq.contrib.auth` has never served it. The tables now list what the app actually registers, which also restores the `GET /auth/login` and `GET`/`POST /auth/logout` routes they were missing.
+- **Form widgets accepted no arguments** — `TextInput(attrs={"class": "form-input"})`, the constructor call shown in the widgets docs, raised `TypeError: TextInput() takes no arguments`; `Widget` had no `__init__` at all. Every built-in widget now takes `attrs=` and merges it with whatever a caller passes to `render()` (the widget's own attrs win on a conflicting key, matching `id`/`name` auto-fill from a bound field). `RadioSelect` and `CheckboxSelectMultiple` drop `id` from the per-option attrs so it is not duplicated across a group.
+- **Fields defaulted to no widget at all** — `Field.__init__` set `self.widget = widget or {}`, a bare dict with no `render()`. Every field now gets a real widget instance by default (a new `widget_class` per field type — `NumberInput` for `IntegerField`/`FloatField`/`DecimalField`, `Select` for `ChoiceField`, `CheckboxInput` for `BooleanField`, and so on, matching the widgets doc's table), and passing a widget *class* rather than an instance (`CharField(widget=Textarea)`, also shown in the docs) is now instantiated automatically. `TextField`, `PasswordField` and `HiddenField` previously marked themselves with a string (`widget = "textarea"`) that got shadowed by `Field.__init__`'s own `self.widget = {}` and so was never actually read; they now carry real `Textarea`/new `PasswordInput`/`HiddenInput` widgets. `PasswordInput` never echoes a submitted value back into the rendered HTML unless `render_value=True`. `DateInput`/`DateTimeInput`/`TimeInput` also gained a `format=` constructor argument, alongside `attrs=`.
+- **`{{ form.field }}` printed the raw value, not the widget** — `BoundField.__str__` returned `str(self.value or "")`, so a template that interpolates a field directly got plain text instead of an `<input>`. It now renders through the field's widget, like `.as_widget()`. The `as_p()`/`as_table()`/`as_div()`/`as_ul()` helpers had their own separate, narrower rendering path (a string comparison against `field.widget` that could never match a real widget instance, no `file` case at all, and no attrs of any kind); they now go through the same widget-rendering path.
+- **`ModelForm.Meta.widgets` was accepted and silently ignored** — the auto-generated fields never looked at it. It now overrides the widget for any auto-generated field named in the dict, the same as an explicitly declared field's own `widget=`.
+- **`i18n_patterns()`'s own docs example did not run** — `urlpatterns = [..., *i18n_patterns(...)]`, shown in the function's docstring and three places in the docs site, raises `TypeError: 'I18nURLGroup' object is not iterable`: `i18n_patterns()` returns a dataclass, not a list, and it has no `__iter__`. `register_urlpatterns()` already special-cased the group as a plain list *element* (`isinstance(item, I18nURLGroup)`), so that was always the only working form. Docs and docstring now show `i18n_patterns(...)` included directly, not spread.
+- **A form's fields were shared across every instance of the form class** — `BaseForm.fields` returned a fresh `dict` on each access, but wrapping the *same* `Field`/`Widget` objects every time. A common pattern for locking a field on edit, `self.fields["slug"].widget.attrs["readonly"] = True` in `__init__`, therefore marked the field read-only for every subsequent instance of that form class, including unrelated requests, not just the one being edited. `fields` now deep-copies `declared_fields` once per instance.
+- **BREAKING — `select_related()` and `prefetch_related()` never actually resolved a relation** — a `ForeignKey` field is a plain integer column; reading it returned the raw related id, with or without `select_related()`, and `.category.slug` raised `AttributeError` on the int. Both methods tried to apply a SQLAlchemy loader strategy (`joinedload`/`selectinload`) to that column or to the framework's own reverse-FK/many-to-many descriptors — none of which are real SQLAlchemy relationships — and raised `sqlalchemy.exc.ArgumentError: expected ORM mapped attribute for loader strategy argument` on every call. `Prefetch.apply()` existed and was documented (`post._prefetched_comments`) but `prefetch_related()` never called it, and it separately assumed a `<model>_id` column name this ORM does not generate.
+
+  Fixed by batch-fetching instead of joining, after the main query runs: `select_related("category")` collects the raw ids and issues one follow-up query per named relation, then replaces the attribute on each instance with the resolved object — the *same* attribute name, so `doc.category` is the raw id normally and the `Category` instance once eager-loaded, never both at once and never a query on plain attribute access. `prefetch_related("docs")` / `prefetch_related(Prefetch("docs", queryset=...))` now does the equivalent for the reverse-FK and many-to-many direction, and the relation's own accessor picks it up: `category.docs.all()` and `post.tags.all()` return the cached list with no query once prefetched (previously always an unresolved `QuerySet`/coroutine, cached or not). Both are O(1) additional queries regardless of row count — no join, and no per-row queries either.
+
+  Two more bugs surfaced by actually exercising this code path for the first time: `_ReverseFKDescriptor` resolved its child model with `getter() if callable(getter) else getter` — a class is itself callable, so this built a blank instance instead of using the class; and `QuerySet` had no `get()`/`get_or_none()` of its own (only `Manager` did), so any chain ending in one — `Post.objects.select_related("author").get(id=1)` — raised `AttributeError` regardless of relation loading. Both fixed; `Manager.get()`/`.get_or_none()` now delegate to `QuerySet`, matching `.exists()`/`.first()`/`.last()`.
+
 ## [1.6.0] - 2026-08-21
 
 ### Added
