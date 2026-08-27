@@ -108,6 +108,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A scaffolded `config/settings.py` reads `DATABASE_URL` from the environment**
+  — `DATABASE_URL = os.environ.get('DATABASE_URL', '...')`, the same shape as
+  `SECRET_KEY` and `DEBUG` beside it. It was a bare literal, which was misleading
+  rather than wrong: the scaffold also writes `DATABASE_URL` into `.env`, and the
+  environment takes precedence, so editing the line in `settings.py` had no
+  effect and nothing on the page said why. It also now points at the databases
+  documentation, since a project has no other hint that `DATABASES` and read
+  replicas exist.
+
 - **`TEMPLATES_DIR` takes several paths, not one** — it was typed `str`, so a project with more than one template root — its own beside a shared theme — could name only one of them, and passing a list raised `TypeError: argument should be a str or an os.PathLike object`. It now accepts either, searched in the order given.
 
 - **A scaffolded `config/urls.py` and `config/settings.py` explain themselves** — the two files a new project opens first said only "Add your apps here" and nothing at all. It now carries a header covering the three ways to add a route (function view, class-based view, another URLconf), the per-method helpers, that every path begins with a slash and a trailing one is ignored, and that which module is read comes from `ROOT_URLCONF`. `settings.py` now also shows `LANGUAGE_CODE`, `TIME_ZONE` and `AUTH_PASSWORD_VALIDATORS` — the first two because nearly every project changes them, the third because three validators were enforcing a password policy that appeared nowhere a reader would look. It gained a header covering the rule that only UPPERCASE names are read, that anything unnamed keeps its default, that values come from `.env`, and that a project's own settings work the same way.
