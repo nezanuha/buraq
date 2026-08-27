@@ -112,6 +112,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A scaffolded settings file names `USE_I18N` and `USE_TZ`** in the comment
+  above the internationalization block. Both are on by default and the file
+  writes only what a project is likely to edit, so neither appeared — with the
+  result that the two settings someone arriving from another framework looks for
+  first were absent, which reads as unsupported rather than as already on.
+
 - **A scaffolded `config/settings.py` reads `DATABASE_URL` from the environment**
   — `DATABASE_URL = os.environ.get('DATABASE_URL', '...')`, the same shape as
   `SECRET_KEY` and `DEBUG` beside it. It was a bare literal, which was misleading
