@@ -210,7 +210,8 @@ class Post(models.Model):
     views     = models.IntegerField(default=0)
 
     class Meta:
-        table_name          = "blog_posts"          # override table name (default: lowercased plural)
+        table_name          = "archive_posts"       # override table name
+                                                    # (default: <app>_<lowercased plural>)
         ordering            = ["-created_at"]       # default ORDER BY — prefix with - for DESC
         verbose_name        = "blog post"           # human-readable singular name
         verbose_name_plural = "blog posts"          # human-readable plural (auto-derived if omitted)
@@ -235,7 +236,7 @@ leaving the model on default behaviour.
 
 | Option | Type | Description |
 |---|---|---|
-| `table_name` | `str` | Database table name. Also accepted as `db_table` (Django alias). |
+| `table_name` | `str` | Database table name. Defaults to the app label plus the lowercased plural model name — `Post` in `blog` becomes `blog_posts`. The app label is part of it because a model name is not unique across a project: two apps may each define a `Post`, and without the prefix the second one cannot be created at all. Also accepted as `db_table` (Django alias). |
 | `db_table_comment` | `str` | Comment stored on the table itself — useful for anyone reading the database directly. |
 | `managed` | `bool` | Default `True`. When `False`, Buraq never creates, alters or drops the table. Use it for existing tables and database views. |
 

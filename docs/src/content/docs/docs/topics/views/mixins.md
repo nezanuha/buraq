@@ -131,7 +131,7 @@ class CreatePostView(SuccessMessageMixin, CreateView):
         return f"Post '{cleaned_data['title']}' saved as draft."
 ```
 
-The message is passed to `buraq.contrib.messages.success(request, msg)` and displayed via the messages framework (add `buraq.middleware.common.MessageMiddleware` to `MIDDLEWARE` and render `{{ messages }}` in your base template).
+The message is passed to `buraq.contrib.messages.success(request, msg)` and displayed via the messages framework (add `buraq.contrib.messages.middleware.MessageMiddleware` to `MIDDLEWARE` and render `{{ messages }}` in your base template).
 
 ---
 

@@ -69,6 +69,8 @@ class QuerySet:
         self._flat: bool = False
         self._fetch_mode: str = FETCH_ONE
         self._peers: list | None = None  # populated after all() when FETCH_PEERS
+        self._select_related_fields: list[str] = []
+        self._prefetch_objs: list = []  # Prefetch instances, applied after the main query
 
     # ── Chaining methods (return new QuerySet) ──────────────────────────────
 
@@ -133,31 +135,71 @@ class QuerySet:
         )
 
     def select_related(self, *fields) -> "QuerySet":
-        from sqlalchemy.orm import joinedload
-        q = self._query
-        for field in fields:
-            rel = getattr(self._model, field, None)
-            if rel is not None:
-                q = q.options(joinedload(rel))
-        return self._clone(q)
+        """
+        Eager-load forward foreign keys.
+
+        A ``ForeignKey`` field holds only the raw related id until its name is
+        passed here — after this, and only after the query has actually run,
+        the same attribute holds the related instance instead. Two queries
+        total (the source rows, then one batch fetch per related model), not
+        a SQL join: ``ForeignKey`` fields are plain integer columns, not
+        SQLAlchemy relationships, so there is no join to hook a loader
+        strategy onto. Still O(1) additional queries regardless of row count,
+        which is the property that actually matters — no per-row queries.
+
+        Unlisted fields, and fields on a queryset this was never called on,
+        are untouched: reading them still returns the raw id, exactly as
+        before. There is no lazy auto-fetch on plain attribute access — that
+        would mean a blocking query outside any query you asked for, which a
+        fully async ORM does not do silently.
+        """
+        qs = self._clone()
+        buraq_fks = getattr(self._model, "__buraq_fks__", {}) or {}
+        qs._select_related_fields = list(self._select_related_fields) + [
+            f for f in fields if f in buraq_fks and f not in self._select_related_fields
+        ]
+        return qs
 
     def prefetch_related(self, *fields) -> "QuerySet":
-        from sqlalchemy.orm import selectinload
-        q = self._query
+        """
+        Batch-fetch reverse foreign key and many-to-many relations.
+
+        Accepts plain field names or ``Prefetch`` instances (for a custom
+        queryset or ``to_attr``). Applied after the main query runs, as a
+        separate batched query per relation — see ``Prefetch.apply()``.
+        Once applied, the relation's own accessor (``parent.children.all()``)
+        returns the cached list instead of issuing a query.
+        """
+        qs = self._clone()
+        objs = list(self._prefetch_objs)
         for field in fields:
-            if isinstance(field, Prefetch):
-                # Custom queryset on Prefetch — store for post-processing.
-                # (Full ORM-level integration requires result rewriting; for now
-                # we apply selectinload so the relation is loaded, then callers
-                # can use .prefetch_objects on the queryset for advanced cases.)
-                rel = getattr(self._model, field.field, None)
-                if rel is not None:
-                    q = q.options(selectinload(rel))
-            else:
-                rel = getattr(self._model, field, None)
-                if rel is not None:
-                    q = q.options(selectinload(rel))
-        return self._clone(q)
+            objs.append(field if isinstance(field, Prefetch) else Prefetch(field))
+        qs._prefetch_objs = objs
+        return qs
+
+    async def _apply_select_related(self, instances: list) -> None:
+        buraq_fks = getattr(self._model, "__buraq_fks__", {}) or {}
+        for field_name in self._select_related_fields:
+            fk = buraq_fks.get(field_name)
+            target_model = getattr(fk, "_to", None) if fk else None
+            if not isinstance(target_model, type):
+                continue  # unresolved string reference — leave the raw id in place
+            related_ids = {
+                getattr(obj, field_name) for obj in instances
+                if getattr(obj, field_name, None) is not None
+            }
+            if not related_ids:
+                continue
+            related = await QuerySet(target_model).filter(id__in=list(related_ids)).all()
+            by_id = {obj.id: obj for obj in related}
+            for obj in instances:
+                fk_value = getattr(obj, field_name, None)
+                if fk_value in by_id:
+                    setattr(obj, field_name, by_id[fk_value])
+
+    async def _apply_prefetch_related(self, instances: list) -> None:
+        for prefetch in self._prefetch_objs:
+            await prefetch.apply(instances)
 
     def values(self, *fields) -> "QuerySet":
         if fields:
@@ -342,6 +384,11 @@ class QuerySet:
             for obj in instances:
                 obj._qs_fetch_mode = FETCH_RAISE
 
+        if instances and self._select_related_fields:
+            await self._apply_select_related(instances)
+        if instances and self._prefetch_objs:
+            await self._apply_prefetch_related(instances)
+
         return instances
 
     async def first(self) -> Any | None:
@@ -355,7 +402,14 @@ class QuerySet:
                 if self._flat and len(self._values_fields) == 1:
                     return row[0]
                 return dict(zip(self._values_fields, row, strict=False))
-            return result.scalar_one_or_none()
+            instance = result.scalar_one_or_none()
+
+        if instance is not None:
+            if self._select_related_fields:
+                await self._apply_select_related([instance])
+            if self._prefetch_objs:
+                await self._apply_prefetch_related([instance])
+        return instance
 
     async def last(self) -> Any | None:
         import sqlalchemy as sa
@@ -383,6 +437,30 @@ class QuerySet:
         async with SessionLocal() as db:
             result = await db.execute(q)
             return result.first() is not None
+
+    async def get(self, *q_objs, **kwargs) -> Any:
+        """
+        The one matching row, filtered further by ``*q_objs``/``**kwargs``.
+
+        Available on ``QuerySet`` itself (not only ``Manager.get()``) so it
+        can end a chain: ``await Post.objects.select_related("author").get(id=1)``.
+        """
+        # Fetch at most 2 rows — enough to detect duplicates without loading the whole table.
+        items = await self.filter(*q_objs, **kwargs).limit(2).all()
+        if not items:
+            raise self._model.DoesNotExist(f"{self._model.__name__} matching query does not exist.")
+        if len(items) > 1:
+            raise MultipleObjectsReturned(
+                f"get() returned more than one {self._model.__name__}."
+            )
+        return items[0]
+
+    async def get_or_none(self, *q_objs, **kwargs) -> Any | None:
+        """Like ``get()``, but ``None`` instead of raising when no row matches."""
+        try:
+            return await self.get(*q_objs, **kwargs)
+        except DoesNotExist:
+            return None
 
     async def delete(self) -> int:
         """Bulk delete all rows matching current filters."""
@@ -652,6 +730,8 @@ class QuerySet:
         qs._values_fields = self._values_fields
         qs._flat = self._flat
         qs._fetch_mode = self._fetch_mode
+        qs._select_related_fields = list(self._select_related_fields)
+        qs._prefetch_objs = list(self._prefetch_objs)
         return qs
 
     # Allow `await Post.objects.filter(...)` directly
@@ -669,15 +749,26 @@ class RelatedManager:
     Automatically filters by the FK column pointing back to the parent instance.
     """
 
-    def __init__(self, model_class: type, fk_field: str, instance):
+    def __init__(self, model_class: type, fk_field: str, instance, attr_name: str = ""):
         self._model = model_class
         self._fk_field = fk_field
         self._instance = instance
+        self._attr_name = attr_name
 
     def _base_qs(self) -> "QuerySet":
         return QuerySet(self._model).filter(**{self._fk_field: self._instance.id})
 
-    def all(self) -> "QuerySet":
+    def all(self):
+        """
+        The prefetched list if ``prefetch_related(attr_name)`` populated one
+        on this instance — plain, already in memory, no query. Otherwise a
+        lazy ``QuerySet``, exactly as before: ``await`` it or iterate with
+        ``async for``.
+        """
+        if self._attr_name:
+            cached = getattr(self._instance, f"_prefetched_{self._attr_name}", None)
+            if cached is not None:
+                return cached
         return self._base_qs()
 
     def filter(self, *q_objs, **kwargs) -> "QuerySet":
@@ -751,12 +842,13 @@ class _ReverseFKDescriptor:
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        child_model = (
-            self._child_model_getter()
-            if callable(self._child_model_getter)
-            else self._child_model_getter
-        )
-        return RelatedManager(child_model, self._fk_field, instance)
+        getter = self._child_model_getter
+        # A class is itself callable (calling it builds an instance), so the
+        # "is this a lazy resolver" check must exclude classes explicitly —
+        # otherwise resolving an already-resolved model class here builds a
+        # blank instance of it instead of using the class.
+        child_model = getter() if callable(getter) and not isinstance(getter, type) else getter
+        return RelatedManager(child_model, self._fk_field, instance, self._attr_name)
 
 
 class Manager:
@@ -804,21 +896,10 @@ class Manager:
     # ── Single-object methods ───────────────────────────────────────────────
 
     async def get(self, *q_objs, **kwargs) -> Any:
-        # Fetch at most 2 rows — enough to detect duplicates without loading the whole table.
-        items = await self.filter(*q_objs, **kwargs).limit(2).all()
-        if not items:
-            raise self._model.DoesNotExist(f"{self._model.__name__} matching query does not exist.")
-        if len(items) > 1:
-            raise MultipleObjectsReturned(
-                f"get() returned more than one {self._model.__name__}."
-            )
-        return items[0]
+        return await QuerySet(self._model).get(*q_objs, **kwargs)
 
     async def get_or_none(self, *q_objs, **kwargs) -> Any | None:
-        try:
-            return await self.get(*q_objs, **kwargs)
-        except DoesNotExist:
-            return None
+        return await QuerySet(self._model).get_or_none(*q_objs, **kwargs)
 
     # ── Write methods ───────────────────────────────────────────────────────
 

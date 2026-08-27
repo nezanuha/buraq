@@ -8,6 +8,23 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from buraq.exceptions import ValidationError
+from buraq.forms.widgets import (
+    CheckboxInput,
+    CheckboxSelectMultiple,
+    DateInput,
+    DateTimeInput,
+    FileInput,
+    HiddenInput,
+    NullBooleanSelect,
+    NumberInput,
+    PasswordInput,
+    Select,
+    SplitDateTimeWidget,
+    Textarea,
+    TextInput,
+    TimeInput,
+    URLInput,
+)
 
 
 class Field:
@@ -17,6 +34,9 @@ class Field:
         "required": "This field is required.",
         "invalid": "Enter a valid value.",
     }
+
+    #: Widget class used when a field is created without an explicit widget=.
+    widget_class = TextInput
 
     def __init__(
         self,
@@ -35,7 +55,10 @@ class Field:
         self.help_text = help_text
         self.disabled = disabled
         self.validators = validators or []
-        self.widget = widget or {}  # widget hints (not rendered server-side by default)
+        widget = widget or self.widget_class
+        if isinstance(widget, type):
+            widget = widget()
+        self.widget = widget
         messages = dict(self.default_error_messages)
         if error_messages:
             messages.update(error_messages)
@@ -110,6 +133,8 @@ class CharField(Field):
 
 
 class IntegerField(Field):
+    widget_class = NumberInput
+
     def __init__(self, min_value: int = None, max_value: int = None, **kwargs):
         super().__init__(**kwargs)
         self.min_value = min_value
@@ -150,6 +175,8 @@ class FloatField(IntegerField):
 
 
 class DecimalField(Field):
+    widget_class = NumberInput
+
     def __init__(
         self, max_digits: int = None, decimal_places: int = None,
         min_value=None, max_value=None, **kwargs
@@ -185,6 +212,8 @@ class DecimalField(Field):
 
 
 class BooleanField(Field):
+    widget_class = CheckboxInput
+
     def to_python(self, value):
         if isinstance(value, str) and value.lower() in ("false", "0", "off", "no", ""):
             return False
@@ -196,6 +225,8 @@ class BooleanField(Field):
 
 
 class NullBooleanField(BooleanField):
+    widget_class = NullBooleanSelect
+
     def to_python(self, value):
         if value in (True, "True", "true", "1", "on", "yes"):
             return True
@@ -213,6 +244,8 @@ class EmailField(CharField):
 
 
 class URLField(CharField):
+    widget_class = URLInput
+
     def validate(self, value):
         super().validate(value)
         if value:
@@ -229,6 +262,7 @@ class SlugField(CharField):
 
 
 class DateField(Field):
+    widget_class = DateInput
     _default_input_formats = ["%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%d/%m/%Y", "%d/%m/%y"]
 
     def __init__(self, input_formats=None, **kwargs):
@@ -251,6 +285,7 @@ class DateField(Field):
 
 
 class DateTimeField(Field):
+    widget_class = DateTimeInput
     input_formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"]
 
     def to_python(self, value):
@@ -267,6 +302,8 @@ class DateTimeField(Field):
 
 
 class TimeField(Field):
+    widget_class = TimeInput
+
     def to_python(self, value):
         if value in (None, ""):
             return None
@@ -282,9 +319,13 @@ class TimeField(Field):
 
 
 class ChoiceField(Field):
+    widget_class = Select
+
     def __init__(self, choices: list, **kwargs):
         super().__init__(**kwargs)
         self.choices = choices  # [(value, label), ...]
+        if hasattr(self.widget, "choices"):
+            self.widget.choices = choices
 
     def to_python(self, value):
         if value == "" or value is None:
@@ -302,6 +343,8 @@ class ChoiceField(Field):
 
 
 class MultipleChoiceField(ChoiceField):
+    widget_class = CheckboxSelectMultiple
+
     def to_python(self, value):
         if not value:
             return []
@@ -338,6 +381,8 @@ class TypedChoiceField(ChoiceField):
 
 
 class FileField(Field):
+    widget_class = FileInput
+
     def to_python(self, value):
         if not value:
             return None
@@ -389,17 +434,17 @@ class RegexField(CharField):
 
 class TextField(CharField):
     """Multi-line text field — renders as <textarea>."""
-    widget = "textarea"
+    widget_class = Textarea
 
 
 class PasswordField(CharField):
     """CharField that masks input."""
-    widget = "password"
+    widget_class = PasswordInput
 
 
 class HiddenField(CharField):
     """CharField rendered as hidden input."""
-    widget = "hidden"
+    widget_class = HiddenInput
 
 
 class IPAddressField(CharField):
@@ -490,6 +535,8 @@ class SplitDateTimeField(Field):
     Expects data keys ``<name>_date`` and ``<name>_time`` in the form data.
     Returns a datetime.datetime object combining both.
     """
+
+    widget_class = SplitDateTimeWidget
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

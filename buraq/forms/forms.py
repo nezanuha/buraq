@@ -32,6 +32,7 @@ Usage:
 """
 from buraq.exceptions import NON_FIELD_ERRORS, ValidationError
 from buraq.forms.fields import Field
+from buraq.forms.widgets import HiddenInput
 
 
 class ErrorList(list):
@@ -210,8 +211,20 @@ class BaseForm:
         self._cleaned_data = None
 
     @property
-    def fields(self):
-        return dict(self.declared_fields)
+    def fields(self) -> dict:
+        """
+        A per-instance copy of ``declared_fields``.
+
+        ``declared_fields`` is shared by every instance of the form class, so
+        a deep copy here — cached on first access — keeps a mutation like
+        ``self.fields["slug"].widget.attrs["readonly"] = True`` in
+        ``ModelForm.__init__`` scoped to this one form instance rather than
+        leaking into every other request that instantiates the same form.
+        """
+        if not hasattr(self, "_fields"):
+            import copy
+            self._fields = copy.deepcopy(self.declared_fields)
+        return self._fields
 
     @property
     def cleaned_data(self) -> dict:
@@ -306,25 +319,7 @@ class BaseForm:
         return f'<ul class="errorlist">{items}</ul>'
 
     def _render_field(self, bf: "BoundField") -> str:
-        value = bf.value
-        name = bf.html_name
-        ftype = getattr(bf.field, "widget", None) or "text"
-        if ftype == "textarea":
-            widget = f'<textarea name="{name}" id="id_{name}">{value or ""}</textarea>'
-        elif ftype == "password":
-            widget = f'<input type="password" name="{name}" id="id_{name}">'
-        elif ftype == "hidden":
-            widget = f'<input type="hidden" name="{name}" value="{value or ""}">'
-        elif hasattr(bf.field, "choices") and bf.field.choices:
-            opts = "".join(
-                f'<option value="{k}"'
-                f'{"  selected" if str(k) == str(value) else ""}>{label}</option>'
-                for k, label in bf.field.choices
-            )
-            widget = f'<select name="{name}" id="id_{name}">{opts}</select>'
-        else:
-            widget = f'<input type="text" name="{name}" value="{value or ""}" id="id_{name}">'
-        return widget
+        return bf.as_widget()
 
     def as_p(self) -> str:
         """Render form as <p> tags."""
@@ -414,11 +409,11 @@ class BaseForm:
 
     def hidden_fields(self) -> list:
         """Return BoundFields for hidden widget fields."""
-        return [bf for bf in self if getattr(bf.field, "widget", None) == "hidden"]
+        return [bf for bf in self if isinstance(bf.field.widget, HiddenInput)]
 
     def visible_fields(self) -> list:
         """Return BoundFields for visible (non-hidden) fields."""
-        return [bf for bf in self if getattr(bf.field, "widget", None) != "hidden"]
+        return [bf for bf in self if not isinstance(bf.field.widget, HiddenInput)]
 
     @property
     def media(self) -> "Media":
@@ -458,6 +453,8 @@ class ModelFormMetaclass(DeclarativeFieldsMetaclass):
 
             if include_fields == "__all__":
                 include_fields = None
+
+            widgets_meta = getattr(meta, "widgets", None) or {}
 
             # Map SQLAlchemy column types → form fields
             import sqlalchemy as sa
@@ -506,6 +503,9 @@ class ModelFormMetaclass(DeclarativeFieldsMetaclass):
                             # Set max_length for String columns
                             if isinstance(col.type, sa.String) and col.type.length:
                                 field.max_length = col.type.length
+                            if col.name in widgets_meta:
+                                widget = widgets_meta[col.name]
+                                field.widget = widget() if isinstance(widget, type) else widget
                             cls.declared_fields[col.name] = field
                             break
 
@@ -635,9 +635,14 @@ class BoundField:
         return result
 
     def as_widget(self, widget=None, attrs: dict = None) -> str:
-        """Render this field's widget as HTML."""
+        """Render this field's widget as HTML — optionally with a different
+        widget instance/class or extra attrs than the field's own."""
         from markupsafe import Markup
-        return Markup(self.form._render_field(self))
+        w = widget or self.field.widget
+        if isinstance(w, type):
+            w = w()
+        render_attrs = {"id": self.id_for_label, **(attrs or {})}
+        return Markup(w.render(self.html_name, self.value, attrs=render_attrs))
 
     def as_text(self, attrs: dict = None) -> str:
         """Render as a text <input>."""
@@ -664,7 +669,8 @@ class BoundField:
         return Markup(f'<input type="hidden" value="{v or ""}" {attr_str}>')
 
     def __str__(self):
-        return str(self.value or "")
+        """``{{ form.field }}`` renders the bound widget, same as ``as_widget()``."""
+        return self.as_widget()
 
     def __repr__(self):
         return f"<BoundField {self.name}={self.value!r}>"

@@ -479,7 +479,20 @@ class _M2MManager:
         self._instance = instance
         self._field = field
 
-    async def all(self) -> list:
+    def all(self):
+        """
+        The prefetched list if ``prefetch_related(attr_name)`` populated one
+        on this instance — plain, already in memory, no query. Otherwise a
+        coroutine that fetches it, exactly as before: ``await post.tags.all()``.
+        """
+        attr_name = self._field._attr_name
+        if attr_name:
+            cached = getattr(self._instance, f"_prefetched_{attr_name}", None)
+            if cached is not None:
+                return cached
+        return self._fetch_all()
+
+    async def _fetch_all(self) -> list:
         import sqlalchemy as sa
 
         from buraq.core.db import SessionLocal
