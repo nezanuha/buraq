@@ -43,9 +43,22 @@ def two_databases(monkeypatch, tmp_path):
 def test_database_url_is_still_the_single_database_form(monkeypatch):
     """A project that sets neither DATABASES nor a replica is unaffected."""
     monkeypatch.setattr(settings, "DATABASES", {}, raising=False)
+    monkeypatch.setattr(settings, "DATABASE_READ_REPLICAS", [], raising=False)
     monkeypatch.setattr(settings, "DATABASE_URL", "sqlite+aiosqlite:///./x.db", raising=False)
+    reset_connections()
     assert database_urls() == {DEFAULT_DB_ALIAS: "sqlite+aiosqlite:///./x.db"}
     assert read_alias() == DEFAULT_DB_ALIAS
+
+
+def test_a_replica_that_does_not_exist_is_reported(monkeypatch):
+    """Naming one DATABASES does not define used to fail as a query, not config."""
+    monkeypatch.setattr(settings, "DATABASES", {
+        "default": "sqlite+aiosqlite:///d.db",
+    }, raising=False)
+    monkeypatch.setattr(settings, "DATABASE_READ_REPLICAS", ["nope"], raising=False)
+    reset_connections()
+    with pytest.raises(ImproperlyConfigured, match="nope"):
+        read_alias()
 
 
 def test_databases_must_have_a_default(monkeypatch):
@@ -91,6 +104,7 @@ def test_replicas_are_used_in_rotation(monkeypatch, tmp_path):
         "r2": "sqlite+aiosqlite:///2.db",
     }, raising=False)
     monkeypatch.setattr(settings, "DATABASE_READ_REPLICAS", ["r1", "r2"], raising=False)
+    reset_connections()          # the replica list is resolved once and cached
     picked = {read_alias() for _ in range(10)}
     assert picked == {"r1", "r2"}
 
@@ -100,6 +114,7 @@ def test_default_is_never_treated_as_a_replica(monkeypatch):
     monkeypatch.setattr(settings, "DATABASES", {"default": "sqlite+aiosqlite:///d.db"},
                         raising=False)
     monkeypatch.setattr(settings, "DATABASE_READ_REPLICAS", ["default"], raising=False)
+    reset_connections()
     assert read_alias() == DEFAULT_DB_ALIAS
 
 

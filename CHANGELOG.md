@@ -72,7 +72,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single-database form and is unchanged.
 
   There are no database routers: nothing decides per model or per app where a
-  query belongs, and migrations only run against `default`.
+  query belongs, and migrations only run against `default`. A replica named in
+  `DATABASE_READ_REPLICAS` but absent from `DATABASES` is reported as a
+  configuration error rather than failing later as a query against a database
+  the project thought it had.
 
 - **`DATABASE_URL` is checked for an async driver at startup.** A blocking one —
   or none at all — now raises `ImproperlyConfigured` naming the driver to use and

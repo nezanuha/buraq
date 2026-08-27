@@ -140,6 +140,9 @@ _connections: dict[str, "_LazyEngine"] = {}
 #: Position in the replica list, so consecutive reads spread across them.
 _replica_turn = itertools.count()
 
+#: Resolved replica aliases; None until first use, cleared by reset_connections().
+_replicas_cache: tuple[str, ...] | None = None
+
 
 def database_config(alias: str = DEFAULT_DB_ALIAS) -> tuple[str, dict]:
     """The URL and engine options for *alias*.
@@ -210,6 +213,37 @@ def connection(alias: str = DEFAULT_DB_ALIAS) -> "_LazyEngine":
     return _connections[alias]
 
 
+def _replicas() -> tuple[str, ...]:
+    """The replica aliases, resolved once.
+
+    Every read asks which database it belongs to, so this cannot re-read
+    settings and rebuild a list each time: on a project with no replicas at all
+    -- almost all of them -- that was several hundred nanoseconds per query to
+    arrive back at "default". Cleared by reset_connections(), which is what
+    changing database settings already has to call.
+    """
+    global _replicas_cache
+    if _replicas_cache is None:
+        from buraq.conf import settings
+
+        configured = getattr(settings, "DATABASE_READ_REPLICAS", None) or []
+        aliases = tuple(a for a in configured if a != DEFAULT_DB_ALIAS)
+        if aliases:
+            # Checked here rather than at the first read, where it surfaced as a
+            # failed query naming a database the project thought it had.
+            known = database_urls()
+            missing = [a for a in aliases if a not in known]
+            if missing:
+                from buraq.exceptions import ImproperlyConfigured
+
+                raise ImproperlyConfigured(
+                    f"DATABASE_READ_REPLICAS names {missing!r}, which "
+                    f"DATABASES does not define. Known: {', '.join(sorted(known))}."
+                )
+        _replicas_cache = aliases
+    return _replicas_cache
+
+
 def read_alias() -> str:
     """The database a read should go to.
 
@@ -218,13 +252,7 @@ def read_alias() -> str:
     expects to read back. Inside atomic() the writer is used instead, which is
     where that case actually arises -- see routing_alias().
     """
-    from buraq.conf import settings
-
-    replicas = [
-        alias
-        for alias in (getattr(settings, "DATABASE_READ_REPLICAS", None) or [])
-        if alias != DEFAULT_DB_ALIAS
-    ]
+    replicas = _replicas()
     if not replicas:
         return DEFAULT_DB_ALIAS
     return replicas[next(_replica_turn) % len(replicas)]
@@ -237,12 +265,20 @@ def routing_alias(*, write: bool, using: str | None = None) -> str:
     a read inside an atomic block: a transaction that has written a row and then
     reads it back must not be answered by a replica that has not seen the write
     yet.
+
+    Ordered so that a project without replicas answers on the second line and
+    never touches the context variable.
     """
     if using is not None:
         return using
-    if write or _current_session.get() is not None:
+    if write:
         return DEFAULT_DB_ALIAS
-    return read_alias()
+    replicas = _replicas()
+    if not replicas:
+        return DEFAULT_DB_ALIAS
+    if _current_session.get() is not None:
+        return DEFAULT_DB_ALIAS
+    return replicas[next(_replica_turn) % len(replicas)]
 
 
 def session_for(alias: str | None = None):
@@ -257,6 +293,8 @@ def reset_connections() -> None:
     is bound to that object at import time throughout the framework, and handing
     out a new one would leave those references pointing at a dead engine.
     """
+    global _replicas_cache
+    _replicas_cache = None
     for alias in [a for a in _connections if a != DEFAULT_DB_ALIAS]:
         del _connections[alias]
     _connections[DEFAULT_DB_ALIAS].reset()
