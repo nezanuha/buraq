@@ -59,10 +59,11 @@ class CommonMiddleware:
         if append_slash and not path.endswith("/") and "." not in path.rsplit("/", 1)[-1]:
             new_path = path + "/"
             from buraq.urls import _route_registry
-            if any(
-                rp.rstrip("/") + "/" == new_path or rp == new_path
-                for rp in _route_registry.values()
-            ):
+            # Only when a route genuinely exists at the slashed path. The old
+            # test also matched routes registered *without* the slash, which is
+            # every route Buraq has -- so it redirected to an address Starlette's
+            # own redirect_slashes immediately sent back, forever.
+            if any(rp == new_path for rp in _route_registry.values()):
                 new_url = new_path
                 if scope.get("query_string"):
                     new_url += "?" + scope["query_string"].decode()
@@ -121,22 +122,6 @@ class ConditionalGetMiddleware:
             "headers": headers,
         })
         await send({"type": "http.response.body", "body": body})
-
-
-class MessageMiddleware:
-    """
-    Middleware placeholder for flash messages.
-
-    The actual message storage is handled by ``buraq.contrib.messages`` via
-    the session; this middleware is provided for compatibility in
-    ``MIDDLEWARE`` lists.
-    """
-
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        await self.app(scope, receive, send)
 
 
 class BrokenLinkEmailsMiddleware:
@@ -211,3 +196,4 @@ async def _redirect(send, location: str, status: int = 302) -> None:
         "headers": [(b"location", location.encode())],
     })
     await send({"type": "http.response.body", "body": b""})
+

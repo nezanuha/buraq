@@ -74,16 +74,59 @@ configuration is required.
 
 ## CsrfViewMiddleware — stack-level CSRF protection
 
-Add `CsrfViewMiddleware` to your `MIDDLEWARE` list to protect all non-exempt views globally, without decorating each one:
+`CsrfViewMiddleware` is in the default `MIDDLEWARE`, so every unsafe request is
+checked unless the view it reaches is decorated `@csrf_exempt`. Nothing needs
+adding:
 
 ```python title="config/settings.py"
 MIDDLEWARE = [
-    "buraq.middleware.SecurityMiddleware",
+    "buraq.middleware.security.SecurityMiddleware",
+    "buraq.middleware.cors.CORSMiddleware",
     "buraq.contrib.sessions.middleware.SessionMiddleware",
-    "buraq.contrib.csrf.CsrfViewMiddleware",   # ← add here
-    ...
+    "buraq.contrib.auth.middleware.AuthenticationMiddleware",
+    "buraq.middleware.csrf.CsrfViewMiddleware",
+    "buraq.middleware.gzip.GZipMiddleware",
 ]
 ```
+
+It reads the session, so it belongs below `SessionMiddleware`.
+
+:::caution[API clients]
+A client that posts JSON has to be issued the token before it can use it: make
+one safe request, read the `csrftoken` cookie, and send it back in the
+`X-CSRFToken` header on every unsafe request. An endpoint authenticated some
+other way — a webhook signature, a bearer token — should be decorated
+`@csrf_exempt` rather than made to carry a cookie it has no use for. Removing
+the middleware from `MIDDLEWARE` turns the check off everywhere.
+:::
+
+### Why the token changes on every page
+
+The value in `{{ csrf_input }}` and the `csrftoken` cookie is different in every
+response, even though the secret behind it does not change. That is deliberate.
+
+Buraq compresses responses by default, and compression plus a secret that repeats
+in every response is the precondition for BREACH: an attacker who can get
+reflected input onto a page learns the secret a character at a time by watching
+how well the response compresses. A token that never repeats gives that attack
+nothing to measure.
+
+The secret lives in the session; what is rendered is that secret combined with a
+fresh random mask, and what is submitted is unmasked before it is compared. Any
+token issued for the current session validates, however old.
+
+The two halves of that are exported, for a client that has to mask or compare a
+token itself:
+
+```python
+from buraq.contrib.csrf import mask_token, unmask_token
+
+masked = mask_token(secret)      # secret -> a value safe to put in a response
+secret = unmask_token(masked)    # back again, before comparing
+```
+
+`unmask_token` returns its argument unchanged if it is not a masked value, so a
+token issued before this existed still compares correctly.
 
 **How it works:**
 

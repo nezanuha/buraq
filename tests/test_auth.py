@@ -16,7 +16,10 @@ async def app():
     _tmpl._templates = None  # force re-discovery with current INSTALLED_APPS
 
     from buraq.core.application import Buraq as BuraqApp
+    from buraq.urls import include, path
     _app = BuraqApp()
+    # URLs come from urlpatterns, the same as a real project's config/urls.py
+    _app.load_urls([path("/auth", include("buraq.contrib.auth.urls"))])
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -30,6 +33,13 @@ async def app():
 @pytest.fixture
 async def client(app):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        # CSRF is in the default stack, so a client has to behave like a browser:
+        # fetch a page to be issued the token, then echo it on every unsafe
+        # request. Doing it here keeps the assertions about auth, not plumbing.
+        await c.get("/auth/login")
+        token = c.cookies.get("csrftoken")
+        if token:
+            c.headers["X-CSRFToken"] = token
         yield c
 
 

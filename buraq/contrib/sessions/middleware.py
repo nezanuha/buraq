@@ -41,11 +41,8 @@ class SessionMiddleware(BaseHTTPMiddleware):
     """
     Signed cookie session middleware.
 
-    Usage in config/urls.py:
-        from buraq.contrib.sessions import SessionMiddleware
-        from buraq.conf import settings
-
-        app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+    Listed in the MIDDLEWARE setting, where it takes SECRET_KEY and DEBUG from
+    settings; pass ``secret_key=`` only to override them.
 
     Usage in views:
         request.session["user_id"] = 42
@@ -57,19 +54,30 @@ class SessionMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app,
-        secret_key: str,
-        session_cookie: str = "session",
-        max_age: int = 1209600,  # 2 weeks
-        same_site: str = "lax",
-        https_only: bool = False,
+        secret_key: str | None = None,
+        session_cookie: str | None = None,
+        max_age: int | None = None,
+        same_site: str | None = None,
+        https_only: bool | None = None,
         domain: str = None,
     ):
         super().__init__(app)
-        self.secret_key = secret_key
-        self.session_cookie = session_cookie
-        self.max_age = max_age
-        self.same_site = same_site
-        self.https_only = https_only
+        # Both default from settings so the class can be named in MIDDLEWARE and
+        # constructed with no arguments, the way every other entry there is.
+        from buraq.conf import settings
+
+        self.secret_key = secret_key if secret_key is not None else settings.SECRET_KEY
+        self.session_cookie = (
+            session_cookie if session_cookie is not None else settings.SESSION_COOKIE_NAME
+        )
+        self.max_age = max_age if max_age is not None else settings.SESSION_COOKIE_MAX_AGE
+        self.same_site = (
+            same_site if same_site is not None else settings.SESSION_COOKIE_SAMESITE
+        )
+        self.http_only = getattr(settings, "SESSION_COOKIE_HTTPONLY", True)
+        self.https_only = (
+            https_only if https_only is not None else not settings.DEBUG
+        )
         self.domain = domain
 
     async def dispatch(self, request: Request, call_next):
@@ -90,7 +98,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
                     key=self.session_cookie,
                     value=cookie_val,
                     max_age=self.max_age,
-                    httponly=True,
+                    httponly=self.http_only,
                     samesite=self.same_site,
                     secure=self.https_only,
                     domain=self.domain,

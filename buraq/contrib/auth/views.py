@@ -29,6 +29,28 @@ async def register(payload: UserCreate) -> UserRead:
 
 # ── Class-based auth views ───────────────────────────────────────────────────
 
+def _set_access_token(response, user) -> None:
+    """
+    Attach the access token alongside the session cookie.
+
+    A browser gets it as an HttpOnly cookie and never has to think about it; a
+    client that would rather send ``Authorization: Bearer`` can read the same
+    token from a login response. Both are verified without touching the database.
+    """
+    from buraq.conf import settings
+    from buraq.contrib.auth.tokens import token_for_user
+
+    minutes = getattr(settings, "JWT_EXPIRY_MINUTES", 60)
+    response.set_cookie(
+        "access_token",
+        token_for_user(user),
+        max_age=minutes * 60,
+        httponly=True,
+        samesite="lax",
+        secure=not settings.DEBUG,
+    )
+
+
 class LoginView:
     """
     Template-based login view — renders a login form on GET, authenticates on POST.
@@ -90,7 +112,9 @@ class LoginView:
         user = await authenticate(request, username=username, password=password)
         if user:
             await login(request, user)
-            return redirect(self.get_success_url(request))
+            response = redirect(self.get_success_url(request))
+            _set_access_token(response, user)
+            return response
 
         return await render(request, self.template_name, {
             "error": "Invalid username or password.",
@@ -131,7 +155,11 @@ class LogoutView:
         from buraq.contrib.auth import logout
         from buraq.shortcuts import redirect
         await logout(request)
-        return redirect(self.next_page)
+        response = redirect(self.next_page)
+        # Clearing the session is not enough: the access token authenticates on
+        # its own, so a logout that left it in place would not log anyone out.
+        response.delete_cookie("access_token")
+        return response
 
 
 class PasswordChangeView:

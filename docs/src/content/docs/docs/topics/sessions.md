@@ -69,17 +69,18 @@ Each session is stored as a JSON file. Files are cleaned up on access if expired
 ### Database backend
 
 ```python title="config/settings.py"
+INSTALLED_APPS = [
+    ...,
+    "buraq.contrib.sessions",
+]
+
 SESSION_ENGINE = "buraq.contrib.sessions.backends.db"
 ```
 
-Create the table first:
+The `buraq_sessions` table comes from the app's own migration:
 
-```sql
-CREATE TABLE buraq_sessions (
-    session_key  VARCHAR(64)      NOT NULL PRIMARY KEY,
-    session_data TEXT             NOT NULL,
-    expire_date  DOUBLE PRECISION NOT NULL
-);
+```bash
+buraq migrate
 ```
 
 Remove expired sessions periodically:

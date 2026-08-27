@@ -31,8 +31,9 @@ This adds these endpoints automatically:
 |---|---|---|
 | `POST` | `/auth/register` | Register a new user |
 | `POST` | `/auth/login` | Login and get JWT token |
-| `GET` | `/auth/me` | Get current user profile |
-| `POST` | `/auth/logout` | Logout |
+| `GET` | `/auth/login` | Login form |
+| `GET` | `/auth/logout` | Log out |
+| `POST` | `/auth/logout` | Log out |
 
 ## Protecting views
 
@@ -80,7 +81,7 @@ curl -X POST http://localhost:8000/auth/login \
   -d '{"username": "alice", "password": "secret123"}'
 # → {"access_token": "eyJ...", "token_type": "bearer"}
 
-# Use the token
-curl http://localhost:8000/auth/me \
+# Use the token on a view you protected with @login_required
+curl http://localhost:8000/posts/new \
   -H "Authorization: Bearer eyJ..."
 ```

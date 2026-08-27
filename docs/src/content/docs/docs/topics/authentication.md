@@ -344,13 +344,50 @@ urlpatterns = [
 ]
 ```
 
+### How a token is used
+
+Signing in sets `access_token` as an HttpOnly cookie alongside the session, so a
+browser needs no extra work. A client that would rather carry the token itself
+sends it back on each request:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Either form is accepted. Verification is an HMAC over the token — no database
+query — so a request carrying a forged or expired token is rejected without
+touching the database at all. A valid one then loads the user, the same single
+lookup a session costs, because a token issued before an account was disabled
+must not still open the door.
+
+Tokens are signed with `SECRET_KEY` using `JWT_ALGORITHM`, which accepts the
+HMAC family (`HS256`, `HS384`, `HS512`). The algorithm named *inside* a token is
+never trusted — a token claiming `"alg": "none"` is rejected, not honoured.
+
+To issue one yourself:
+
+```python
+from buraq.contrib.auth.tokens import decode_token, encode_token, token_for_user
+
+token = token_for_user(user)                 # {"sub": user.pk}
+claims = decode_token(token)                 # raises TokenError if forged or expired
+
+# Any other claims — a scope, a one-off confirmation link:
+invite = encode_token({"invite": "abc"}, expires_minutes=15)
+```
+
+Logging out clears the cookie; a token a client kept a copy of stays valid until
+it expires, which is what `JWT_EXPIRY_MINUTES` is for.
+
 ### Endpoints
 
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/auth/register` | Create a new user |
-| `POST` | `/auth/login` | Exchange credentials for a token (`obtain_auth_token`) |
-| `GET` | `/auth/me` | Current user profile (Bearer required) |
+| `POST` | `/auth/login` | Sign in; sets the session and the `access_token` cookie |
+| `GET` | `/auth/login` | Login form |
+| `GET` | `/auth/logout` | Log the current user out |
+| `POST` | `/auth/logout` | Log the current user out |
 
 ---
 

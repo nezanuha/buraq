@@ -7,27 +7,67 @@ Middleware processes every request before it reaches a view and every response b
 
 ## Built-in middleware
 
-Buraq automatically applies these (configured via settings):
+These are the default `MIDDLEWARE`, listed outermost first — the entry at the
+top sees a request before every entry below it, and touches the response last:
+
+```python title="config/settings.py"
+MIDDLEWARE = [
+    "buraq.middleware.security.SecurityMiddleware",
+    "buraq.middleware.cors.CORSMiddleware",
+    "buraq.contrib.sessions.middleware.SessionMiddleware",
+    "buraq.contrib.auth.middleware.AuthenticationMiddleware",
+    "buraq.middleware.csrf.CsrfViewMiddleware",
+    "buraq.middleware.gzip.GZipMiddleware",
+]
+```
 
 | Middleware | Purpose |
 |---|---|
+| Security | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, HSTS, `ALLOWED_HOSTS` |
 | CORS | Cross-Origin Resource Sharing headers |
-| GZip | Response compression |
 | Session | Cookie-based sessions |
-| Authentication | Reads session, sets `request.user` (`User` or `AnonymousUser`) |
-| Security headers | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, etc. |
+| Authentication | Reads the session, sets `request.user` (`User` or `AnonymousUser`) |
+| CSRF | Rejects an unsafe request without a valid token; `@csrf_exempt` opts a view out |
+| GZip | Response compression (see the note below) |
+
+Order matters: `AuthenticationMiddleware` reads `request.session`, so it must be
+listed below `SessionMiddleware`.
+
+:::caution[Compression and secrets]
+Buraq compresses responses by default; the framework this borrows from ships
+compression off and asks you to consider it first. The concern is BREACH: when a
+page contains both a secret and text an attacker controls, how well the response
+compresses leaks the secret a character at a time.
+
+Buraq's own exposure is closed — the CSRF token is the only secret it renders,
+and it is masked so no two responses repeat it. What remains is
+application-specific: if one of your own pages renders a stable secret — an API
+key, a password-reset token, an invitation code — *and* reflects user input on
+the same page, that page is exposed regardless of the framework.
+
+If that describes your application, either stop rendering the secret beside
+reflected input, or drop `buraq.middleware.gzip.GZipMiddleware` from
+`MIDDLEWARE`. Static files stay compressed either way, because `collectstatic`
+compresses them on disk.
+
+The default is on because every CDN and reverse proxy in front of a modern
+application compresses too — turning it off in the application alone buys
+nothing if Cloudflare or Nginx compresses the same response.
+::: Remove an entry and its behaviour goes with it
+— a JSON-only API has no use for cookie sessions, and dropping both session and
+authentication lines is the way to say so.
 
 ## CORS settings
 
 ```python
-CORS_ALLOW_ORIGINS     = ["https://myfrontend.com", "https://admin.mysite.com"]
+CORS_ORIGINS           = ["https://myfrontend.com", "https://admin.mysite.com"]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS     = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 CORS_ALLOW_HEADERS     = ["*"]
 ```
 
 :::caution
-Setting `CORS_ALLOW_ORIGINS = ["*"]` automatically disables `CORS_ALLOW_CREDENTIALS` — browsers reject credentialed requests to wildcard origins.
+Leaving `CORS_ORIGINS` empty automatically disables `CORS_ALLOW_CREDENTIALS` — browsers reject credentialed requests to wildcard origins.
 :::
 
 ## Custom middleware
@@ -134,7 +174,7 @@ Persists flash messages in the session between requests. Required by `buraq.cont
 ```python title="config/settings.py"
 MIDDLEWARE = [
     "buraq.contrib.sessions.middleware.SessionMiddleware",
-    "buraq.middleware.common.MessageMiddleware",   # must come after SessionMiddleware
+    "buraq.contrib.messages.middleware.MessageMiddleware",   # must come after SessionMiddleware
     ...
 ]
 ```
