@@ -27,6 +27,13 @@ Usage in any app's templatetags.py::
     @register.filter(is_safe=True)
     def highlight(value, term):
         return value.replace(term, f"<mark>{term}</mark>")
+
+    # Receive the current render context (request, SITE_FULL_URL, and
+    # anything else your context processors added) as the first argument
+    @register.global(takes_context=True)
+    def canonical_url(context):
+        request = context.get("request")
+        return str(request.url) if request else ""
 """
 from __future__ import annotations
 
@@ -47,25 +54,37 @@ class Library:
 
     # ── @register.global ──────────────────────────────────────────────────────
 
-    def global_(self, func: Callable = None, *, name: str = None, is_safe: bool = False):
+    def global_(
+        self, func: Callable = None, *, name: str = None,
+        is_safe: bool = False, takes_context: bool = False,
+    ):
         """
         Register a function as a Jinja2 global (callable from any template).
 
         Can be used as:
             @register.global
             @register.global(name="my_name")
+            @register.global(takes_context=True)
+
+        With ``takes_context=True``, the current render context (the mapping
+        that includes ``request`` and whatever context processors added) is
+        passed as the first argument — see ``jinja2.pass_context``, which
+        this wraps.
         """
         def decorator(fn: Callable) -> Callable:
             key = name or fn.__name__
+            registered = fn
             if is_safe:
                 from markupsafe import Markup
-                original = fn
+                original = registered
                 def _safe(*args, **kwargs):
                     return Markup(original(*args, **kwargs))
                 _safe.__name__ = fn.__name__
-                self._globals[key] = _safe
-            else:
-                self._globals[key] = fn
+                registered = _safe
+            if takes_context:
+                from jinja2 import pass_context
+                registered = pass_context(registered)
+            self._globals[key] = registered
             return fn
 
         if func is not None:
@@ -77,25 +96,35 @@ class Library:
 
     # ── @register.filter ──────────────────────────────────────────────────────
 
-    def filter(self, func: Callable = None, *, name: str = None, is_safe: bool = False):
+    def filter(
+        self, func: Callable = None, *, name: str = None,
+        is_safe: bool = False, takes_context: bool = False,
+    ):
         """
         Register a function as a Jinja2 filter.
 
         Can be used as:
             @register.filter
             @register.filter(name="my_filter", is_safe=True)
+            @register.filter(takes_context=True)
+
+        With ``takes_context=True``, the current render context is passed as
+        the first argument, ahead of the piped value — see ``global_()``.
         """
         def decorator(fn: Callable) -> Callable:
             key = name or fn.__name__
+            registered = fn
             if is_safe:
                 from markupsafe import Markup
-                original = fn
+                original = registered
                 def _safe(*args, **kwargs):
                     return Markup(original(*args, **kwargs))
                 _safe.__name__ = fn.__name__
-                self._filters[key] = _safe
-            else:
-                self._filters[key] = fn
+                registered = _safe
+            if takes_context:
+                from jinja2 import pass_context
+                registered = pass_context(registered)
+            self._filters[key] = registered
             return fn
 
         if func is not None:

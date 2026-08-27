@@ -12,7 +12,7 @@ Buraq uses Jinja2 as its sole template engine.
 ## Configuration
 
 ```python title="config/settings.py"
-TEMPLATES_DIR = str(BASE_DIR / "templates")
+TEMPLATES_DIR = str(BASE_DIR / "templates")   # one path, or a list of them
 
 # APP_DIRS (default True) — also search <app>/templates/ in every INSTALLED_APP
 APP_DIRS = True
@@ -23,7 +23,31 @@ Buraq searches template directories in priority order:
 1. `TEMPLATES_DIR` (your project-level templates)
 2. Each installed app's `templates/` subfolder (when `APP_DIRS = True`)
 
-This means an app can ship its own templates that are automatically available without any extra configuration.
+This means an app can ship its own templates that are automatically available
+without any extra configuration — and because your project's directory is
+searched first, you can override any of them by putting a file of the same name
+in `templates/`.
+
+Name an app's templates `<app>/templates/<app>/...` so two apps shipping a
+`detail.html` do not collide.
+
+### Configuring Jinja itself
+
+`TEMPLATE_OPTIONS` is passed to Jinja's `Environment`, so anything it accepts can
+be set:
+
+```python title="config/settings.py"
+TEMPLATE_OPTIONS = {
+    "undefined": "jinja2.StrictUndefined",      # a typo raises instead of rendering ""
+    "trim_blocks": True,
+    "lstrip_blocks": True,
+    "extensions": ["jinja2.ext.loopcontrols"],  # {% break %} / {% continue %}
+}
+```
+
+`undefined` and `extensions` take dotted paths so this file never has to import
+`jinja2`; everything else is passed straight through. `autoescape` stays on
+whatever else you set.
 
 ---
 

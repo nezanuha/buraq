@@ -185,12 +185,19 @@ def i18n_patterns(*patterns: Any, prefix_default_language: bool = True) -> I18nU
 
         urlpatterns = [
             path("/i18n/set_language", set_language),   # NOT language-prefixed
-            *i18n_patterns(
+            i18n_patterns(
                 path("/",        views.home,    name="home"),
                 path("/about",   views.about,   name="about"),
                 path("/posts",   include("posts.urls")),
             ),
         ]
+
+    Add the group to ``urlpatterns`` as a single element — with ``append()``,
+    inside the list literal as shown above, or with ``+= [i18n_patterns(...)]``
+    — not spread with ``*`` or added directly with ``+=``. The group carries
+    ``prefix_default_language`` through to route registration, which a plain
+    list of patterns has no way to hold; ``register_urlpatterns`` unwraps it
+    when it finds one.
     """
     return I18nURLGroup(list(patterns), prefix_default_language=prefix_default_language)
 

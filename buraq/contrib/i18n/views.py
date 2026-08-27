@@ -45,4 +45,16 @@ async def set_language(request: Request) -> RedirectResponse:
         return RedirectResponse(next_url, status_code=302)
 
     redirect_to = translate_url(next_url, language)
-    return RedirectResponse(redirect_to, status_code=302)
+    response = RedirectResponse(redirect_to, status_code=302)
+    # LocaleMiddleware looks for this cookie, but nothing ever set it, so cookie
+    # detection could never fire and a choice survived only as long as the URL
+    # prefix carried it.
+    from buraq.conf import settings
+
+    response.set_cookie(
+        getattr(settings, "LANGUAGE_COOKIE_NAME", "buraq_language"),
+        language,
+        max_age=getattr(settings, "LANGUAGE_COOKIE_AGE", 60 * 60 * 24 * 365),
+        samesite="lax",
+    )
+    return response
