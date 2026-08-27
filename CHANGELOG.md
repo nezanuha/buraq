@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Several databases, and reads from a replica.** `DATABASES` names them, each
+  a URL like `DATABASE_URL` so the async driver still has somewhere to live:
+
+  ```python
+  DATABASES = {
+      "default": "postgresql+asyncpg://user:pass@primary/db",
+      "replica": "postgresql+asyncpg://user:pass@replica/db",
+  }
+  DATABASE_READ_REPLICAS = ["replica"]
+  ```
+
+  Queries do not change: reads go to a replica, writes to `default`. Reads
+  *inside* `atomic()` also go to `default` — a replica lags the primary, so a
+  transaction that writes a row and reads it back must not be answered by one.
+  `QuerySet.using()` names a database outright and overrides both; it previously
+  existed only to raise `NotImplementedError`. `DATABASE_URL` remains the
+  single-database form and is unchanged.
+
+  There are no database routers: nothing decides per model or per app where a
+  query belongs, and migrations only run against `default`.
+
 - **`DATABASE_URL` is checked for an async driver at startup.** A blocking one —
   or none at all — now raises `ImproperlyConfigured` naming the driver to use and
   the extra that installs it. SQLAlchemy caught these already, but a bare

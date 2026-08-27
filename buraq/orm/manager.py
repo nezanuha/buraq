@@ -71,6 +71,7 @@ class QuerySet:
         self._peers: list | None = None  # populated after all() when FETCH_PEERS
         self._select_related_fields: list[str] = []
         self._prefetch_objs: list = []  # Prefetch instances, applied after the main query
+        self._using: str | None = None  # database named by using(), if any
 
     # ── Chaining methods (return new QuerySet) ──────────────────────────────
 
@@ -128,11 +129,25 @@ class QuerySet:
     def none(self) -> "QuerySet":
         return self._clone(self._query.where(sa.false()))
 
-    def using(self, db) -> "QuerySet":
-        raise NotImplementedError(
-            "Multi-database routing via using() is not yet implemented in Buraq. "
-            "All queries use the single DATABASE_URL connection."
-        )
+    def using(self, db: str) -> "QuerySet":
+        """Run this query against the named database from ``DATABASES``.
+
+        Overrides the usual routing entirely, so a read named here goes where it
+        is told even inside atomic() -- which is the point of saying it.
+        """
+        qs = self._clone()
+        qs._using = db
+        return qs
+
+    def _session(self, *, write: bool = False):
+        """A session on the database this query belongs to.
+
+        Stands in for ``SessionLocal()`` at every call site, so which database a
+        query runs against is decided in one place rather than twenty.
+        """
+        from buraq.core.db import routing_alias, session_for
+
+        return session_for(routing_alias(write=write, using=self._using))()
 
     def select_related(self, *fields) -> "QuerySet":
         """
@@ -365,8 +380,7 @@ class QuerySet:
     # ── Async terminal methods ──────────────────────────────────────────────
 
     async def all(self) -> list:
-        from buraq.core.db import SessionLocal
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.execute(self._query)
             if self._values_fields is not None:
                 rows = result.all()
@@ -392,8 +406,7 @@ class QuerySet:
         return instances
 
     async def first(self) -> Any | None:
-        from buraq.core.db import SessionLocal
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.execute(self._query.limit(1))
             if self._values_fields is not None:
                 row = result.first()
@@ -414,27 +427,24 @@ class QuerySet:
     async def last(self) -> Any | None:
         import sqlalchemy as sa
 
-        from buraq.core.db import SessionLocal
         pk_col = getattr(self._model, "id", None)
         if pk_col is not None:
             q = self._query.order_by(None).order_by(sa.desc(pk_col)).limit(1)
         else:
             q = self._query
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.execute(q)
             return result.scalar_one_or_none()
 
     async def count(self) -> int:
-        from buraq.core.db import SessionLocal
-        async with SessionLocal() as db:
+        async with self._session() as db:
             q = select(func.count()).select_from(self._query.subquery())
             result = await db.execute(q)
             return result.scalar() or 0
 
     async def exists(self) -> bool:
-        from buraq.core.db import SessionLocal
         q = sa.select(sa.literal(1)).select_from(self._query.subquery()).limit(1)
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.execute(q)
             return result.first() is not None
 
@@ -464,7 +474,7 @@ class QuerySet:
 
     async def delete(self) -> int:
         """Bulk delete all rows matching current filters."""
-        from buraq.core.db import SessionLocal, _current_session
+        from buraq.core.db import _current_session
         where_clauses = self._query.whereclause
         q = sa_delete(self._model)
         if where_clauses is not None:
@@ -474,14 +484,14 @@ class QuerySet:
             result = await active.execute(q)
             await active.flush()
             return result.rowcount
-        async with SessionLocal() as db:
+        async with self._session(write=True) as db:
             result = await db.execute(q)
             await db.commit()
             return result.rowcount
 
     async def update(self, **kwargs) -> int:
         """Bulk update all rows matching current filters."""
-        from buraq.core.db import SessionLocal, _current_session
+        from buraq.core.db import _current_session
         from buraq.orm.query import F, _FExpr
         resolved = {}
         for key, value in kwargs.items():
@@ -498,7 +508,7 @@ class QuerySet:
             result = await active.execute(q)
             await active.flush()
             return result.rowcount
-        async with SessionLocal() as db:
+        async with self._session(write=True) as db:
             result = await db.execute(q)
             await db.commit()
             return result.rowcount
@@ -511,7 +521,6 @@ class QuerySet:
             result = await Post.objects.aggregate(total=Count("id"), avg=Avg("views"))
             # → {"total": 42, "avg": 7.3}
         """
-        from buraq.core.db import SessionLocal
         from buraq.orm.aggregates import Aggregate
         cols = []
         labels = []
@@ -524,7 +533,7 @@ class QuerySet:
 
         base = self._query.subquery()
         q = select(*cols).select_from(base)
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.execute(q)
             row = result.first()
             if row is None:
@@ -538,7 +547,6 @@ class QuerySet:
         Example:
             qs = await Post.objects.values("author_id").annotate(count=Count("id"))
         """
-        from buraq.core.db import SessionLocal
         from buraq.orm.aggregates import Aggregate
 
         # Build select with base columns + annotations
@@ -565,7 +573,7 @@ class QuerySet:
         if self._query.whereclause is not None:
             q = q.where(self._query.whereclause)
 
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.execute(q)
             rows = result.all()
             all_labels = (self._values_fields or []) + agg_labels
@@ -573,8 +581,7 @@ class QuerySet:
 
     async def iterator(self) -> AsyncIterator:
         """Async generator yielding one row at a time."""
-        from buraq.core.db import SessionLocal
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.stream_scalars(self._query)
             async for row in result:
                 yield row
@@ -621,7 +628,6 @@ class QuerySet:
         from sqlalchemy.engine import make_url as _make_url
 
         from buraq.conf import settings
-        from buraq.core.db import SessionLocal
         col = getattr(self._model, field)
         try:
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
@@ -636,7 +642,7 @@ class QuerySet:
         else:
             trunc = sa.cast(func.date_trunc(kind, col), sa.Date)
         q = sa.select(trunc.label("date")).distinct().order_by(trunc)
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.execute(q)
             return [row[0] for row in result.all()]
 
@@ -649,7 +655,6 @@ class QuerySet:
         from sqlalchemy.engine import make_url as _make_url
 
         from buraq.conf import settings
-        from buraq.core.db import SessionLocal
         col = getattr(self._model, field)
         try:
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
@@ -672,14 +677,13 @@ class QuerySet:
         else:
             trunc = func.date_trunc(kind, col)
         q = sa.select(trunc.label("dt")).distinct().order_by(trunc)
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.execute(q)
             return [row[0] for row in result.all()]
 
     async def raw(self, sql: str, params: dict | list | None = None) -> list:
         """Execute raw SQL and return rows as dicts."""
-        from buraq.core.db import SessionLocal
-        async with SessionLocal() as db:
+        async with self._session(write=True) as db:
             result = await db.execute(sa.text(sql), params or {})
             keys = list(result.keys())
             return [dict(zip(keys, row, strict=False)) for row in result.all()]
@@ -698,7 +702,6 @@ class QuerySet:
         from sqlalchemy.engine import make_url as _make_url
 
         from buraq.conf import settings
-        from buraq.core.db import SessionLocal
         try:
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
         except Exception:
@@ -718,7 +721,7 @@ class QuerySet:
 
         compiled = self._query.compile(compile_kwargs={"literal_binds": True})
         raw_sql = f"{prefix} {compiled}"
-        async with SessionLocal() as db:
+        async with self._session() as db:
             result = await db.execute(sa.text(raw_sql))
             rows = result.fetchall()
         return "\n".join(" | ".join(str(c) for c in row) for row in rows)
@@ -732,6 +735,7 @@ class QuerySet:
         qs._fetch_mode = self._fetch_mode
         qs._select_related_fields = list(self._select_related_fields)
         qs._prefetch_objs = list(self._prefetch_objs)
+        qs._using = self._using
         return qs
 
     # Allow `await Post.objects.filter(...)` directly
@@ -886,6 +890,10 @@ class Manager:
 
     def distinct(self) -> QuerySet:
         return QuerySet(self._model).distinct()
+
+    def using(self, db: str) -> QuerySet:
+        """Start a queryset against the named database from ``DATABASES``."""
+        return QuerySet(self._model).using(db)
 
     def select_related(self, *fields) -> QuerySet:
         return QuerySet(self._model).select_related(*fields)

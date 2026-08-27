@@ -38,6 +38,13 @@ class BuraqSettings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./db.sqlite3"
+    # Several databases, by alias, each a URL like DATABASE_URL. Leave empty and
+    # DATABASE_URL is the only one. A "default" entry is required when set: every
+    # query that does not name a database uses it.
+    DATABASES: dict[str, str] = {}
+    # Aliases from DATABASES that reads may be sent to, in rotation. Writes, and
+    # reads inside atomic(), always go to "default".
+    DATABASE_READ_REPLICAS: list[str] = []
     # Ignored by SQLite, which uses a StaticPool.
     # The implicit primary key on every model. Integer runs out near two
     # billion rows; set "buraq.orm.fields.BigAutoField" to start wider.

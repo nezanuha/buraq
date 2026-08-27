@@ -476,7 +476,7 @@ Most settings follow the same naming convention. Key differences:
 
 | Django `settings.py` | Buraq `settings.py` |
 |---|---|
-| `DATABASES = {"default": {...}}` | `DATABASE_URL = "postgresql+asyncpg://..."` — one database only, see [What's Different](#whats-different) |
+| `DATABASES = {"default": {...}}` | `DATABASE_URL = "postgresql+asyncpg://..."`, or `DATABASES` as a dict of URLs |
 | `INSTALLED_APPS` | `INSTALLED_APPS` |
 | `MIDDLEWARE` | `MIDDLEWARE` |
 | `TEMPLATES = [{...}]` | `TEMPLATES_DIR`, `APP_DIRS`, `TEMPLATE_OPTIONS` |
@@ -616,8 +616,8 @@ The API is identical — only the import path differs.
 
 - **Every ORM call needs `await`** — this is the biggest change
 - **Views must be `async def`** — synchronous views are not supported
-- **A single database URL** replaces Django's `DATABASES` dict — and with it the
-  multi-database features: no routers, no `using()`, no read replica
+- **Databases are URLs**, not `ENGINE`/`NAME` dicts — `DATABASES` takes several,
+  and `using()` and read replicas work; there are no database routers
 - **Jinja2** instead of Django's template engine — syntax is ~95% compatible
 - **JWT auth** is built-in alongside session auth
 - **No `syncdb`** — Alembic handles all migrations via `buraq makemigrations`

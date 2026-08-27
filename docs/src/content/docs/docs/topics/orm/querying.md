@@ -659,3 +659,84 @@ for post in posts:
 # One SQL statement, no matter how many posts
 await Post.objects.bulk_update(posts, fields=["status"])
 ```
+
+## Reading from a replica
+
+Configure the databases and say which of them reads may go to:
+
+```python title="config/settings.py"
+DATABASES = {
+    "default": "postgresql+asyncpg://user:pass@primary/db",
+    "replica": "postgresql+asyncpg://user:pass@replica/db",
+}
+DATABASE_READ_REPLICAS = ["replica"]
+```
+
+Nothing in your queries changes. Reads are sent to the replica, writes to the
+primary:
+
+```python
+await Post.objects.filter(published=True)      # replica
+await Post.objects.create(title="Hello")       # primary
+```
+
+List more than one replica and reads rotate between them.
+
+### What stays on the primary
+
+| | goes to |
+|---|---|
+| any write | `default` |
+| any read inside `atomic()` | `default` |
+| `raw()` | `default` — the SQL may write |
+| everything else | a replica, if one is configured |
+
+The second row is the one that matters. A replica is behind the primary by
+however long replication takes, so a transaction that writes a row and then
+reads it back would see stale data — or nothing at all:
+
+```python
+@atomic
+async def publish(post_id):
+    await Post.objects.filter(id=post_id).update(published=True)
+    # Reads the row it just wrote, so this must not go to a replica.
+    return await Post.objects.get(id=post_id)
+```
+
+Buraq routes every read inside an `atomic()` block to the primary for that
+reason. You do not have to think about it.
+
+### using()
+
+`using()` names a database outright, and overrides all of the above:
+
+```python
+await Post.objects.using("replica").filter(published=True)   # even inside atomic()
+await Post.objects.using("default").get(id=1)                # a read you need current
+```
+
+It chains in either position, and survives the calls after it:
+
+```python
+Post.objects.using("replica").filter(x=1).order_by("-id")
+Post.objects.filter(x=1).using("replica").order_by("-id")    # the same
+```
+
+:::caution[Reading straight after writing]
+Outside a transaction, nothing links a write to the read that follows it, so
+this can return the old row:
+
+```python
+await post.save()
+await Post.objects.get(id=post.id)     # may be answered by a lagging replica
+```
+
+Wrap the pair in `atomic()`, or name the database with `using("default")`.
+:::
+
+:::note[No routers]
+There is nothing that decides per model or per app which database a query
+belongs to. Reads go to a replica, writes to the primary, `using()` overrides
+both — and migrations only ever run against `default`.
+:::
+

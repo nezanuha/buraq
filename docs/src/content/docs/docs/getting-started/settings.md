@@ -85,11 +85,33 @@ Left to SQLAlchemy this surfaces as `ModuleNotFoundError: No module named
 'psycopg2'`, which reads like a missing dependency and is not — installing
 psycopg2 cannot help, because it cannot be awaited.
 
-:::caution[One database]
-`DATABASE_URL` is a single connection, and Buraq has no equivalent of a
-`DATABASES` dict, database routers, or `QuerySet.using()` — that method exists
-but raises `NotImplementedError`. If your application needs to read from a
-replica or split tables across servers, that is not available yet.
+### More than one database
+
+`DATABASE_URL` is one connection. To use several, name them:
+
+```python title="config/settings.py"
+DATABASES = {
+    "default": "postgresql+asyncpg://user:pass@primary/db",
+    "replica": "postgresql+asyncpg://user:pass@replica/db",
+}
+DATABASE_READ_REPLICAS = ["replica"]
+```
+
+`default` is required — every query that does not name a database uses it.
+`DATABASE_READ_REPLICAS` lists the aliases reads may be sent to, in rotation.
+Writes always go to `default`, and so do reads inside `atomic()`.
+
+Setting `DATABASES` replaces `DATABASE_URL`; a project needs one or the other,
+not both.
+
+See [Reading from a replica](../topics/orm/querying.md#reading-from-a-replica)
+for what routes where, and `using()`.
+
+:::note[What this is not]
+There are no database routers: nothing decides per model or per app which
+database a query belongs to. Reads go to a replica, writes go to the primary,
+and `using()` overrides both. Splitting tables across servers, or migrating
+anything other than `default`, is not supported.
 :::
 
 ### URL handling

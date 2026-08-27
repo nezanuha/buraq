@@ -1,3 +1,4 @@
+import itertools
 from collections.abc import AsyncGenerator
 from contextvars import ContextVar
 
@@ -71,9 +72,9 @@ def _check_database_url(url: str) -> None:
     )
 
 
-def _make_engine():
+def _make_engine(alias: str = "default"):
     from buraq.conf import settings
-    url = settings.DATABASE_URL
+    url = database_urls()[alias]
     _check_database_url(url)
     kwargs = dict(echo=settings.DATABASE_ECHO, pool_pre_ping=True)
     if url.startswith("sqlite"):
@@ -88,17 +89,24 @@ def _make_engine():
 class _LazyEngine:
     """Lazy proxy — engine is created on first access so settings can be overridden first."""
 
-    _engine = None
-    _session_factory = None
+    def __init__(self, alias: str = "default"):
+        self.alias = alias
+        self._engine = None
+        self._session_factory = None
 
     def _init(self):
         if self._engine is None:
-            self._engine = _make_engine()
+            self._engine = _make_engine(self.alias)
             self._session_factory = async_sessionmaker(
                 self._engine,
                 class_=AsyncSession,
                 expire_on_commit=False,
             )
+
+    def reset(self) -> None:
+        """Forget the engine, so the next use builds one from current settings."""
+        self._engine = None
+        self._session_factory = None
 
     def __call__(self, *args, **kwargs):
         self._init()
@@ -109,7 +117,106 @@ class _LazyEngine:
         return getattr(self._engine, name)
 
 
-_lazy = _LazyEngine()
+DEFAULT_DB_ALIAS = "default"
+
+#: One lazy engine per configured alias, built on first use.
+_connections: dict[str, "_LazyEngine"] = {}
+
+#: Position in the replica list, so consecutive reads spread across them.
+_replica_turn = itertools.count()
+
+
+def database_urls() -> dict[str, str]:
+    """Every configured database, by alias.
+
+    DATABASES is the multi-database form; DATABASE_URL is the single-database
+    one and remains what a project gets by default. Setting both is a mistake
+    worth naming rather than silently resolving.
+    """
+    from buraq.conf import settings
+
+    configured = dict(getattr(settings, "DATABASES", None) or {})
+    if not configured:
+        return {DEFAULT_DB_ALIAS: settings.DATABASE_URL}
+    if DEFAULT_DB_ALIAS not in configured:
+        from buraq.exceptions import ImproperlyConfigured
+
+        raise ImproperlyConfigured(
+            f"DATABASES has no {DEFAULT_DB_ALIAS!r} entry. Every query that does "
+            f"not name a database uses it, so there has to be one."
+        )
+    return configured
+
+
+def connection(alias: str = DEFAULT_DB_ALIAS) -> "_LazyEngine":
+    """The engine for *alias*, created on first use."""
+    if alias not in _connections:
+        urls = database_urls()
+        if alias not in urls:
+            from buraq.exceptions import ImproperlyConfigured
+
+            known = ", ".join(sorted(urls)) or "none"
+            raise ImproperlyConfigured(
+                f"No database named {alias!r} is configured. Known: {known}."
+            )
+        _connections[alias] = _LazyEngine(alias)
+    return _connections[alias]
+
+
+def read_alias() -> str:
+    """The database a read should go to.
+
+    Replicas are behind the primary by however long replication takes, so this
+    is only correct for a query whose caller has not just written something it
+    expects to read back. Inside atomic() the writer is used instead, which is
+    where that case actually arises -- see routing_alias().
+    """
+    from buraq.conf import settings
+
+    replicas = [
+        alias
+        for alias in (getattr(settings, "DATABASE_READ_REPLICAS", None) or [])
+        if alias != DEFAULT_DB_ALIAS
+    ]
+    if not replicas:
+        return DEFAULT_DB_ALIAS
+    return replicas[next(_replica_turn) % len(replicas)]
+
+
+def routing_alias(*, write: bool, using: str | None = None) -> str:
+    """Which database this query belongs on.
+
+    An explicit using() wins. Otherwise a write goes to the primary, and so does
+    a read inside an atomic block: a transaction that has written a row and then
+    reads it back must not be answered by a replica that has not seen the write
+    yet.
+    """
+    if using is not None:
+        return using
+    if write or _current_session.get() is not None:
+        return DEFAULT_DB_ALIAS
+    return read_alias()
+
+
+def session_for(alias: str | None = None):
+    """An async_sessionmaker-compatible callable for *alias*."""
+    return connection(alias or DEFAULT_DB_ALIAS)
+
+
+def reset_connections() -> None:
+    """Forget every engine, so the next use reads settings again.
+
+    The default connection is reset in place rather than replaced: SessionLocal
+    is bound to that object at import time throughout the framework, and handing
+    out a new one would leave those references pointing at a dead engine.
+    """
+    for alias in [a for a in _connections if a != DEFAULT_DB_ALIAS]:
+        del _connections[alias]
+    _connections[DEFAULT_DB_ALIAS].reset()
+
+
+_lazy = _LazyEngine(DEFAULT_DB_ALIAS)
+_connections[DEFAULT_DB_ALIAS] = _lazy
 engine = _lazy  # kept for backwards compat
 SessionLocal = _lazy  # async_sessionmaker-compatible callable
 
