@@ -175,13 +175,40 @@ class StaticFilesHandler:
             self._mount_production()
         self._mount_media()
 
+    def _dev_directories(self) -> list[str]:
+        """Every directory a source file could be in, in search order.
+
+        collectstatic finds files through STATICFILES_DIRS and each installed
+        app's static/, but the development mount only ever looked at STATIC_DIR
+        -- so a project using the setting the framework itself prefers got its
+        files collected in production and a 404 while developing, which reads as
+        a missing file rather than a missing mount.
+        """
+        found: list[str] = []
+        for source in (
+            *(getattr(settings, "STATICFILES_DIRS", None) or []),
+            str(self._static_dir),
+        ):
+            if source not in found and Path(source).is_dir():
+                found.append(source)
+
+        from buraq.contrib.staticfiles.finders import AppDirectoriesFinder
+
+        for _rel, full in AppDirectoriesFinder().list():
+            root = str(Path(full).parent)
+            if root not in found:
+                found.append(root)
+        return found
+
     def _mount_dev(self) -> None:
-        if self._static_dir.exists():
-            self.app.mount(
-                _mount_path(settings.STATIC_URL),
-                StaticFiles(directory=str(self._static_dir)),
-                name="static",
-            )
+        directories = self._dev_directories()
+        if not directories:
+            return
+        served = StaticFiles(directory=directories[0])
+        # StaticFiles takes one directory but searches all_directories, which is
+        # how it serves a package's files alongside a project's.
+        served.all_directories = list(directories)
+        self.app.mount(_mount_path(settings.STATIC_URL), served, name="static")
 
     def _mount_production(self) -> None:
         """

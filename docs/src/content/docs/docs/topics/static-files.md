@@ -25,6 +25,30 @@ STATICFILES_FINDERS = [
 ]
 ```
 
+### Where source files live
+
+`STATICFILES_DIRS` lists the project's own source directories, searched in
+order; each installed app's `static/` is searched after them. Development serves
+from exactly these, so a file reachable after `collectstatic` is reachable while
+you are building.
+
+```python title="config/settings.py"
+STATICFILES_DIRS = [
+    str(BASE_DIR / "static"),
+    str(BASE_DIR / "theme" / "static"),
+]
+```
+
+`STATIC_DIR` is the older single-directory form and still works — a scaffolded
+project uses it, since a new project has exactly one. It is treated as one more
+entry, searched after `STATICFILES_DIRS`:
+
+```python title="config/settings.py"
+STATIC_DIR = str(BASE_DIR / "static")     # equivalent to a one-entry list
+```
+
+Set one or the other; there is no reason for both.
+
 ## In templates
 
 Two equivalent styles — use whichever you prefer:

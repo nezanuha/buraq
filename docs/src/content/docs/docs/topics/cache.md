@@ -17,6 +17,9 @@ CACHE_REDIS_URL = "redis://localhost:6379/0"
 # Memcached
 CACHE_BACKEND       = "buraq.contrib.cache.backends.memcached.MemcachedCacheBackend"
 CACHE_MEMCACHED_URL = "memcached://localhost:11211"
+# For more than one server, list them instead -- this takes precedence
+# over CACHE_MEMCACHED_URL when both are set.
+CACHE_MEMCACHED_SERVERS = [("cache1", 11211), ("cache2", 11211)]
 
 # File
 CACHE_BACKEND   = "buraq.contrib.cache.backends.file.FileCacheBackend"

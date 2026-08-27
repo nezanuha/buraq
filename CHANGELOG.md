@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Every setting is documented.** `STATIC_DIR` — which a scaffolded project has
+  in its settings file — and `CACHE_MEMCACHED_SERVERS` appeared on no
+  documentation page. All 95 settings now do.
+
 - **CI runs the suite against PostgreSQL and MySQL**, not only SQLite. The
   differences that actually bite — sequences, locking, collation, what a driver
   accepts — are the ones SQLite cannot show, so passing on it proved less than
@@ -170,6 +174,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   listed it.
 
 ### Fixed
+
+- **`STATICFILES_DIRS` was ignored while developing.** The development mount read
+  only `STATIC_DIR`, while the finders behind `collectstatic` read
+  `STATICFILES_DIRS` and each installed app's `static/` as well — so a project
+  using the setting the framework itself prefers had its files collected
+  correctly for production and answered with a 404 in development. That reads as
+  a missing file rather than a missing mount, which is the wrong thing to go
+  looking for. Development now serves every directory `collectstatic` collects
+  from, in the same order, so what resolves in one resolves in the other.
 
 - **Nothing said Buraq is single-database.** The migration guide called
   `DATABASE_URL` a replacement for the older framework's `DATABASES` dict, which
