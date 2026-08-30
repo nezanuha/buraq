@@ -116,6 +116,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The installation page leads with a project environment**, not
+  `uv tool install`. A global tool install puts `buraq` on the PATH and holds
+  Buraq and its own dependencies — and nothing of yours, so the first package
+  your code imports is not there. That was hidden while `startproject` built a
+  `.venv` and installed into it; now that it does not, the page has to say where
+  packages go, and it does, with a section on adding your own.
+
+  Three claims on that page had also stopped being true: that `startproject`
+  installs dependencies, that a project contains an `alembic/` directory, and
+  that `buraq` re-executes itself using `./.venv` so no activation is needed.
+
 - **BREAKING — `startproject` no longer creates a virtualenv.** It writes the
   files and stops; `--install` asks for the old behaviour. Whoever ran the
   command already has an environment with Buraq installed in it, so building a

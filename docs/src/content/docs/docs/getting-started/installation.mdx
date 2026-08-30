@@ -8,10 +8,29 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 ## The short version
 
 <Tabs syncKey="installer">
+<TabItem label="pip">
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows; source .venv/bin/activate elsewhere
+pip install buraq
+
+buraq startproject myproject
+cd myproject
+buraq migrate
+buraq runserver
+```
+
+Works on any machine with Python. Slower installs than uv, nothing else lost.
+
+</TabItem>
 <TabItem label="uv">
 
 ```bash
-uv tool install buraq
+uv venv
+.venv\Scripts\activate        # Windows; source .venv/bin/activate elsewhere
+uv pip install buraq
+
 buraq startproject myproject
 cd myproject
 buraq migrate
@@ -22,29 +41,17 @@ Needs uv — if `uv` is not a command on your machine yet, it is
 [one line away](#requirements), or use the pip tab.
 
 </TabItem>
-<TabItem label="pip">
-
-```bash
-pip install buraq
-buraq startproject myproject
-cd myproject
-buraq migrate
-buraq runserver
-```
-
-Works on any machine with Python. Slower installs than uv, nothing else lost.
-
-</TabItem>
 </Tabs>
 
-Your project is on `http://127.0.0.1:8000`. Everything
-below explains those five lines.
+Your project is on `http://127.0.0.1:8000`. Everything below explains those
+lines.
 
 :::note[The environment is yours]
 `buraq startproject` writes files. It does not create a virtualenv or install
 anything, because reaching the command at all means Buraq is installed and
-importable — the project runs in whatever environment you are already using,
-whether that is a venv, conda, Poetry or a container.
+importable — the project runs in whatever environment you are already in,
+whether that is a venv, conda, Poetry or a container. Your own packages go in
+that same environment.
 
 Pass `--install` if you would rather it made a `.venv` in the project and
 installed into that.
@@ -75,46 +82,50 @@ Everything works with pip — it ships with Python, and every step on this page 
 a pip tab. You give up install speed and the managed lockfile, nothing else.
 :::
 
-## 1. Install the `buraq` command
+## 1. Make an environment and install Buraq
 
-Creating a project needs `buraq` *before* any project exists, so install it
-globally rather than as a project dependency:
+Your project's packages need somewhere to live, and so does Buraq. One
+environment holds both:
 
 <Tabs syncKey="installer">
-<TabItem label="uv">
-
-```bash
-uv tool install buraq
-```
-
-</TabItem>
 <TabItem label="pip">
 
 ```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+source .venv/bin/activate      # macOS / Linux
+
 pip install buraq
+```
+
+</TabItem>
+<TabItem label="uv">
+
+```bash
+uv venv
+.venv\Scripts\activate        # Windows
+source .venv/bin/activate      # macOS / Linux
+
+uv pip install buraq
 ```
 
 </TabItem>
 </Tabs>
 
-`uv: command not found` means uv is not installed yet — see
-[Requirements](#requirements) above, or use the pip tab.
-
-Pip users who want uv's speed without installing it separately can have pip bring
-it along:
-
-```bash
-pip install "buraq[uv]"
-```
-
-`buraq startproject` then uses uv on its own — see
-[About the uv extra](#about-the-uv-extra).
-
 Check it worked:
 
 ```bash
 buraq --version
+# Buraq 1.6.0
 ```
+
+:::note[Installing it globally instead]
+`uv tool install buraq` or `pipx install buraq` put the command on your `PATH`
+without an environment, which is convenient for trying Buraq out. It is not
+enough to build with: the tool's environment holds Buraq and nothing of yours,
+so the first package your own code imports will not be there. Make an
+environment as above when you start writing anything.
+:::
 
 :::caution[Not `uv add buraq`]
 `uv add` adds a dependency to a project that already has a `pyproject.toml`, and
@@ -130,12 +141,11 @@ buraq startproject myproject
 cd myproject
 ```
 
-This writes the project **and installs its dependencies** — with uv if you have
-it, otherwise a `.venv` and pip.
+This writes files and nothing else — no environment, no install. You are already
+in one, which is how you ran the command.
 
-You get `config/` (settings and URLs), `alembic/` (migrations), `main.py`,
-`manage.py`, a `pyproject.toml` listing Buraq, and a `.env` holding a freshly
-generated `SECRET_KEY`.
+You get `config/` (settings and URLs), `main.py`, `manage.py`, a `pyproject.toml`
+listing Buraq, and a `.env` holding a freshly generated `SECRET_KEY`.
 
 ## 3. Run it
 
@@ -147,11 +157,15 @@ buraq runserver
 Your project is on `http://127.0.0.1:8000`, and the auto-generated API docs are
 at `/api/docs`.
 
-No activation step: run `buraq` from the project directory and it re-executes
-itself using `./.venv`.
+## Adding your own packages
 
-Next: [Quickstart](/docs/getting-started/quickstart) builds a working blog on top
-of this.
+They go in the environment from step 1, the same as Buraq:
+
+```bash
+pip install httpx          # or: uv pip install httpx
+```
+
+Record them in the project's `pyproject.toml` so the next person gets them too.
 
 ## Database drivers
 
@@ -201,18 +215,15 @@ pip install aiomcache            # Memcached
 </TabItem>
 </Tabs>
 
-## About the uv extra
-
-`pip install "buraq[uv]"` is an opt-in extra rather than a dependency: uv is a
-~50 MB binary, and nothing in Buraq needs it except project creation. Installing
-Buraq into an existing project therefore does not drag a package manager along
-with it.
-
 ## Troubleshooting
 
-**`buraq: command not found`** — the install directory is not on your `PATH`.
-With `uv tool install`, run `uv tool update-shell` and open a new terminal. With
-pip, use `python -m buraq` in place of `buraq`.
+**`buraq: command not found`** — the environment is not activated. Activate it,
+or use `python -m buraq` in place of `buraq`. If you installed with
+`uv tool install`, run `uv tool update-shell` and open a new terminal.
+
+**`ModuleNotFoundError` for a package you installed** — you are in a different
+environment from the one you installed into. `buraq shell -c "import buraq;
+print(buraq.__file__)"` prints where the running Buraq is being read from.
 
 **You want the environment made for you** — `buraq startproject myproject
 --install` creates a `.venv` in the project and installs into it, with `uv` when
