@@ -1368,22 +1368,19 @@ def startproject(
     , encoding="utf-8")
 
     typer.echo("")
-    ready = _install_dependencies(project_dir) if install else False
+    if install and not _install_dependencies(project_dir):
+        # The files are correct either way; only the install is outstanding, and
+        # it was asked for explicitly so the failure is worth naming.
+        console.warn("Dependencies were not installed. Run the install again, or "
+                     "use the environment you already have.")
 
     typer.echo("")
     console.success("Project created. Now run:")
     typer.echo(f"\n  cd {project_dir}")
-    if not ready:
-        # The environment is the project's own business: whoever ran this
-        # already has Buraq installed somewhere, and guessing that they want a
-        # second environment inside the project -- rather than the container,
-        # the conda env or the one they are already in -- is not this command's
-        # call to make. --install is there for anyone who does want it.
-        if _find_uv():
-            typer.echo("  uv sync                        # or your own environment")
-        else:
-            typer.echo("  python -m venv .venv           # or your own environment")
-            typer.echo("  pip install buraq")
+    # Nothing about an environment: reaching this command at all means Buraq is
+    # installed and importable, so migrate and runserver work from here as they
+    # stand. Printing a setup step would be telling somebody to do what they
+    # have visibly just done.
     typer.echo("  buraq migrate                  # create tables")
     typer.echo("  buraq runserver                # start server")
     typer.echo("\nAPI docs will be at: http://127.0.0.1:8000/api/docs\n")

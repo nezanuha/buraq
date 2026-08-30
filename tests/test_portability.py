@@ -131,13 +131,21 @@ def test_startproject_does_not_read_from_stdin():
     assert "typer.prompt" not in body
 
 
-def test_startproject_next_steps_match_the_available_installer():
-    """Printing `uv sync` on a machine without uv strands the reader."""
+def test_startproject_next_steps_do_not_set_up_an_environment():
+    """Reaching startproject means an environment already works.
+
+    The command printed a setup step -- uv sync, or venv and pip -- which told
+    the reader to do what running the command had just proved they had done.
+    What it prints now is only what is actually outstanding.
+    """
     source = (PACKAGE / "management" / "cli.py").read_text(encoding="utf-8")
     start = source.index("def startproject(")
-    end = source.index("\n@app.command()", start)
-    body = source[start:end]
+    end = source.index(chr(10) + "@app.command()", start)
+    printed = chr(10).join(
+        line for line in source[start:end].splitlines() if "typer.echo(" in line
+    )
 
-    assert "_find_uv()" in body
-    assert "python -m venv .venv" in body
-    assert "pip install buraq" in body
+    for absent in ("uv sync", "python -m venv", "pip install buraq"):
+        assert absent not in printed, f"next steps should not print {absent!r}"
+    assert "buraq migrate" in printed
+    assert "buraq runserver" in printed

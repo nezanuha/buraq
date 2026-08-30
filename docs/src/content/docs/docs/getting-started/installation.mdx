@@ -40,16 +40,25 @@ Works on any machine with Python. Slower installs than uv, nothing else lost.
 Your project is on `http://127.0.0.1:8000`. Everything
 below explains those five lines.
 
+:::note[The environment is yours]
+`buraq startproject` writes files. It does not create a virtualenv or install
+anything, because reaching the command at all means Buraq is installed and
+importable — the project runs in whatever environment you are already using,
+whether that is a venv, conda, Poetry or a container.
+
+Pass `--install` if you would rather it made a `.venv` in the project and
+installed into that.
+:::
+
 ## Requirements
 
 - **Python 3.11 or newer** — check with `python --version`, and install from
   [python.org/downloads](https://www.python.org/downloads/) if it reports lower
 - **uv** — recommended, and a one-line install
 
-Buraq is built for speed, and uv is the toolchain that matches it: installs are
-far faster than pip's, and it manages the project's environment and lockfile for
-you. A generated Buraq project is already set up for it, and `buraq startproject`
-uses it automatically whenever it is present.
+uv installs far faster than pip and manages a project's environment and lockfile
+for you. Nothing here requires it — `buraq startproject` writes files and does
+not touch your environment, so whichever tool you already use is the right one.
 
 ```bash
 # macOS / Linux
