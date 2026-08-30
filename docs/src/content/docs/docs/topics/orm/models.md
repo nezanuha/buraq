@@ -236,7 +236,7 @@ leaving the model on default behaviour.
 
 | Option | Type | Description |
 |---|---|---|
-| `table_name` | `str` | Database table name. Defaults to the app label plus the lowercased plural model name — `Post` in `blog` becomes `blog_posts`. The app label is part of it because a model name is not unique across a project: two apps may each define a `Post`, and without the prefix the second one cannot be created at all. Also accepted as `db_table` (Django alias). |
+| `table_name` | `str` | Database table name. Defaults to the app label plus the lowercased plural model name — `Post` in `blog` becomes `blog_posts`, `Category` becomes `blog_categories`, `Box` becomes `blog_boxes`. The app label is part of it because a model name is not unique across a project: two apps may each define a `Post`, and without the prefix the second one cannot be created at all. Irregular plurals are not attempted — `Person` becomes `persons`, not `people` — so set this when the name matters. Also accepted as `db_table` (Django alias). |
 | `db_table_comment` | `str` | Comment stored on the table itself — useful for anyone reading the database directly. |
 | `managed` | `bool` | Default `True`. When `False`, Buraq never creates, alters or drops the table. Use it for existing tables and database views. |
 

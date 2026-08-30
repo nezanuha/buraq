@@ -60,8 +60,22 @@ def _to_table_name(class_name: str, app_label: str = "") -> str:
     apps cannot be installed together at all.
     """
     s = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", class_name)
-    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower() + "s"
+    name = _pluralize(re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower())
     return f"{app_label}_{name}" if app_label else name
+
+
+def _pluralize(word: str) -> str:
+    """Enough English to stop the obvious mistakes.
+
+    An unconditional "s" produced categorys, boxs and classs. These three rules
+    cover the endings that actually occur in model names; anything irregular --
+    person, child, mouse -- is beyond a rule and belongs in ``Meta.db_table``.
+    """
+    if word.endswith(("s", "x", "z", "ch", "sh")):
+        return word + "es"
+    if len(word) > 1 and word.endswith("y") and word[-2] not in "aeiou":
+        return word[:-1] + "ies"
+    return word + "s"
 
 
 class Index:

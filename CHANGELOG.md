@@ -116,6 +116,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING — a default table name is pluralised as English, not by adding
+  `s`.** `Category` produced `categorys`, and so did `boxs`, `classs`,
+  `addresss` and `dishs` — names that then appear in every query, error message
+  and database console for the life of the project. Words ending in `s`, `x`,
+  `z`, `ch` or `sh` now take `es`, and a consonant before a `y` becomes `ies`.
+  Irregular plurals are not attempted: `Person` is still `persons`, and
+  `Meta.db_table` is the answer when the name matters.
+
+  No table Buraq ships changes name, so the migrations it ships still apply. A
+  project with a model whose name hits one of these endings has a table to
+  rename; `buraq makemigrations` will not see it as a rename, so write that
+  migration by hand or set `Meta.db_table` to the old name.
+- **Generated migrations are numbered** — `0001_auto.py`, `0002_auto.py`, the
+  same as the migrations Buraq ships, rather than Alembic's random hex. A
+  directory listing now has the sequence in it. The revision id inside the file
+  keeps the `<app>_<number>` form that keeps it unique across apps, since
+  Alembic resolves by id and never by filename.
+
 - **A scaffolded settings file names `USE_I18N` and `USE_TZ`** in the comment
   above the internationalization block. Both are on by default and the file
   writes only what a project is likely to edit, so neither appeared — with the

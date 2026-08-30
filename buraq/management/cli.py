@@ -3,6 +3,7 @@ import importlib
 import io
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -596,7 +597,7 @@ def _app_revision_kwargs(app: str, versions: Path) -> dict:
     chose the installed package. It equally needs telling which head to follow,
     since every other app's branch is a head too.
     """
-    args = {"version_path": str(versions)}
+    args = {"version_path": str(versions), "rev_id": f"{app}_{_next_number(versions):04d}"}
     script = _script_directory()
     if script is None:
         return args
@@ -613,6 +614,37 @@ def _app_revision_kwargs(app: str, versions: Path) -> dict:
 
     heads = [rev.revision for rev in own if rev.is_head] or [own[0].revision]
     return {**args, "head": heads[0]}
+
+
+def _next_number(versions: Path) -> int:
+    """The next migration number for one app, from the files already there."""
+    used = [
+        int(m.group(1))
+        for path in versions.glob("*.py")
+        if (m := re.match(r"(\d{4})_", path.name))
+    ]
+    return max(used, default=0) + 1
+
+
+def _sequential_name(path: Path, rev_id: str, number: int) -> Path:
+    """Rename a freshly written revision to NNNN_slug.py.
+
+    Alembic names a file after its revision id, which is random hex -- so a
+    directory listing has no order in it and reads as unrelated files. Numbering
+    is what the migrations Buraq ships already use, and what makes the sequence
+    legible. The id inside the file is untouched: Alembic resolves revisions by
+    id and never by filename, so the name is free to be for people.
+    """
+    # Alembic names the file "<rev_id>_<slug>", and the id is itself
+    # "<app>_<number>" -- so the whole id has to come off, not the first
+    # underscore-separated piece of it.
+    stem = path.stem
+    slug = stem[len(rev_id) + 1:] if stem.startswith(f"{rev_id}_") else stem
+    renamed = path.with_name(f"{number:04d}_{slug or 'auto'}.py")
+    if renamed.exists():
+        return path
+    path.rename(renamed)
+    return renamed
 
 
 def _autogenerate(app: str, versions: Path, message: str) -> list[Path]:
@@ -655,12 +687,14 @@ def _autogenerate(app: str, versions: Path, message: str) -> list[Path]:
             os.environ[_APP_ENV_VAR] = previous
 
     written = sorted(set(versions.glob("*.py")) - before)
+    rev_id = kwargs["rev_id"]
+    number = int(rev_id.rsplit("_", 1)[-1])
     kept = []
     for path in written:
         if _is_empty_migration(path):
             path.unlink()
         else:
-            kept.append(path)
+            kept.append(_sequential_name(path, rev_id, number))
     return kept
 
 
