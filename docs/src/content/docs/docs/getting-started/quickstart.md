@@ -5,8 +5,8 @@ description: "Build a working blog with models, views, URLs and templates."
 
 A working blog in about five minutes — models, views, URLs, templates.
 
-New here? [Installation](/docs/getting-started/installation) covers getting the
-`buraq` command first.
+New here? [Installation](/docs/getting-started/installation) covers making an
+environment and installing the `buraq` command first.
 
 ## 1. Create the project
 
@@ -15,7 +15,8 @@ buraq startproject myblog
 cd myblog
 ```
 
-That writes the project and installs its dependencies.
+That writes the files. It installs nothing — the project runs in the
+environment you installed Buraq into, and your own packages go there too.
 
 ## 2. Create the app
 
