@@ -99,15 +99,21 @@ def test_scaffolded_python_files_load(name, content, encoding, tmp_path):
     assert result.returncode == 0, result.stderr
 
 
-def test_the_scaffolded_manage_py_does_not_detach_on_windows():
-    """Same defect as the console script: execv() on Windows orphans the server."""
-    source = (PACKAGE / "management" / "cli.py").read_text(encoding="utf-8")
+def test_the_scaffolded_manage_py_runs_in_place():
+    """It no longer re-executes itself, so it cannot detach or pick the wrong venv.
+
+    manage.py used to look for a .venv beside it and re-run itself with that
+    interpreter, which needed one branch to avoid orphaning the server on
+    Windows and another to identify the environment on POSIX -- where the venv's
+    python is a symlink to the system one and comparing resolved paths said they
+    were the same. The project no longer creates an environment, so there is
+    nothing to re-enter and none of that has to be right.
+    """
     manage = next(c for name, c, _ in _scaffolded_files() if name == "manage.py")
 
-    assert 'os.name == "nt"' in manage
-    assert "subprocess.run(argv).returncode" in manage
-    assert "os.execv(str(python), argv)" in manage
-    assert source  # guards against the template silently disappearing
+    for absent in ("os.execv", "subprocess", "_bootstrap", ".venv", "sys.prefix"):
+        assert absent not in manage, f"manage.py should no longer mention {absent}"
+    assert "from buraq.management.cli import main" in manage
 
 
 def test_startproject_does_not_read_from_stdin():

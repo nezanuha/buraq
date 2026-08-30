@@ -1125,8 +1125,10 @@ def startproject(
         None, help="Same as the directory argument, kept for existing scripts"
     ),
     use_postgres: bool = typer.Option(False, "--postgres", help="Configure for PostgreSQL"),
-    no_install: bool = typer.Option(
-        False, "--no-install", help="Only write the files; do not install dependencies"
+    install: bool = typer.Option(
+        False,
+        "--install",
+        help="Also create a .venv and install into it (uv when present, else venv + pip)",
     ),
 ):
     """
@@ -1341,38 +1343,19 @@ def startproject(
         "app = Buraq(settings_module='config.settings')\n"
     , encoding="utf-8")
 
-    # manage.py — auto-detects .venv so `python manage.py` just works
+    # manage.py -- the same entry point as the `buraq` command, run from the
+    # project so config.settings is importable without anything on PYTHONPATH.
     (project_dir / "manage.py").write_text(
-        '#!/usr/bin/env python\n'
+        "#!/usr/bin/env python\n"
         '"""Run: python manage.py <command>"""\n'
-        'import os, sys\n'
-        'from pathlib import Path\n\n'
-        'def _bootstrap():\n'
-        '    root = Path(__file__).parent.resolve()\n'
-        '    venv = root / ".venv"\n'
-        '    python = venv / "Scripts" / "python.exe"\n'
-        '    if not python.exists():\n'
-        '        python = venv / "bin" / "python"\n'
-        "    # sys.prefix rather than the interpreter path: on Linux and macOS\n"
-        "    # the venv python is a symlink to the system one, so resolving both\n"
-        "    # gives the same binary and this would think it was already inside.\n"
-        "    if not python.exists() or Path(sys.prefix).resolve() == venv.resolve():\n"
-        '        return\n'
-        '    argv = [str(python)] + sys.argv\n'
-        '    if os.name == \"nt\":\n'
-        '        # Windows has no real exec: execv() spawns a child and exits this\n'
-        '        # process, so the shell takes its prompt back while the server runs\n'
-        '        # on detached and Ctrl+C reaches nobody.\n'
-        '        import subprocess\n'
-        '        raise SystemExit(subprocess.run(argv).returncode)\n'
-        '    os.execv(str(python), argv)\n\n'
-        '_bootstrap()\n\n'
-        'sys.path.insert(0, str(Path(__file__).parent))\n'
-        'os.environ.setdefault(\"BURAQ_SETTINGS_MODULE\", \"config.settings\")\n'
-        'from buraq.management.cli import main\n\n'
+        "import os, sys\n"
+        "from pathlib import Path\n\n"
+        "sys.path.insert(0, str(Path(__file__).parent))\n"
+        'os.environ.setdefault("BURAQ_SETTINGS_MODULE", "config.settings")\n'
+        "from buraq.management.cli import main\n\n"
         'if __name__ == "__main__":\n'
-        '    main()\n'
-    , encoding="utf-8")
+        "    main()\n"
+        , encoding="utf-8")
 
     # templates/base.html
     (project_dir / "templates" / "base.html").write_text(
@@ -1385,19 +1368,22 @@ def startproject(
     , encoding="utf-8")
 
     typer.echo("")
-    ready = False if no_install else _install_dependencies(project_dir)
+    ready = _install_dependencies(project_dir) if install else False
 
     typer.echo("")
     console.success("Project created. Now run:")
     typer.echo(f"\n  cd {project_dir}")
     if not ready:
-        # Either --no-install, or the install did not finish. Either way the
-        # files are correct and this is the step that is still outstanding.
+        # The environment is the project's own business: whoever ran this
+        # already has Buraq installed somewhere, and guessing that they want a
+        # second environment inside the project -- rather than the container,
+        # the conda env or the one they are already in -- is not this command's
+        # call to make. --install is there for anyone who does want it.
         if _find_uv():
-            typer.echo("  uv sync                        # install dependencies")
+            typer.echo("  uv sync                        # or your own environment")
         else:
-            typer.echo("  python -m venv .venv           # create the environment")
-            typer.echo("  pip install buraq              # install dependencies")
+            typer.echo("  python -m venv .venv           # or your own environment")
+            typer.echo("  pip install buraq")
     typer.echo("  buraq migrate                  # create tables")
     typer.echo("  buraq runserver                # start server")
     typer.echo("\nAPI docs will be at: http://127.0.0.1:8000/api/docs\n")

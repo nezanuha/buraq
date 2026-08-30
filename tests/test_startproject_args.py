@@ -88,8 +88,15 @@ def test_the_installer_is_chosen_from_what_is_available():
     assert '"install", "buraq"' in source
 
 
-def test_no_install_is_offered():
-    assert "no_install" in _params()
+def test_installing_is_opt_in():
+    """Whoever ran startproject already has an environment with Buraq in it.
+
+    Building a second one inside the project was a guess about which environment
+    they meant -- not the container, not the conda env, not the one they were
+    standing in. --install is there for anyone who does want it.
+    """
+    assert "install" in _params()
+    assert "no_install" not in _params()
 
 
 def test_a_failed_install_does_not_raise(tmp_path, monkeypatch):

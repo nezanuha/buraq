@@ -116,6 +116,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING — `startproject` no longer creates a virtualenv.** It writes the
+  files and stops; `--install` asks for the old behaviour. Whoever ran the
+  command already has an environment with Buraq installed in it, so building a
+  second one inside the project was a guess about which environment they
+  meant — not the container, not the conda environment, not the one they were
+  standing in.
+
+  Three faults came from that guess. `manage.py` carried eighteen lines to
+  re-execute itself inside the project's `.venv`, which needed one branch to
+  avoid orphaning the server on Windows and another to identify the environment
+  on Linux and macOS, where the venv's python is a symlink to the system one and
+  comparing resolved paths said they were the same interpreter. The install
+  resolved Buraq from the index, so a project could not be run against a local
+  build without reinstalling over the top. And a venv `uv` creates has no `pip`
+  in it, so `python -m pip` inside a scaffolded project failed.
+
+  `manage.py` is eleven lines now and re-executes nothing. `startproject` returns
+  in about two seconds rather than after an install, and prints the environment
+  step alongside the others.
+
 - **BREAKING — a default table name is pluralised as English, not by adding
   `s`.** `Category` produced `categorys`, and so did `boxs`, `classs`,
   `addresss` and `dishs` — names that then appear in every query, error message

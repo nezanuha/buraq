@@ -205,11 +205,14 @@ with it.
 With `uv tool install`, run `uv tool update-shell` and open a new terminal. With
 pip, use `python -m buraq` in place of `buraq`.
 
-**The install step failed** (no network, a blocked index) — the project files are
-still correct. `buraq startproject` prints the one command left to run; run it
-from inside the project.
+**You want the environment made for you** — `buraq startproject myproject
+--install` creates a `.venv` in the project and installs into it, with `uv` when
+it is there and `venv` + `pip` when it is not. Without the flag the project is
+files only, and runs in whatever environment you are already using.
 
-**You want the files only** — `buraq startproject myproject --no-install`.
+**The `--install` step failed** (no network, a blocked index) — the project files
+are still correct. `buraq startproject` prints the one command left to run; run
+it from inside the project.
 
 **You want the project somewhere else** — name a directory second:
 `buraq startproject myproject blog_folder`. Files land directly in it. `--dest`
