@@ -128,3 +128,45 @@ def test_development_and_collectstatic_agree(dev, tmp_path, monkeypatch):
     for rel in ("brand.css", "blog/post.css"):
         assert (tmp_path / "out" / rel).exists(), f"collectstatic missed {rel}"
         assert client.get(f"/static/{rel}").status_code == 200, f"development missed {rel}"
+
+
+def test_no_implicit_static_directory(dev, tmp_path, monkeypatch):
+    """./static is not served unless something actually configures it.
+
+    The handler used to fall back to ./static when STATIC_DIR was unset, while
+    the finders did not -- so a file there was served while developing and
+    absent after collectstatic, which is the worse way round for the two to
+    disagree.
+    """
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "static").mkdir()
+    (tmp_path / "static" / "local.css").write_text("a{}")
+    theme = tmp_path / "theme"
+    theme.mkdir()
+    (theme / "brand.css").write_text("b{}")
+
+    client = dev(STATIC_DIR=None, STATICFILES_DIRS=[str(theme)])
+    assert client.get("/static/brand.css").status_code == 200
+    assert client.get("/static/local.css").status_code == 404
+
+
+def test_development_serves_exactly_what_the_finders_search(dev, tmp_path, monkeypatch):
+    """One list, so the two cannot drift apart again."""
+    import sys
+
+    from buraq.contrib.staticfiles.finders import search_directories
+
+    theme = tmp_path / "theme"
+    theme.mkdir()
+    (theme / "brand.css").write_text("b{}")
+    app = tmp_path / "news"
+    (app / "static" / "news").mkdir(parents=True)
+    (app / "__init__.py").write_text("")
+    (app / "static" / "news" / "feed.css").write_text("n{}")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    sys.modules.pop("news", None)
+
+    client = dev(STATIC_DIR=None, STATICFILES_DIRS=[str(theme)], INSTALLED_APPS=["news"])
+    assert search_directories() == [str(theme), str(app / "static")]
+    assert client.get("/static/brand.css").status_code == 200
+    assert client.get("/static/news/feed.css").status_code == 200

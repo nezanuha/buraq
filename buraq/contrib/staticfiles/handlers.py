@@ -178,30 +178,15 @@ class StaticFilesHandler:
     def _dev_directories(self) -> list[str]:
         """Every directory a source file could be in, in search order.
 
-        collectstatic finds files through STATICFILES_DIRS and each installed
-        app's static/, but the development mount only ever looked at STATIC_DIR
-        -- so a project using the setting the framework itself prefers got its
-        files collected in production and a 404 while developing, which reads as
-        a missing file rather than a missing mount.
+        Asked of the finders rather than assembled here, so development cannot
+        drift from collectstatic. It did twice: STATICFILES_DIRS was not read at
+        all, and then ./static was served without STATIC_DIR set while the
+        finders ignored it -- a file that worked while building and was missing
+        once deployed.
         """
-        found: list[str] = []
-        for source in (
-            *(getattr(settings, "STATICFILES_DIRS", None) or []),
-            str(self._static_dir),
-        ):
-            if source not in found and Path(source).is_dir():
-                found.append(source)
+        from buraq.contrib.staticfiles.finders import search_directories
 
-        # Each app's static/ itself, not the directory a file happens to sit in:
-        # a file at shop/static/shop/cart.js is served at /static/shop/cart.js,
-        # so the mount root is shop/static.
-        from buraq.contrib.staticfiles.finders import AppDirectoriesFinder
-
-        for app_name in getattr(settings, "INSTALLED_APPS", None) or []:
-            root = AppDirectoriesFinder._app_static_dir(app_name)
-            if root and root not in found:
-                found.append(root)
-        return found
+        return [d for d in search_directories() if Path(d).is_dir()]
 
     def _mount_dev(self) -> None:
         directories = self._dev_directories()

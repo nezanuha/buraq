@@ -49,6 +49,12 @@ STATIC_DIR = str(BASE_DIR / "static")     # equivalent to a one-entry list
 
 Set one or the other; there is no reason for both.
 
+:::caution
+Neither is implied. A `static/` directory that no setting mentions is not
+served and not collected — so if you remove `STATIC_DIR` from a scaffolded
+project, name the directory in `STATICFILES_DIRS` instead.
+:::
+
 ## In templates
 
 Two equivalent styles — use whichever you prefer:

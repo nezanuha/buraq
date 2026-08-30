@@ -205,6 +205,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at `shop/static/shop/cart.js` is served at `/static/shop/cart.js`, so the
   directory to serve is the app's `static/` and not the one the file sits in.
 
+  Development now asks the finders for that list rather than assembling its own,
+  so the two cannot drift apart again. That also removes an implicit fallback to
+  `./static` when `STATIC_DIR` was unset, which the finders never had: a file
+  there was served while developing and missing after `collectstatic`, which is
+  the worse way round for the two to disagree. Name the directory in
+  `STATICFILES_DIRS` if a project relied on it.
+
 - **Nothing said Buraq is single-database.** The migration guide called
   `DATABASE_URL` a replacement for the older framework's `DATABASES` dict, which
   reads as a change of syntax; it is a change of capability. There are no
