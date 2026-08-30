@@ -272,7 +272,7 @@ buraq compilemessages
 buraq compilemessages --domain django
 ```
 
-Requires `babel` (`buraq install babel`). Strings are extracted from `.py` and `.html` files by default. Compiled `.mo` files are written next to the `.po` files in `locale/<lang>/LC_MESSAGES/`.
+Requires `babel` (`pip install babel`). Strings are extracted from `.py` and `.html` files by default. Compiled `.mo` files are written next to the `.po` files in `locale/<lang>/LC_MESSAGES/`.
 
 See [Internationalization](../topics/i18n.md) for full usage.
 
@@ -419,16 +419,17 @@ buraq version
 # Buraq 0.1.0
 ```
 
-## Package management (uv wrappers)
+## Package management
+
+Buraq has no package commands of its own. Use whatever the project already uses:
 
 ```bash
-buraq install requests httpx
-buraq install --dev pytest
-buraq uninstall requests
-buraq sync
-buraq pip freeze
-
-# Run any command inside the uv virtual environment
-buraq run python -m pytest
-buraq run alembic history
+uv add requests httpx          # uv
+poetry add requests httpx      # Poetry
+pip install requests httpx     # pip
 ```
+
+There were wrappers here — `buraq install`, `uninstall`, `sync`, `pip` and
+`run` — and they forwarded one option each out of the sixty-odd their tools
+accept, under names that did not match. Anything past the simplest case had to
+be run against the real command anyway, so they are gone.

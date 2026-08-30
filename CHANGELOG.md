@@ -183,6 +183,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **BREAKING — the uv wrapper commands.** `buraq install`, `buraq uninstall`,
+  `buraq sync`, `buraq pip` and `buraq run` each did nothing but call the
+  matching `uv` subcommand. They forwarded one option apiece — `--dev` and
+  `--all-extras` — out of the sixty-odd `uv add` and `uv sync` accept, so
+  anything beyond the simplest case had to be run against `uv` directly, and
+  the names did not match what they wrapped (`install` for `add`). They also
+  required uv unconditionally, which broke them in exactly the projects Buraq
+  scaffolds without it, using the pip fallback.
+
+  Use whatever the project already uses: `uv add`, `poetry add`, `pip install`.
+  A web framework has no opinion worth adding here, and having one cost a
+  supported surface that could only disappoint.
+
 - **`CacheControlMiddleware`** — it set `Cache-Control` with `=` rather than
   `setdefault`, so adding it overwrote the static handler's header and put back
   the unconditional `immutable` described above. It was also a

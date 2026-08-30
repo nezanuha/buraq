@@ -1113,68 +1113,6 @@ def compilemessages(
     invalidate_cache()
 
 
-# ─── uv Package Manager ──────────────────────────────────────────────────────
-
-def _uv() -> str:
-    """Return the uv executable path, or raise if not installed."""
-    uv_path = _find_uv()
-    if not uv_path:
-        typer.echo(
-            "uv is not installed. Install it with:\n"
-            "  curl -LsSf https://astral.sh/uv/install.sh | sh\n"
-            "  or: pip install uv",
-            err=True,
-        )
-        raise typer.Exit(1)
-    return uv_path
-
-
-@app.command()
-def install(
-    packages: list[str] = typer.Argument(..., help="Packages to install"),
-    dev: bool = typer.Option(False, "--dev", "-d", help="Add as dev dependency"),
-):
-    """Install packages using uv (uv add)."""
-    cmd = [_uv(), "add"]
-    if dev:
-        cmd.append("--dev")
-    cmd.extend(packages)
-    console.step(f"Installing {', '.join(packages)}")
-    subprocess.run(cmd)
-
-
-@app.command()
-def uninstall(packages: list[str] = typer.Argument(..., help="Packages to remove")):
-    """Remove packages using uv (uv remove)."""
-    cmd = [_uv(), "remove"] + list(packages)
-    console.step(f"Removing {', '.join(packages)}")
-    subprocess.run(cmd)
-
-
-@app.command()
-def sync(
-    all_extras: bool = typer.Option(False, "--all-extras", help="Include all optional deps"),
-):
-    """Sync all dependencies from pyproject.toml using uv."""
-    cmd = [_uv(), "sync"]
-    if all_extras:
-        cmd.append("--all-extras")
-    console.step("Syncing dependencies with uv")
-    subprocess.run(cmd)
-
-
-@app.command("pip")
-def pip_run(args: list[str] = typer.Argument(..., help="pip arguments")):
-    """Run any uv pip command (e.g. buraq pip freeze)."""
-    subprocess.run([_uv(), "pip"] + list(args))
-
-
-@app.command()
-def run(args: list[str] = typer.Argument(..., help="Command to run in uv environment")):
-    """Run a command inside the uv virtual environment."""
-    subprocess.run([_uv(), "run"] + list(args))
-
-
 # ─── Project Scaffolding (startproject) ──────────────────────────────────────
 
 @app.command()
