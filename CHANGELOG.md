@@ -193,6 +193,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`python manage.py <command>` could not run an app's own commands.** It called
+  `app()` while the `buraq` script calls `main()`, and only `main()` registers
+  each installed app's commands before arguments are parsed — so the same
+  command worked one way and answered "No such command" the other. `manage.py`
+  now calls `main()` as well.
+- **`manage.py` did not re-run itself inside the project's virtualenv on Linux
+  or macOS.** It compared the resolved path of the running interpreter against
+  the venv's, and on those platforms the venv's `python` is a symlink to the
+  system one — so both resolve to the same binary, and running
+  `python manage.py` with the system interpreter looked like it was already
+  inside the environment. It is now `sys.prefix` against the venv directory,
+  which is what actually distinguishes them. Windows was unaffected, since the
+  venv holds a real copy there.
+
 - **`STATICFILES_DIRS` was ignored while developing.** The development mount read
   only `STATIC_DIR`, while the finders behind `collectstatic` read
   `STATICFILES_DIRS` and each installed app's `static/` as well — so a project

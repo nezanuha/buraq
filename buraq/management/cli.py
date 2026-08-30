@@ -1415,7 +1415,10 @@ def startproject(
         '    python = venv / "Scripts" / "python.exe"\n'
         '    if not python.exists():\n'
         '        python = venv / "bin" / "python"\n'
-        '    if not python.exists() or Path(sys.executable).resolve() == python.resolve():\n'
+        "    # sys.prefix rather than the interpreter path: on Linux and macOS\n"
+        "    # the venv python is a symlink to the system one, so resolving both\n"
+        "    # gives the same binary and this would think it was already inside.\n"
+        "    if not python.exists() or Path(sys.prefix).resolve() == venv.resolve():\n"
         '        return\n'
         '    argv = [str(python)] + sys.argv\n'
         '    if os.name == \"nt\":\n'
@@ -1428,9 +1431,9 @@ def startproject(
         '_bootstrap()\n\n'
         'sys.path.insert(0, str(Path(__file__).parent))\n'
         'os.environ.setdefault(\"BURAQ_SETTINGS_MODULE\", \"config.settings\")\n'
-        'from buraq.management.cli import app\n\n'
+        'from buraq.management.cli import main\n\n'
         'if __name__ == "__main__":\n'
-        '    app()\n'
+        '    main()\n'
     , encoding="utf-8")
 
     # templates/base.html
