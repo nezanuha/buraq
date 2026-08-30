@@ -145,6 +145,46 @@ def _mount_path(url: str) -> str | None:
     return _normalize_url_prefix(url).rstrip("/") or None
 
 
+class _FinderStatic(StaticFiles):
+    """StaticFiles that resolves a request through STATICFILES_FINDERS.
+
+    Starlette looks a path up in a list of directories. This looks it up the way
+    collectstatic does, so whatever will be collected is what gets served, and a
+    finder that has no directories to offer -- one reading from a package, an
+    archive, a build tool's output -- works here too.
+    """
+
+    def __init__(self) -> None:
+        # check_dir would reject the empty directory list; there is no directory.
+        super().__init__(directory=None, check_dir=False)
+
+    def lookup_path(self, path: str):
+        # Starlette's own lookup confines the result to the served directory with
+        # a commonpath check. There is no single directory here, so the path is
+        # confined before it reaches a finder instead: an absolute path, or one
+        # with a parent segment in it, would otherwise be joined to a finder's
+        # root and read whatever it pointed at. The client's %2e%2e is already
+        # decoded by this point, which is what makes the segment check the right
+        # place for it.
+        if path.startswith(("/", "\\")) or (len(path) > 1 and path[1] == ":"):
+            return "", None
+        # A separator is either kind here: the client sends /, and Starlette
+        # hands over the platform's own on Windows.
+        segments = path.replace("\\", "/").split("/")
+        if any(part in ("..", "") for part in segments if part != "."):
+            return "", None
+
+        from buraq.contrib.staticfiles.finders import find
+
+        located = find(path)
+        if not located:
+            return "", None
+        try:
+            return located, os.stat(located)
+        except (FileNotFoundError, NotADirectoryError):
+            return "", None
+
+
 class StaticFilesHandler:
     """
     Serves static files — development serves them straight from STATIC_DIR,
@@ -175,28 +215,22 @@ class StaticFilesHandler:
             self._mount_production()
         self._mount_media()
 
-    def _dev_directories(self) -> list[str]:
-        """Every directory a source file could be in, in search order.
-
-        Asked of the finders rather than assembled here, so development cannot
-        drift from collectstatic. It did twice: STATICFILES_DIRS was not read at
-        all, and then ./static was served without STATIC_DIR set while the
-        finders ignored it -- a file that worked while building and was missing
-        once deployed.
-        """
-        from buraq.contrib.staticfiles.finders import search_directories
-
-        return [d for d in search_directories() if Path(d).is_dir()]
-
     def _mount_dev(self) -> None:
-        directories = self._dev_directories()
-        if not directories:
-            return
-        served = StaticFiles(directory=directories[0])
-        # StaticFiles takes one directory but searches all_directories, which is
-        # how it serves a package's files alongside a project's.
-        served.all_directories = list(directories)
-        self.app.mount(_mount_path(settings.STATIC_URL), served, name="static")
+        """Serve source files by asking the finders, exactly as collectstatic does.
+
+        Mounting a list of directories meant keeping a second copy of "where do
+        source files live", and it drifted from the finders three times: once
+        ignoring STATICFILES_DIRS, once mounting the wrong root for an app, once
+        serving a ./static the finders never looked at. A custom finder could
+        not be served at all, since it has files rather than directories to
+        offer.
+
+        Resolving each request through the finders removes the second copy. It
+        costs a lookup per request, which is why it is the development path
+        only; production serves STATIC_ROOT, where collectstatic has already put
+        everything.
+        """
+        self.app.mount(_mount_path(settings.STATIC_URL), _FinderStatic(), name="static")
 
     def _mount_production(self) -> None:
         """

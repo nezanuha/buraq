@@ -421,7 +421,10 @@ Namespace your files under the app name (e.g. `posts/style.css`) to avoid collis
 
 ## Custom finders
 
-Implement a finder class with `find(path)` and `list()` methods, then add it to `STATICFILES_FINDERS`:
+Implement a finder class with `find(path)` and `list()` methods, then add it to
+`STATICFILES_FINDERS`. `find` resolves one path and `list` enumerates
+everything; development uses the first and `collectstatic` the second, so a
+finder that implements both works in each:
 
 ```python title="myapp/finders.py"
 class NodeModulesFinder:
@@ -442,6 +445,10 @@ STATICFILES_FINDERS = [
     "myapp.finders.NodeModulesFinder",
 ]
 ```
+
+A finder needs no directory of its own — one reading from a package, an archive
+or a build tool's output works the same way, because nothing outside it assumes
+files come from a filesystem tree.
 
 ## Media files
 

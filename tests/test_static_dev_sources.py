@@ -154,7 +154,6 @@ def test_development_serves_exactly_what_the_finders_search(dev, tmp_path, monke
     """One list, so the two cannot drift apart again."""
     import sys
 
-    from buraq.contrib.staticfiles.finders import search_directories
 
     theme = tmp_path / "theme"
     theme.mkdir()
@@ -167,6 +166,54 @@ def test_development_serves_exactly_what_the_finders_search(dev, tmp_path, monke
     sys.modules.pop("news", None)
 
     client = dev(STATIC_DIR=None, STATICFILES_DIRS=[str(theme)], INSTALLED_APPS=["news"])
-    assert search_directories() == [str(theme), str(app / "static")]
     assert client.get("/static/brand.css").status_code == 200
     assert client.get("/static/news/feed.css").status_code == 200
+
+
+def test_a_custom_finder_is_served(dev, tmp_path, monkeypatch):
+    """A finder with files but no directories -- the shape the docs show.
+
+    Mounting directories could not serve one at all: there is nothing to mount.
+    Development resolves through the finders instead, so anything collectstatic
+    can collect is reachable while building.
+    """
+    import sys
+
+    (tmp_path / "node_modules" / "pkg").mkdir(parents=True)
+    (tmp_path / "node_modules" / "pkg" / "lib.js").write_text("// lib")
+    (tmp_path / "myfinders.py").write_text(
+        "from pathlib import Path\n\n"
+        "class NodeModulesFinder:\n"
+        "    def find(self, path):\n"
+        "        full = Path('node_modules') / path\n"
+        "        return str(full) if full.is_file() else None\n\n"
+        "    def list(self):\n"
+        "        for f in Path('node_modules').rglob('*'):\n"
+        "            if f.is_file():\n"
+        "                yield f.relative_to('node_modules').as_posix(), str(f)\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    sys.modules.pop("myfinders", None)
+
+    client = dev(
+        STATIC_DIR=None,
+        STATICFILES_DIRS=[],
+        INSTALLED_APPS=[],
+        STATICFILES_FINDERS=["myfinders.NodeModulesFinder"],
+    )
+    assert client.get("/static/pkg/lib.js").status_code == 200
+
+
+def test_a_path_cannot_escape_upwards(dev, tmp_path, monkeypatch):
+    """Resolving through the finders must not become a way out of them."""
+    secret = tmp_path / "secret.txt"
+    secret.write_text("nope")
+    served = tmp_path / "static"
+    served.mkdir()
+    (served / "ok.css").write_text("a{}")
+
+    client = dev(STATIC_DIR=None, STATICFILES_DIRS=[str(served)])
+    assert client.get("/static/ok.css").status_code == 200
+    for attempt in ("/static/../secret.txt", "/static/%2e%2e/secret.txt"):
+        assert client.get(attempt).status_code in (400, 404), attempt

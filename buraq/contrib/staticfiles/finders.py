@@ -29,10 +29,6 @@ class FileSystemFinder:
             dirs.append(static_dir)
         self.dirs = dirs
 
-    def search_directories(self) -> list[str]:
-        """The roots this finder searches, in order."""
-        return list(self.dirs)
-
     def find(self, path: str) -> str | None:
         """Return the absolute path of ``path`` if it exists in any configured dir."""
         for root in self.dirs:
@@ -64,15 +60,6 @@ class AppDirectoriesFinder:
 
     Finds static files inside each installed app's ``static/`` directory.
     """
-
-    def search_directories(self) -> list[str]:
-        """Each installed app's ``static/``, in INSTALLED_APPS order."""
-        found = []
-        for app_name in settings.INSTALLED_APPS:
-            root = self._app_static_dir(app_name)
-            if root and root not in found:
-                found.append(root)
-        return found
 
     def find(self, path: str) -> str | None:
         for app_name in settings.INSTALLED_APPS:
@@ -147,19 +134,3 @@ def get_files():
             if rel not in seen:
                 seen.add(rel)
                 yield rel, full
-
-
-def search_directories() -> list[str]:
-    """Every directory the configured finders search, in order.
-
-    The one list development and collectstatic both work from. They used to
-    build their own: the handler fell back to ./static when STATIC_DIR was
-    unset and the finder did not, so a file there was served while developing
-    and absent after deploying.
-    """
-    found: list[str] = []
-    for finder in get_finders():
-        for directory in getattr(finder, "search_directories", list)():
-            if directory not in found:
-                found.append(directory)
-    return found
