@@ -226,6 +226,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`buraq check` passed on a project that could not start.** It reported "no
+  issues" while `runserver` failed on the first line of `config/urls.py` — a
+  package missing from the environment, a typo in an import, a view that had
+  been renamed. Those are the likeliest ways a project breaks, and the one
+  command meant to find problems before starting the server did not look at
+  them. `urls.E001` now reports a URLconf that cannot be imported, naming what
+  was missing, and `urls.E002` one that raises while importing.
+
 - **A scaffolded `pyproject.toml` declared `buraq>=0.1.0`**, which accepts every
   release ever made — so a project generated today claimed compatibility with
   versions from before most of what it uses existed. The floor is now the

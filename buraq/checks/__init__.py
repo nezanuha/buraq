@@ -17,6 +17,7 @@ Usage:
 """
 # Register built-in security checks
 import buraq.checks.security  # noqa: F401, E402
+import buraq.checks.urls  # noqa: F401, E402
 from buraq.checks.registry import (
     CheckMessage,
     Critical,

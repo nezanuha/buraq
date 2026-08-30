@@ -87,6 +87,8 @@ buraq check
 
 Prints results grouped by severity (`INFO`, `WARNING`, `ERROR`, `CRITICAL`). Exits with code `1` if any `ERROR`-level check fails.
 
+The checks themselves, and how to add your own, are in [System checks](../topics/checks.md).
+
 ## Database shell
 
 ```bash

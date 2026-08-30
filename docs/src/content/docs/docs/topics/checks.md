@@ -15,6 +15,11 @@ Buraq runs these automatically on startup:
 | `security.W001` | Warning | `SECRET_KEY` is shorter than 50 characters |
 | `security.W002` | Warning | `DEBUG=True` with `ALLOWED_HOSTS=["*"]` |
 | `database.W001` | Warning | SQLite configured without `DEBUG=True` |
+| `urls.E001` | Error | `ROOT_URLCONF` could not be imported — usually a package missing from this environment |
+| `urls.E002` | Error | `ROOT_URLCONF` raised while importing |
+
+The last two catch the commonest way a project fails to start: an import at the
+top of `config/urls.py` that is not installed in the environment being run.
 
 ## Running checks manually
 
