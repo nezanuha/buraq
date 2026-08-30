@@ -78,3 +78,53 @@ def test_earlier_directories_win(dev, tmp_path):
 def test_nothing_is_mounted_when_no_directory_exists(dev, tmp_path):
     client = dev(STATIC_DIR=str(tmp_path / "absent"), STATICFILES_DIRS=[])
     assert client.get("/static/anything.css").status_code == 404
+
+
+def test_an_installed_apps_static_is_served(dev, tmp_path, monkeypatch):
+    """The URL is /static/<app>/<file>, so the mount root is the app's static/.
+
+    Taking the directory a file sits in instead gives .../static/shop, under
+    which /static/shop/cart.js cannot resolve -- collected fine, 404 in
+    development.
+    """
+    import sys
+
+    app = tmp_path / "shop"
+    (app / "static" / "shop").mkdir(parents=True)
+    (app / "__init__.py").write_text("")
+    (app / "static" / "shop" / "cart.js").write_text("// cart")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    sys.modules.pop("shop", None)
+
+    client = dev(STATIC_DIR=None, STATICFILES_DIRS=[], INSTALLED_APPS=["shop"])
+    response = client.get("/static/shop/cart.js")
+    assert response.status_code == 200
+    assert response.text == "// cart"
+
+
+def test_development_and_collectstatic_agree(dev, tmp_path, monkeypatch):
+    """Whatever collectstatic would collect must resolve while developing."""
+    import sys
+
+    from buraq.contrib.staticfiles import collect_static
+    from buraq.contrib.staticfiles.storage import reset_storage
+
+    theme = tmp_path / "theme"
+    theme.mkdir()
+    (theme / "brand.css").write_text("body{}")
+    app = tmp_path / "blog"
+    (app / "static" / "blog").mkdir(parents=True)
+    (app / "__init__.py").write_text("")
+    (app / "static" / "blog" / "post.css").write_text("p{}")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    sys.modules.pop("blog", None)
+
+    client = dev(STATIC_DIR=None, STATICFILES_DIRS=[str(theme)], INSTALLED_APPS=["blog"])
+    monkeypatch.setattr(settings, "STATIC_ROOT", str(tmp_path / "out"), raising=False)
+    reset_storage()
+    collect_static()
+    reset_storage()
+
+    for rel in ("brand.css", "blog/post.css"):
+        assert (tmp_path / "out" / rel).exists(), f"collectstatic missed {rel}"
+        assert client.get(f"/static/{rel}").status_code == 200, f"development missed {rel}"

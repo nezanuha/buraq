@@ -182,7 +182,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   correctly for production and answered with a 404 in development. That reads as
   a missing file rather than a missing mount, which is the wrong thing to go
   looking for. Development now serves every directory `collectstatic` collects
-  from, in the same order, so what resolves in one resolves in the other.
+  from, in the same order, so what resolves in one resolves in the other —
+  including each installed app's `static/`, which had the same problem: a file
+  at `shop/static/shop/cart.js` is served at `/static/shop/cart.js`, so the
+  directory to serve is the app's `static/` and not the one the file sits in.
 
 - **Nothing said Buraq is single-database.** The migration guide called
   `DATABASE_URL` a replacement for the older framework's `DATABASES` dict, which

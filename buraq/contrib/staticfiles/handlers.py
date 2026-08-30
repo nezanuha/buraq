@@ -192,11 +192,14 @@ class StaticFilesHandler:
             if source not in found and Path(source).is_dir():
                 found.append(source)
 
+        # Each app's static/ itself, not the directory a file happens to sit in:
+        # a file at shop/static/shop/cart.js is served at /static/shop/cart.js,
+        # so the mount root is shop/static.
         from buraq.contrib.staticfiles.finders import AppDirectoriesFinder
 
-        for _rel, full in AppDirectoriesFinder().list():
-            root = str(Path(full).parent)
-            if root not in found:
+        for app_name in getattr(settings, "INSTALLED_APPS", None) or []:
+            root = AppDirectoriesFinder._app_static_dir(app_name)
+            if root and root not in found:
                 found.append(root)
         return found
 
