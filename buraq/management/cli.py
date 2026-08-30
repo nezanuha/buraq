@@ -325,6 +325,21 @@ def _find_uv() -> str | None:
     return str(beside) if beside.exists() else None
 
 
+def _buraq_floor() -> str:
+    """The version doing the scaffolding, as a lower bound for the project.
+
+    It was a literal ">=0.1.0", which accepts every release ever made -- so a
+    project generated today declared itself compatible with versions from before
+    most of what it uses existed.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("buraq")
+    except PackageNotFoundError:
+        return "0.1.0"
+
+
 def _install_dependencies(project_dir: Path) -> bool:
     """
     Install the new project's dependencies. True when it is ready to run.
@@ -1178,11 +1193,11 @@ def startproject(
         f'version = "0.1.0"\n'
         f'requires-python = ">=3.11"\n'
         f'dependencies = [\n'
-        f'    "buraq>=0.1.0",\n'
+        f'    "buraq>={_buraq_floor()}",\n'
         f'    {db_dep},\n'
         f']\n\n'
-        f'# PEP 735 dependency groups — uv native dev deps\n'
-        f'# Install with: uv sync --group dev\n'
+        f'# PEP 735 dependency groups, which uv, pip 25.1+ and PDM all read:\n'
+        f'#   uv sync --group dev   |   pip install --group dev\n'
         f'[dependency-groups]\n'
         f'dev = [\n'
         f'    "pytest>=8.0.0",\n'
@@ -1190,10 +1205,6 @@ def startproject(
         f'    "httpx>=0.27.0",\n'
         f'    "ruff>=0.4.0",\n'
         f']\n\n'
-        f'[tool.uv]\n'
-        f'# uv manages the venv and lockfile for this project\n'
-        f'managed = true\n'
-        f'default-groups = ["dev"]\n\n'
         f'[tool.ruff]\n'
         f'line-length = 100\n'
         f'target-version = "py311"\n\n'

@@ -226,6 +226,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A scaffolded `pyproject.toml` declared `buraq>=0.1.0`**, which accepts every
+  release ever made — so a project generated today claimed compatibility with
+  versions from before most of what it uses existed. The floor is now the
+  version doing the scaffolding.
+- **A scaffolded `pyproject.toml` configured uv**, with a `[tool.uv]` section
+  saying uv managed the project's environment and lockfile. It does not: the
+  project has no environment of its own, and whichever tool you use is your
+  choice. The section is gone. `[dependency-groups]` stays — it is PEP 735, read
+  by uv, pip 25.1+ and PDM alike, and the comment above it now says so rather
+  than calling it a uv feature.
+
 - **`python manage.py <command>` could not run an app's own commands.** It called
   `app()` while the `buraq` script calls `main()`, and only `main()` registers
   each installed app's commands before arguments are parsed — so the same
