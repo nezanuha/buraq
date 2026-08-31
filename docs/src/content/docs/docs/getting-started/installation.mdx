@@ -5,95 +5,17 @@ description: "Install the buraq command, create a project, and get it running."
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-## The short version
+## Install
+
+You need **Python 3.11 or newer** — check with `python --version`.
 
 <Tabs syncKey="installer">
 <TabItem label="pip">
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate        # Windows; source .venv/bin/activate elsewhere
-pip install buraq
-
-buraq startproject myproject
-cd myproject
-buraq migrate
-buraq runserver
-```
-
-Works on any machine with Python. Slower installs than uv, nothing else lost.
-
-</TabItem>
-<TabItem label="uv">
-
-```bash
-uv venv
-.venv\Scripts\activate        # Windows; source .venv/bin/activate elsewhere
-uv pip install buraq
-
-buraq startproject myproject
-cd myproject
-buraq migrate
-buraq runserver
-```
-
-Needs uv — if `uv` is not a command on your machine yet, it is
-[one line away](#requirements), or use the pip tab.
-
-</TabItem>
-</Tabs>
-
-Your project is on `http://127.0.0.1:8000`. Everything below explains those
-lines.
-
-:::note[The environment is yours]
-`buraq startproject` writes files. It does not create a virtualenv or install
-anything, because reaching the command at all means Buraq is installed and
-importable — the project runs in whatever environment you are already in,
-whether that is a venv, conda, Poetry or a container. Your own packages go in
-that same environment.
-
-Pass `--install` if you would rather it made a `.venv` in the project and
-installed into that.
-:::
-
-## Requirements
-
-- **Python 3.11 or newer** — check with `python --version`, and install from
-  [python.org/downloads](https://www.python.org/downloads/) if it reports lower
-- **uv** — recommended, and a one-line install
-
-uv installs far faster than pip and manages a project's environment and lockfile
-for you. Nothing here requires it — `buraq startproject` writes files and does
-not touch your environment, so whichever tool you already use is the right one.
-
-```bash
-# macOS / Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows (PowerShell)
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-Other methods are in [uv's own guide](https://docs.astral.sh/uv/getting-started/installation/).
-
-:::note[Prefer to stay with pip?]
-Everything works with pip — it ships with Python, and every step on this page has
-a pip tab. You give up install speed and the managed lockfile, nothing else.
-:::
-
-## 1. Make an environment and install Buraq
-
-Your project's packages need somewhere to live, and so does Buraq. One
-environment holds both:
-
-<Tabs syncKey="installer">
-<TabItem label="pip">
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-source .venv/bin/activate      # macOS / Linux
+.venv\Scripts\activate      # Windows
+source .venv/bin/activate    # macOS / Linux
 
 pip install buraq
 ```
@@ -103,51 +25,41 @@ pip install buraq
 
 ```bash
 uv venv
-.venv\Scripts\activate        # Windows
-source .venv/bin/activate      # macOS / Linux
+.venv\Scripts\activate      # Windows
+source .venv/bin/activate    # macOS / Linux
 
 uv pip install buraq
 ```
 
+No uv yet? `curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS and Linux,
+`powershell -c "irm https://astral.sh/uv/install.ps1 | iex"` on Windows. It
+installs faster than pip; nothing here needs it.
+
 </TabItem>
 </Tabs>
 
-Check it worked:
+That environment now holds Buraq, and it is where your project's packages go
+too. Check it worked:
 
 ```bash
 buraq --version
 # Buraq 1.6.0
 ```
 
-:::note[Installing it globally instead]
-`uv tool install buraq` or `pipx install buraq` put the command on your `PATH`
-without an environment, which is convenient for trying Buraq out. It is not
-enough to build with: the tool's environment holds Buraq and nothing of yours,
-so the first package your own code imports will not be there. Make an
-environment as above when you start writing anything.
-:::
-
-:::caution[Not `uv add buraq`]
-`uv add` adds a dependency to a project that already has a `pyproject.toml`, and
-you do not have one yet — it fails with `No pyproject.toml found in current
-directory or any parent directory`. Use `uv add buraq` only to add Buraq to an
-existing project.
-:::
-
-## 2. Create a project
+## Create a project
 
 ```bash
 buraq startproject myproject
 cd myproject
 ```
 
-This writes files and nothing else — no environment, no install. You are already
-in one, which is how you ran the command.
-
 You get `config/` (settings and URLs), `main.py`, `manage.py`, a `pyproject.toml`
 listing Buraq, and a `.env` holding a freshly generated `SECRET_KEY`.
 
-## 3. Run it
+That is all it does — no environment, no install. You are already in one, which
+is how you ran the command.
+
+## Run it
 
 ```bash
 buraq migrate
@@ -159,10 +71,10 @@ at `/api/docs`.
 
 ## Adding your own packages
 
-They go in the environment from step 1, the same as Buraq:
+Into the same environment as Buraq:
 
 ```bash
-pip install httpx          # or: uv pip install httpx
+pip install httpx            # or: uv pip install httpx
 ```
 
 Record them in the project's `pyproject.toml` so the next person gets them too.
@@ -216,6 +128,16 @@ pip install aiomcache            # Memcached
 </Tabs>
 
 ## Troubleshooting
+
+**`No pyproject.toml found in current directory or any parent directory`** —
+from `uv add buraq`. `uv add` adds a dependency to a project that already
+exists, and you do not have one yet. Use `uv pip install buraq` as above;
+`uv add buraq` is for adding Buraq to a project you already have.
+
+**A package you installed is not found, and you used `uv tool install buraq` or
+`pipx`** — those put `buraq` on your PATH inside an environment of their own,
+holding Buraq and nothing of yours. Convenient for trying Buraq out, not enough
+to build with. Make an environment as above.
 
 **`buraq: command not found`** — the environment is not activated. Activate it,
 or use `python -m buraq` in place of `buraq`. If you installed with
