@@ -7,7 +7,9 @@ description: "buraq.apps provides application configuration classes and a global
 
 ## AppConfig
 
-Create an `apps.py` in your application:
+`buraq startapp` writes an `apps.py` for you, with an empty `ready()` to fill
+in. It is optional — an app listed by its own name works without one — and this
+is what it looks like filled in:
 
 ```python
 # blog/apps.py
@@ -54,6 +56,10 @@ class ShopConfig(AppConfig):
 `ready()` runs once during startup, after every installed app's `models` module has
 been imported, so the ORM registry is fully populated by the time it is called. Use
 it to connect signals, register checks, or perform one-time initialization:
+
+It only runs for an app registered by its config path, or one whose `apps.py`
+declares a config — an app listed as a bare package with no `apps.py` has no
+`ready()` to run.
 
 ```python
 async def ready(self):
