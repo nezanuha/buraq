@@ -34,7 +34,7 @@ myblog/
 │   ├── urls.py
 │   ├── forms.py
 │   ├── admin.py
-│   ├── schemas.py        # Pydantic schemas for API endpoints
+│   ├── schemas.py        # Pydantic schemas for JSON endpoints — see Schemas
 │   └── migrations/
 │       └── __init__.py
 ...

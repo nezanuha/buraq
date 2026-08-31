@@ -46,6 +46,7 @@ export const currentSidebar = [
           { label: 'Databases', slug: 'docs/topics/orm/databases' },
         ],
       },
+      { label: 'Schemas', slug: 'docs/topics/schemas' },
       {
         label: 'Views',
         items: [

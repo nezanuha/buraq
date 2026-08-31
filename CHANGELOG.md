@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A Schemas page.** `buraq startapp` writes a `schemas.py` with a `PostRead`
+  and a `PostCreate` in it, and nothing explained what they were for — one line
+  in a directory listing was the whole of it. The page covers why the two
+  directions are separate classes, what `from_attributes` is doing and which
+  schema needs it, how a schema keeps a model field like `created_at` out of a
+  response, that a JSON endpoint needs `@csrf_exempt` because CSRF expects a
+  form token, and when not to write one at all.
+
 - **`@admin.register(Model)`** — registering a `ModelAdmin` where the class is,
   rather than in a call underneath it. It is the form most people reach for
   first, which is how it went unnoticed that it did not exist: the scaffolded
