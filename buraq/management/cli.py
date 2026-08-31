@@ -899,6 +899,72 @@ def createsuperuser(
 
 # ─── App Scaffolding ─────────────────────────────────────────────────────────
 
+def _singularize(word: str) -> str:
+    """The singular of an app name, for the model the app holds.
+
+    The inverse of the ORM's pluralisation and no cleverer: it undoes the three
+    endings that one adds. A word it cannot reduce comes back unchanged, which
+    is right for an app already named in the singular.
+    """
+    if word.endswith("ies") and len(word) > 3:
+        return word[:-3] + "y"
+    if word.endswith(("sses", "shes", "ches", "xes", "zes")):
+        return word[:-2]        # these took "es", so "es" comes off
+    if word.endswith("s") and not word.endswith("ss"):
+        return word[:-1]
+    return word
+
+
+def _app_templates(name: str, singular: str, plural: str) -> dict[str, str]:
+    """The four templates the generated views render.
+
+    They were not written at all, so a freshly created app answered every
+    request with TemplateNotFound -- a poor first impression of something the
+    tool had just reported creating.
+    """
+    detail = "{{ url('" + name + "_detail', pk=item.id) }}"
+    create = "{{ url('" + name + "_create') }}"
+    back = "{{ url('" + name + "_list') }}"
+    edit = "{{ url('" + name + "_update', pk=" + singular + ".id) }}"
+    name_of = "{{ " + singular + ".name }}"
+    return {
+        "list.html": (
+            "<h1>" + plural.title() + "</h1>\n"
+            "<ul>\n"
+            "  {% for item in " + plural + " %}\n"
+            '    <li><a href="' + detail + '">{{ item.name }}</a></li>\n'
+            "  {% else %}\n"
+            "    <li>Nothing here yet.</li>\n"
+            "  {% endfor %}\n"
+            "</ul>\n"
+            '<a href="' + create + '">New</a>\n'
+        ),
+        "create.html": (
+            "<h1>New " + singular + "</h1>\n"
+            '<form method="post">\n'
+            "  {{ csrf_input }}\n"
+            '  <input name="name" required>\n'
+            '  <button type="submit">Save</button>\n'
+            "</form>\n"
+            '<a href="' + back + '">Back</a>\n'
+        ),
+        "detail.html": (
+            "<h1>" + name_of + "</h1>\n"
+            '<a href="' + edit + '">Edit</a>\n'
+            '<a href="' + back + '">Back</a>\n'
+        ),
+        "edit.html": (
+            "<h1>Edit " + name_of + "</h1>\n"
+            '<form method="post">\n'
+            "  {{ csrf_input }}\n"
+            '  <input name="name" value="' + name_of + '" required>\n'
+            '  <button type="submit">Save</button>\n'
+            "</form>\n"
+            '<a href="' + back + '">Back</a>\n'
+        ),
+    }
+
+
 @app.command()
 def startapp(name: str = typer.Argument(..., help="App name")):
     """Create a new Buraq app with the standard directory structure."""
@@ -909,69 +975,85 @@ def startapp(name: str = typer.Argument(..., help="App name")):
 
     base.mkdir(parents=True)
 
+    # An app name is conventionally plural -- posts, articles -- and the model
+    # inside it is the singular thing it holds. Appending "s" to the app name
+    # gave list_postss, a Posts model whose table came out posts_postses, and
+    # templates under postss/.
+    from buraq.orm.base import _pluralize
+
+    singular = _singularize(name)
+    model = "".join(part.title() for part in singular.split("_"))
+    plural = _pluralize(singular)
+
     files = {
         "__init__.py": "",
         "models.py": (
-            f"from buraq import models\n\n\n"
-            f"class {name.title()}(models.Model):\n"
-            f"    name = models.CharField(max_length=200)\n"
-            f"    created_at = models.DateTimeField(auto_now_add=True)\n"
+            "from buraq import models\n\n\n"
+            f"class {model}(models.Model):\n"
+            "    name = models.CharField(max_length=200)\n"
+            "    created_at = models.DateTimeField(auto_now_add=True)\n"
         ),
         "schemas.py": (
             "from pydantic import BaseModel\n\n\n"
-            f"class {name.title()}Read(BaseModel):\n"
+            f"class {model}Read(BaseModel):\n"
             "    id: int\n"
             "    name: str\n\n"
-            "    model_config = {\"from_attributes\": True}\n\n\n"
-            f"class {name.title()}Create(BaseModel):\n"
+            '    model_config = {"from_attributes": True}\n\n\n'
+            f"class {model}Create(BaseModel):\n"
             "    name: str\n"
         ),
         "views.py": (
-            f"from buraq.shortcuts import render, redirect, get_object_or_404\n"
-            f"from .models import {name.title()}\n\n\n"
-            f"async def list_{name}s(request):\n"
-            f"    items = await {name.title()}.objects.all()\n"
-            f"    return await render(request, '{name}s/list.html', {{'{name}s': items}})\n\n\n"
-            f"async def create_{name}(request):\n"
-            f"    if request.method == 'POST':\n"
-            f"        form = await request.form()\n"
-            f"        await {name.title()}.objects.create(name=form.get('name'))\n"
-            f"        return redirect('/{name}s/')\n"
-            f"    return await render(request, '{name}s/create.html')\n\n\n"
-            f"async def get_{name}(request, pk: int):\n"
-            f"    item = await get_object_or_404({name.title()}, id=pk)\n"
-            f"    return await render(request, '{name}s/detail.html', {{'{name}': item}})\n\n\n"
-            f"async def update_{name}(request, pk: int):\n"
-            f"    item = await get_object_or_404({name.title()}, id=pk)\n"
-            f"    if request.method == 'POST':\n"
-            f"        form = await request.form()\n"
-            f"        await {name.title()}.objects.update(pk, name=form.get('name'))\n"
-            f"        return redirect('/{name}s/')\n"
-            f"    return await render(request, '{name}s/edit.html', {{'{name}': item}})\n\n\n"
-            f"async def delete_{name}(request, pk: int):\n"
-            f"    await get_object_or_404({name.title()}, id=pk)\n"
-            f"    await {name.title()}.objects.delete(pk)\n"
-            f"    return redirect('/{name}s/')\n"
+            "from buraq.shortcuts import render, redirect, get_object_or_404\n"
+            "from buraq.urls import reverse\n"
+            f"from .models import {model}\n\n\n"
+            f"async def list_{plural}(request):\n"
+            f"    items = await {model}.objects.all()\n"
+            f"    return await render(request, '{name}/list.html', {{'{plural}': items}})\n\n\n"
+            f"async def create_{singular}(request):\n"
+            "    if request.method == 'POST':\n"
+            "        form = await request.form()\n"
+            f"        await {model}.objects.create(name=form.get('name'))\n"
+            f"        return redirect(reverse('{name}_list'))\n"
+            f"    return await render(request, '{name}/create.html')\n\n\n"
+            f"async def get_{singular}(request, pk: int):\n"
+            f"    item = await get_object_or_404({model}, id=pk)\n"
+            f"    return await render(request, '{name}/detail.html', {{'{singular}': item}})\n\n\n"
+            f"async def update_{singular}(request, pk: int):\n"
+            f"    item = await get_object_or_404({model}, id=pk)\n"
+            "    if request.method == 'POST':\n"
+            "        form = await request.form()\n"
+            f"        await {model}.objects.update(pk, name=form.get('name'))\n"
+            f"        return redirect(reverse('{name}_list'))\n"
+            f"    return await render(request, '{name}/edit.html', {{'{singular}': item}})\n\n\n"
+            f"async def delete_{singular}(request, pk: int):\n"
+            f"    await get_object_or_404({model}, id=pk)\n"
+            f"    await {model}.objects.delete(pk)\n"
+            f"    return redirect(reverse('{name}_list'))\n"
         ),
         "urls.py": (
-            f"from buraq.urls import get, post, delete\n"
-            f"from . import views\n\n\n"
-            f"urlpatterns = [\n"
-            f"    get('/',          views.list_{name}s,   name='{name}_list'),\n"
-            f"    get('/new',       views.create_{name},  name='{name}_create'),\n"
-            f"    post('/new',      views.create_{name},  name='{name}_create_post'),\n"
-            f"    get('/<int:pk>',  views.get_{name},     name='{name}_detail'),\n"
-            f"    get('/<int:pk>/edit',  views.update_{name},  name='{name}_update'),\n"
-            f"    post('/<int:pk>/edit', views.update_{name},  name='{name}_update_post'),\n"
-            f"    post('/<int:pk>/delete', views.delete_{name}, name='{name}_delete'),\n"
-            f"]\n"
+            "from buraq.urls import path\n"
+            "from . import views\n\n\n"
+            "urlpatterns = [\n"
+            f"    path('/', views.list_{plural}, name='{name}_list'),\n"
+            f"    path('/new', views.create_{singular},\n"
+            f"         methods=['GET', 'POST'], name='{name}_create'),\n"
+            f"    path('/<int:pk>', views.get_{singular}, name='{name}_detail'),\n"
+            f"    path('/<int:pk>/edit', views.update_{singular},\n"
+            f"         methods=['GET', 'POST'], name='{name}_update'),\n"
+            f"    path('/<int:pk>/delete', views.delete_{singular},\n"
+            f"         methods=['POST'], name='{name}_delete'),\n"
+            "]\n"
         ),
         "admin.py": (
+            # site.register, not a decorator: buraq.contrib.admin exports
+            # ModelAdmin, AdminSite and site, and never had a register
+            # decorator -- the generated file did not import.
             "from buraq.contrib.admin import ModelAdmin, site\n"
-            f"from .models import {name.title()}\n\n\n"
-            f"class {name.title()}Admin(ModelAdmin):\n"
-            f"    list_display = [\"id\", \"name\"]\n\n\n"
-            f"site.register({name.title()}, {name.title()}Admin)\n"
+            f"from .models import {model}\n\n\n"
+            f"class {model}Admin(ModelAdmin):\n"
+            "    list_display = ('id', 'name', 'created_at')\n"
+            "    search_fields = ('name',)\n\n\n"
+            f"site.register({model}, {model}Admin)\n"
         ),
     }
 
@@ -981,8 +1063,14 @@ def startapp(name: str = typer.Argument(..., help="App name")):
     (base / "migrations").mkdir(exist_ok=True)
     (base / "migrations" / "__init__.py").write_text("", encoding="utf-8")
 
+    directory = base / "templates" / name
+    directory.mkdir(parents=True, exist_ok=True)
+    for leaf, markup in _app_templates(name, singular, plural).items():
+        (directory / leaf).write_text(markup, encoding="utf-8")
+
     console.success(f"App {name!r} created")
     console.hint(f"Add {name!r} to INSTALLED_APPS in config/settings.py")
+
 
 
 # ─── Static Files ────────────────────────────────────────────────────────────

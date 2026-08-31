@@ -241,6 +241,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`{{ csrf_input }}` rendered the function, not a field.** `csrf_input` and
+  `csrf_token` are Jinja environment globals, and a global is a value rather
+  than something a bare `{{ name }}` calls — so the form shown on every
+  documentation page put `&lt;function _csrf_input at 0x…&gt;` into the HTML,
+  and the POST that followed was refused with 403. Both are now supplied by
+  `render()` as values that render themselves, so the documented form works.
+  The token is only created when a template actually asks for one, and
+  `csrf_input(request)` still works for anything written that way.
+- **`buraq startapp` produced an app that could not run.** An app name is
+  conventionally plural, and the scaffold appended `s` to it for every plural
+  and capitalised it for the model — so `startapp posts` gave a `Posts` model
+  whose table came out `posts_postses`, a view called `list_postss`, and
+  templates under `postss/`. It named four templates and wrote none of them, so
+  every page answered `TemplateNotFound`, and `admin.py` used an
+  `@admin.register` decorator that does not exist, so the app never imported at
+  all.
+
+  The model is now the singular of the app name, the templates are written, the
+  admin file uses `site.register()`, redirects go through `reverse()` rather
+  than a hardcoded path that guesses where the project mounted the app, and
+  `/new` and `/edit` are one route each with `methods=['GET', 'POST']` instead
+  of two under two different names.
+
 - **The ETag decorator hashed the response body twice on every request.** The
   digest was computed for the header and then computed again to compare against
   `If-None-Match` — the same bytes, the same answer, the first one discarded.

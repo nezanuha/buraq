@@ -61,6 +61,37 @@ def _import_dotted(path: str, setting: str):
         ) from exc
 
 
+class _CsrfValue:
+    """A CSRF value that renders itself, so ``{{ csrf_input }}`` works.
+
+    ``csrf_input`` and ``csrf_token`` are environment globals, and a Jinja
+    global is a value rather than something a bare ``{{ name }}`` will call --
+    so the documented form rendered the function object, HTML-escaped, into the
+    page: ``&lt;function _csrf_input at 0x...&gt;``. Every form in the
+    documentation, and every one a scaffolded app generated, was posting without
+    a token and getting a 403.
+
+    Rendering happens through ``__html__``, which Jinja calls on output, so the
+    token is only created for a template that actually asks for one -- and
+    ``csrf_input(request)`` keeps working for anything already written that way.
+    """
+
+    __slots__ = ("_request", "_render")
+
+    def __init__(self, request, render):
+        self._request = request
+        self._render = render
+
+    def __html__(self) -> str:
+        return self._render(self._request)
+
+    def __str__(self) -> str:
+        return str(self._render(self._request))
+
+    def __call__(self, request=None):
+        return self._render(request if request is not None else self._request)
+
+
 def _build_env(template_dirs: list[str]):
     """
     The Jinja environment, with anything TEMPLATE_OPTIONS asks for.

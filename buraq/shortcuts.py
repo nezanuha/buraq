@@ -40,6 +40,28 @@ async def render(
     except Exception:
         _log.exception("render(): context processors failed for %r", template_name)
 
+    # Rendered lazily, so a page that never asks for a token does not create
+    # one. A caller passing its own value still wins -- these are defaults.
+    from buraq.core.templating import _CsrfValue
+
+    def _input(req):
+        from markupsafe import Markup
+
+        from buraq.contrib.csrf import get_token
+
+        return Markup(
+            '<input type="hidden" name="csrfmiddlewaretoken" value="'
+            f'{get_token(req)}">'
+        )
+
+    def _token(req):
+        from buraq.contrib.csrf import get_token
+
+        return get_token(req)
+
+    ctx.setdefault("csrf_input", _CsrfValue(request, _input))
+    ctx.setdefault("csrf_token", _CsrfValue(request, _token))
+
     if context:
         ctx.update(context)
 
