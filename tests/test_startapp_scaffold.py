@@ -70,7 +70,7 @@ def test_no_name_is_doubled(tmp_path):
 
 
 def test_every_generated_module_imports(tmp_path):
-    """admin.py used a decorator that does not exist, so the app never loaded."""
+    """admin.py used @admin.register, which did not exist, so nothing loaded."""
     _scaffold(tmp_path)
     for module in ("models", "views", "urls", "admin", "schemas"):
         result = subprocess.run(

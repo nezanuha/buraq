@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`@admin.register(Model)`** — registering a `ModelAdmin` where the class is,
+  rather than in a call underneath it. It is the form most people reach for
+  first, which is how it went unnoticed that it did not exist: the scaffolded
+  `admin.py` used it, so every generated app raised `AttributeError` on import.
+  It takes several models, returns the class, and refuses a class that is not a
+  `ModelAdmin` rather than failing later when the page is opened.
+  `site.register(Model, AdminClass)` is unchanged and remains the way to
+  register with the default admin.
+
 - **Every setting is documented.** `STATIC_DIR` — which a scaffolded project has
   in its settings file — and `CACHE_MEMCACHED_SERVERS` appeared on no
   documentation page. All 95 settings now do.

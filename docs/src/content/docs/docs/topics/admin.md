@@ -41,15 +41,16 @@ buraq createsuperuser
 
 ## Registering models
 
-Create an `admin.py` inside your app and register models with `site.register()`.
-The admin panel auto-discovers these files on startup.
+Create an `admin.py` inside your app. The admin panel auto-discovers these files
+on startup.
 
 ```python title="posts/admin.py"
-from buraq.contrib.admin import ModelAdmin, site
-from posts.models import Post, Comment
+from buraq.contrib import admin
+from posts.models import Category, Comment, Post
 
 
-class PostAdmin(ModelAdmin):
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
     list_display  = ["id", "title", "is_published", "created_at"]
     search_fields = ["title", "slug"]
     ordering      = ["-created_at"]
@@ -57,14 +58,30 @@ class PostAdmin(ModelAdmin):
     readonly_fields = ["created_at"]
 
 
-class CommentAdmin(ModelAdmin):
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
     list_display = ["id", "author_name", "post_id", "created_at"]
     search_fields = ["author_name"]
 
 
+admin.site.register(Category)      # default ModelAdmin — shows all columns
+```
+
+The decorator takes several models if one `ModelAdmin` suits them all
+(`@admin.register(Post, Draft)`), and `site.register(Model)` on its own is the
+way to register a model with the default admin, as `Category` does above.
+
+Importing the module — `from buraq.contrib import admin` — keeps `ModelAdmin`,
+`register` and `site` under one name. Importing them directly works the same
+way:
+
+```python
+from buraq.contrib.admin import ModelAdmin, site
+
+class PostAdmin(ModelAdmin):
+    ...
+
 site.register(Post, PostAdmin)
-site.register(Comment, CommentAdmin)
-site.register(Category)            # default ModelAdmin — shows all columns
 ```
 
 ## ModelAdmin options

@@ -1045,15 +1045,12 @@ def startapp(name: str = typer.Argument(..., help="App name")):
             "]\n"
         ),
         "admin.py": (
-            # site.register, not a decorator: buraq.contrib.admin exports
-            # ModelAdmin, AdminSite and site, and never had a register
-            # decorator -- the generated file did not import.
-            "from buraq.contrib.admin import ModelAdmin, site\n"
+            "from buraq.contrib import admin\n"
             f"from .models import {model}\n\n\n"
-            f"class {model}Admin(ModelAdmin):\n"
+            f"@admin.register({model})\n"
+            f"class {model}Admin(admin.ModelAdmin):\n"
             "    list_display = ('id', 'name', 'created_at')\n"
-            "    search_fields = ('name',)\n\n\n"
-            f"site.register({model}, {model}Admin)\n"
+            "    search_fields = ('name',)\n"
         ),
     }
 
