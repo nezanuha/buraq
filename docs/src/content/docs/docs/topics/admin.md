@@ -41,8 +41,10 @@ buraq createsuperuser
 
 ## Registering models
 
-Create an `admin.py` inside your app. The admin panel auto-discovers these files
-on startup.
+Create an `admin.py` inside your app. The admin imports one from every app in
+`INSTALLED_APPS` when it is mounted — so a model appears only if its app is
+listed there. An app with no `admin.py` is skipped; anything that fails inside
+one is raised rather than swallowed.
 
 ```python title="posts/admin.py"
 from buraq.contrib import admin

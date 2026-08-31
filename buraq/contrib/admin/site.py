@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import contextlib
 import importlib
+import importlib.util
 from typing import TYPE_CHECKING
 
 from buraq.conf import settings
@@ -42,9 +42,24 @@ class AdminSite:
         return _AdminURLs(self)
 
     def autodiscover(self):
+        """Import each installed app's admin.py, if it has one.
+
+        Absence is normal and skipped. A failure *inside* one is not: this used
+        to suppress ModuleNotFoundError around the import, which covered both --
+        so one typo'd import in an app's admin.py meant its models quietly never
+        appeared, with nothing logged and nothing raised. Whether the module
+        exists is asked first, so only that question is answered by silence.
+        """
         for app_name in getattr(settings, "INSTALLED_APPS", []):
-            with contextlib.suppress(ModuleNotFoundError):
-                importlib.import_module(f"{app_name}.admin")
+            dotted = f"{app_name}.admin"
+            try:
+                if importlib.util.find_spec(dotted) is None:
+                    continue
+            except (ImportError, ValueError):
+                # The app itself is not importable; that is not this loop's
+                # problem to report, and INSTALLED_APPS validation covers it.
+                continue
+            importlib.import_module(dotted)
 
 
 class _AdminURLs:

@@ -250,6 +250,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A broken `admin.py` made a model vanish from the admin, silently.**
+  `autodiscover()` wrapped the import in `suppress(ModuleNotFoundError)` to skip
+  apps that have no `admin.py` — and that also swallowed a failed import
+  *inside* one. A typo like `from .modelz import Post` meant the model simply
+  never appeared, with nothing raised and nothing logged, which looks exactly
+  like forgetting to register it. Whether the module exists is now asked before
+  importing, so absence stays quiet and failure does not.
+
 - **The tutorial's URL list could not reach half its own routes.** It put
   `path("/<str:slug>", ...)` before `path("/new", ...)`, and routes match top to
   bottom — so `/posts/new` matched the slug route with a slug of `"new"` and the
