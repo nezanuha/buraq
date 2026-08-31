@@ -14,8 +14,7 @@ You need **Python 3.11 or newer** — check with `python --version`.
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate      # Windows
-source .venv/bin/activate    # macOS / Linux
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
 
 pip install buraq
 ```
@@ -25,30 +24,20 @@ pip install buraq
 
 ```bash
 uv venv
-.venv\Scripts\activate      # Windows
-source .venv/bin/activate    # macOS / Linux
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
 
 uv pip install buraq
 ```
 
-Activating is what makes a bare `buraq` the one you just installed; without it
-the command comes from your `PATH`, which may be a different Buraq entirely.
-
-`uv run buraq …` works without activating, with one thing to know: run inside a
-project, it uses *that project's* environment — creating `.venv` and installing
-the dependencies its `pyproject.toml` declares, from the index. That is uv
-behaving as designed, and it is a different environment from the one you made
-here. Pick one and stay with it.
-
 No uv yet? `curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS and Linux,
-`powershell -c "irm https://astral.sh/uv/install.ps1 | iex"` on Windows. It
-installs faster than pip; nothing here needs it.
+`powershell -c "irm https://astral.sh/uv/install.ps1 | iex"` on Windows.
 
 </TabItem>
 </Tabs>
 
-That environment now holds Buraq, and it is where your project's packages go
-too. Check it worked:
+Activating matters: it is what makes `buraq` the one you just installed rather
+than whichever your `PATH` finds. That environment is also where your project's
+own packages go.
 
 ```bash
 buraq --version
@@ -138,40 +127,32 @@ pip install aiomcache            # Memcached
 
 ## Troubleshooting
 
-**`No pyproject.toml found in current directory or any parent directory`** —
-from `uv add buraq`. `uv add` adds a dependency to a project that already
-exists, and you do not have one yet. Use `uv pip install buraq` as above;
-`uv add buraq` is for adding Buraq to a project you already have.
-
-**A package you installed is not found, and you used `uv tool install buraq` or
-`pipx`** — those put `buraq` on your PATH inside an environment of their own,
-holding Buraq and nothing of yours. Convenient for trying Buraq out, not enough
-to build with. Make an environment as above.
-
 **`buraq: command not found`** — the environment is not activated. Activate it,
-or use `python -m buraq`, or with uv `uv run buraq`. If you installed with
-`uv tool install`, run `uv tool update-shell` and open a new terminal.
+or use `python -m buraq`. If you installed with `uv tool install`, run
+`uv tool update-shell` and open a new terminal.
 
-**`buraq` runs, but not the one you installed** — it came from your `PATH`, not
-from `.venv`. Activating fixes it, and so does `uv run buraq`. To see which one
-is running:
+**`ModuleNotFoundError`, or `buraq` behaving like a version you do not have** —
+you are in a different environment from the one you installed into. This prints
+which Buraq is actually running:
 
 ```bash
 buraq shell -c "import buraq; print(buraq.__file__)"
 ```
 
-**`ModuleNotFoundError` for a package you installed** — you are in a different
-environment from the one you installed into. `buraq shell -c "import buraq;
-print(buraq.__file__)"` prints where the running Buraq is being read from.
+A `site-packages` path under your project's `.venv` is what you want. Three
+things commonly put you somewhere else: not activating, so the command comes
+from your `PATH`; `uv tool install` or `pipx`, which hold Buraq in an
+environment of their own with nothing of yours in it; and `uv run` inside a
+project, which uses that project's own environment and installs what its
+`pyproject.toml` declares from the index.
+
+**`No pyproject.toml found in current directory or any parent directory`** —
+from `uv add buraq`. `uv add` adds a dependency to a project that already
+exists, and you do not have one yet. Use `uv pip install buraq`.
 
 **You want the environment made for you** — `buraq startproject myproject
 --install` creates a `.venv` in the project and installs into it, with `uv` when
-it is there and `venv` + `pip` when it is not. Without the flag the project is
-files only, and runs in whatever environment you are already using.
-
-**The `--install` step failed** (no network, a blocked index) — the project files
-are still correct. `buraq startproject` prints the one command left to run; run
-it from inside the project.
+it is there and `venv` + `pip` when it is not.
 
 **You want the project somewhere else** — name a directory second:
 `buraq startproject myproject blog_folder`. Files land directly in it. `--dest`
