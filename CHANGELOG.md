@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`backend.open()` — one connection to send several messages over.**
+  `send_many()` covers the case where every message is known up front;
+  this covers the one it cannot, where work happens between the sends:
+
+  ```python
+  async with get_connection().open() as connection:
+      async for row in Subscriber.objects.iterator():
+          if await row.should_receive(digest):
+              await connection.send(build_message(row))
+  ```
+
+  One handshake for the block however long the loop runs, and the connection
+  closes on the way out including when the block raises. Previously the only
+  way to filter while sending was a loop of `send()`, which is a connection per
+  message — the documentation said so and named it as something Buraq could not
+  do.
+
+  Each `open()` returns its own connection rather than state on the backend:
+  `get_connection()` caches backends, so a connection kept on one would be
+  closed by whichever concurrent block finished first. A backend with nothing to
+  open — console, file, in-memory — hands back itself, so the same code runs in
+  tests without a branch.
+
 - **`buraq.db.transaction` is a real module.** `buraq/db/__init__.py` aliased it
   as an attribute, so `from buraq.db import transaction` worked and
   `from buraq.db.transaction import atomic` raised `ModuleNotFoundError`. The

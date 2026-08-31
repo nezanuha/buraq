@@ -131,3 +131,87 @@ async def test_a_failed_connection_reports_nothing_sent(client, monkeypatch):
 
     monkeypatch.setattr(_FakeClient, "connect", refuse)
     assert await _backend(monkeypatch).send_many(_messages(3)) == 0
+
+
+# ── open(): a connection to work between sends on ────────────────────────────
+
+async def test_open_keeps_one_connection_across_a_loop(client, monkeypatch):
+    """The case send_many cannot cover: logic between the sends.
+
+    Django does this with `with mail.get_connection() as connection:`. Without
+    it the only way to filter while sending was a loop of send(), which is a
+    connection per message.
+    """
+    backend = _backend(monkeypatch)
+    rows = [("a@x.c", True), ("b@x.c", False), ("c@x.c", True)]
+
+    async with backend.open() as connection:
+        for address, wants_email in rows:
+            if wants_email:
+                await connection.send(
+                    EmailMessage(subject="hi", body="b", to=[address], from_email="s@x.c")
+                )
+
+    assert len(_FakeClient.instances) == 1
+    assert _FakeClient.instances[0].sent == [["a@x.c"], ["c@x.c"]]
+
+
+async def test_open_closes_on_the_way_out(client, monkeypatch):
+    async with _backend(monkeypatch).open():
+        pass
+    assert _FakeClient.instances[0].quit_called
+
+
+async def test_open_closes_even_when_the_block_raises(client, monkeypatch):
+    with pytest.raises(RuntimeError):
+        async with _backend(monkeypatch).open() as connection:
+            await connection.send(_messages(1)[0])
+            raise RuntimeError("boom")
+
+    assert _FakeClient.instances[0].quit_called, "a leaked connection outlives the process"
+
+
+async def test_open_logs_in_once(client, monkeypatch):
+    backend = _backend(monkeypatch, username="user", password="pw")
+    async with backend.open() as connection:
+        for message in _messages(3):
+            await connection.send(message)
+
+    assert _FakeClient.instances[0].logged_in is True
+    assert len(_FakeClient.instances) == 1
+
+
+async def test_a_connection_that_will_not_open_reports_failure(client, monkeypatch):
+    """Rather than raising: send() already returns False on a bad send."""
+
+    async def refuse(self):
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(_FakeClient, "connect", refuse)
+    async with _backend(monkeypatch).open() as connection:
+        assert await connection.send(_messages(1)[0]) is False
+
+
+async def test_two_blocks_do_not_share_a_connection(client, monkeypatch):
+    """get_connection() caches backends, so state on one would be shared.
+
+    Two blocks over the same backend must each get their own client, or the
+    first to finish closes the connection the second is still using.
+    """
+    backend = _backend(monkeypatch)
+
+    async with backend.open() as first, backend.open() as second:
+        await first.send(_messages(1)[0])
+        await second.send(_messages(1)[0])
+
+    assert len(_FakeClient.instances) == 2
+    assert _FakeClient.instances[0] is not _FakeClient.instances[1]
+
+
+async def test_a_backend_with_nothing_to_open_still_works(client, monkeypatch):
+    """Console, file and in-memory backends have no connection to hold."""
+    from buraq.contrib.email.backends.locmem import EmailBackend
+
+    backend = EmailBackend()
+    async with backend.open() as connection:
+        assert connection is backend

@@ -104,14 +104,30 @@ await get_connection().send_many(messages)          # one handshake
 ```
 
 The filtering that would have sat inside the loop moves into building the list.
-That covers most of what a loop was for; what it does not cover is work that has
-to happen *between* sends on the same connection — reading a row after each one,
-say, or rate-limiting by hand. For that, `send()` in a loop is still the answer,
-and it will cost a connection per message.
 
-Django's `with mail.get_connection() as connection:` keeps one connection open
-across a loop, so it handles that case without the cost. Buraq has no equivalent:
-backends are cached, connections are not held open between calls.
+### Working between sends
+
+When the messages are not all known up front — you are reading rows, deciding as
+you go, or pausing between them — open a connection and send into it:
+
+```python
+async with get_connection().open() as connection:
+    async for row in Subscriber.objects.iterator():
+        if not await row.should_receive(digest):
+            continue
+        await connection.send(build_message(row))
+```
+
+One handshake for the whole block, however long the loop runs and whatever
+happens in between. The connection closes on the way out, including when the
+block raises.
+
+Each `open()` returns its own connection, so two blocks running at once do not
+share one — `get_connection()` caches backends, and a connection kept on the
+backend would be closed by whichever block finished first.
+
+A backend with nothing to open — console, file, in-memory — hands back itself,
+so the same code works in tests and in development without a branch.
 
 ### Custom backend
 
