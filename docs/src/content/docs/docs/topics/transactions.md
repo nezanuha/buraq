@@ -1,9 +1,9 @@
 ﻿---
 title: "Database Transactions"
-description: "buraq.orm.transaction provides async-first transaction management."
+description: "buraq.db.transaction provides async-first transaction management."
 ---
 
-`buraq.orm.transaction` provides async-first transaction management.
+`buraq.db.transaction` provides async-first transaction management.
 
 ```python
 from buraq.db import transaction
@@ -105,7 +105,7 @@ async with transaction.atomic():
 ## Error handling
 
 ```python
-from buraq.orm.transaction import TransactionManagementError
+from buraq.db.transaction import TransactionManagementError
 
 try:
     async with transaction.atomic():
