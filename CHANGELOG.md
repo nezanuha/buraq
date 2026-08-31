@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Viewsets and a router.** `ModelViewSet` states a model once and `Router`
+  turns it into the five routes a JSON resource needs, with names, response
+  models and the fixed paths registered before the one carrying a converter:
+
+  ```python
+  class PostViewSet(ModelViewSet):
+      model = Post
+      read_schema = PostRead
+      write_schema = PostCreate
+
+  router = Router()
+  router.register("/api/posts", PostViewSet, basename="post")
+  urlpatterns = router.urls
+  ```
+
+  Only the actions a class defines are routed, so a read-only resource is one
+  with `create`, `update` and `destroy` removed — there is no second list of
+  permitted methods to keep in step. Overriding an action keeps its route.
+- **Declarative filtering on a viewset** — `filter_fields`, `search_fields`,
+  `ordering_fields`, `ordering` and `paginate_by` map `?status=draft`,
+  `?search=hello`, `?ordering=-created_at` and `?page=2` onto the queryset. A
+  parameter naming a field the class did not offer is ignored rather than
+  reaching a column it was never meant to.
+
 - **`startapp` writes an `apps.py`.** `AppConfig` and its `ready()` hook exist
   and the apps documentation says to create the file — but the scaffold never
   did, so a startup hook was reachable only by someone who had read that page

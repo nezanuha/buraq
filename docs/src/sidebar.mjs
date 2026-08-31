@@ -47,6 +47,7 @@ export const currentSidebar = [
         ],
       },
       { label: 'Schemas', slug: 'docs/topics/schemas' },
+      { label: 'Viewsets & Routers', slug: 'docs/topics/viewsets' },
       {
         label: 'Views',
         items: [
