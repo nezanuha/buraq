@@ -23,6 +23,7 @@ Usage::
 from buraq.test.client import AsyncClient, RequestFactory
 from buraq.test.testcase import (
     DiscoverRunner,
+    LiveServerTestCase,
     MessagesTestMixin,
     SimpleTestCase,
     TestCase,
@@ -36,6 +37,7 @@ __all__ = [
     "RequestFactory",
     "TestCase",
     "SimpleTestCase",
+    "LiveServerTestCase",
     "TransactionTestCase",
     "override_settings",
     "MessagesTestMixin",

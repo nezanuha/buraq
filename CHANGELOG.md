@@ -299,6 +299,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fifteen documented imports did not import.** A sweep of every
+  `from buraq… import …` shown in the documentation found lines that had rotted
+  as code moved: `buraq.db.transaction` (it is `buraq.orm.transaction`),
+  `buraq.core.auth.hash_password` (`buraq.contrib.auth.make_password`),
+  `buraq.contrib.ratelimit` (no such module — the limiter lives on the
+  application), `buraq.contrib.csrf.CSRFMiddleware` (`CsrfViewMiddleware`, in
+  `buraq.middleware.csrf`), `buraq.forms.forms` for the formset helpers
+  (`buraq.forms`), and `buraq.contrib.email.get_connection`.
+
+  `LiveServerTestCase` is now exported from `buraq.test` beside the other test
+  classes, and `NoReverseMatch` and `Resolver404` from `buraq.urls`, where the
+  functions that raise them are. A test walks every documented import — 608 of
+  them — so the next one to rot fails here rather than for a reader.
+- **Password examples were missing their `await`.** `make_password()` and
+  `check_password()` are coroutines — hashing runs in a thread so it cannot
+  block the loop — and two pages showed them called synchronously, which yields
+  a coroutine object rather than a hash.
+
 - **`send_many()` opened one SMTP connection per message.** It inherited a loop
   over `send()`, and `send()` uses aiosmtplib's one-shot helper — connect,
   negotiate TLS, authenticate, quit, for every message. Counted against a local

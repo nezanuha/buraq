@@ -144,10 +144,10 @@ Useful for checking what a `Meta.permissions` entry will produce before running
 from buraq.contrib.auth import make_password, check_password, validate_password
 
 # Hash a password
-hashed = make_password("my-secret")
+hashed = await make_password("my-secret")
 
 # Verify
-ok = check_password("my-secret", hashed)
+ok = await check_password("my-secret", hashed)
 
 # Validate strength (raises ValidationError on failure)
 validate_password("short")          # → ValidationError: too short

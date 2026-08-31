@@ -79,10 +79,39 @@ sent = await conn.send_many([first, second, third])
 `send_mass_mail()` is the same thing for plain-text messages given as tuples.
 
 The SMTP backend opens one connection for the batch, authenticates once, and
-sends every message through it — which is what makes this worth using over a
-loop of `send()`, where each call is a fresh connection, TLS negotiation and
-login. A message the server rejects costs that message, not the batch; the
-return value is how many were accepted.
+sends every message through it. A message the server rejects costs that message,
+not the batch; the return value is how many were accepted.
+
+### Why not a loop of send()
+
+`send()` opens a connection, negotiates TLS, authenticates and quits — every
+time. It is the right shape for one message and the wrong shape for fifty:
+
+```python
+for user in users:
+    await send_mail("Hello", body, [user.email])   # fifty handshakes
+```
+
+Build the list and hand it over instead:
+
+```python
+messages = [
+    EmailMessage(subject="Hello", body=body, to=[user.email])
+    for user in users
+    if user.wants_email
+]
+await get_connection().send_many(messages)          # one handshake
+```
+
+The filtering that would have sat inside the loop moves into building the list.
+That covers most of what a loop was for; what it does not cover is work that has
+to happen *between* sends on the same connection — reading a row after each one,
+say, or rate-limiting by hand. For that, `send()` in a loop is still the answer,
+and it will cost a connection per message.
+
+Django's `with mail.get_connection() as connection:` keeps one connection open
+across a loop, so it handles that case without the cost. Buraq has no equivalent:
+backends are cached, connections are not held open between calls.
 
 ### Custom backend
 

@@ -197,8 +197,8 @@ See [Permissions & Groups](permissions.md) for setup and assignment.
 ```python
 from buraq.contrib.auth import make_password, check_password, validate_password
 
-hashed = make_password("my-secret")
-ok     = check_password("my-secret", hashed)
+hashed = await make_password("my-secret")
+ok     = await check_password("my-secret", hashed)
 
 # Keep the user logged in after a password change
 from buraq.contrib.auth import update_session_auth_hash
@@ -539,12 +539,12 @@ class Profile(AbstractUser):
 
 ```python
 from buraq.contrib.auth.models import User
-from buraq.core.auth import hash_password
+from buraq.contrib.auth import make_password
 
 user = await User.objects.create(
     username        = "alice",
     email           = "alice@example.com",
-    hashed_password = hash_password("secure-password"),
+    hashed_password = await make_password("secure-password"),
     is_active       = True,
 )
 ```

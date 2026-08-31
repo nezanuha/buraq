@@ -181,17 +181,29 @@ MIDDLEWARE = [
 
 ## Rate limiting
 
-Buraq includes SlowAPI rate limiting:
+Buraq wires [SlowAPI](https://slowapi.readthedocs.io/) when it is installed, with
+`RATE_LIMIT` as the limit applied to every route:
+
+```python title="config/settings.py"
+RATE_LIMIT = "100/minute"     # the default
+```
+
+There is no `buraq.contrib.ratelimit` — the limiter is built at startup and kept
+on the application, which is where a per-route limit comes from:
 
 ```python
-from buraq.contrib.ratelimit import limiter, RateLimitExceeded
-from starlette.requests import Request
+from buraq.urls import path
+
+app = Buraq(settings_module="config.settings")
 
 
-@limiter.limit("5/minute")
-async def login(request: Request):
+@app.state.limiter.limit("5/minute")
+async def login(request):
     ...
 ```
+
+Without SlowAPI installed the limiter is not created and no limiting happens;
+nothing else changes.
 
 ## CSRF protection
 
@@ -199,13 +211,18 @@ Buraq ships a CSRF middleware that validates tokens on state-changing requests. 
 
 ### Setup
 
-```python title="config/urls.py"
-from buraq.contrib.csrf import CSRFMiddleware
+It is in `MIDDLEWARE` already, so there is nothing to set up:
 
-app.add_middleware(CSRFMiddleware)
+```python title="config/settings.py"
+MIDDLEWARE = [
+    ...
+    "buraq.middleware.csrf.CsrfViewMiddleware",
+]
 ```
 
-`CSRFMiddleware` skips validation for safe methods (`GET`, `HEAD`, `OPTIONS`, `TRACE`).
+Removing that line turns CSRF protection off everywhere. `CsrfViewMiddleware`
+skips validation for safe methods (`GET`, `HEAD`, `OPTIONS`, `TRACE`), and for
+a view decorated `@csrf_exempt`.
 
 ### Using the token in templates
 

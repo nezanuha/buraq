@@ -83,7 +83,7 @@ ModelForm(data=None, instance=None, **kwargs)
 ## BaseFormSet
 
 ```python
-from buraq.forms.forms import BaseFormSet
+from buraq.forms import BaseFormSet
 ```
 
 Manages a collection of same-type forms.
@@ -103,7 +103,7 @@ Manages a collection of same-type forms.
 ## modelformset_factory
 
 ```python
-from buraq.forms.forms import modelformset_factory
+from buraq.forms import modelformset_factory
 
 ArticleFormSet = modelformset_factory(
     model   = Article,
@@ -118,7 +118,7 @@ Returns a `BaseFormSet` subclass that creates/updates multiple instances of `mod
 ## inlineformset_factory
 
 ```python
-from buraq.forms.forms import inlineformset_factory
+from buraq.forms import inlineformset_factory
 
 CommentFormSet = inlineformset_factory(
     parent_model = Post,

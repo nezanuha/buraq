@@ -33,6 +33,10 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+# Re-exported: reverse() raises NoReverseMatch and resolve() raises Resolver404,
+# so this is where a caller looks for them.
+from buraq.exceptions import NoReverseMatch, Resolver404  # noqa: F401
+
 _PATH_TYPE_MAP = {"int": int, "str": str, "slug": str, "uuid": str, "path": str}
 _TYPED_PARAM_RE = re.compile(r"<(\w+):(\w+)>")
 
@@ -101,6 +105,7 @@ def include(module_path_or_patterns, namespace: str = "") -> URLInclude:
 
 
 _ALL_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+
 
 
 def path(
@@ -242,7 +247,6 @@ def resolve(path_str: str) -> ResolverMatch:
 
     Raises `Resolver404` if no route matches.
     """
-    from buraq.exceptions import Resolver404
 
     for name, registered_path in _route_registry.items():
         pattern = re.sub(r"\{(\w+)\}", r"(?P<\1>[^/]+)", registered_path)
