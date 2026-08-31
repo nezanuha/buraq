@@ -78,6 +78,12 @@ sent = await conn.send_many([first, second, third])
 
 `send_mass_mail()` is the same thing for plain-text messages given as tuples.
 
+The SMTP backend opens one connection for the batch, authenticates once, and
+sends every message through it — which is what makes this worth using over a
+loop of `send()`, where each call is a fresh connection, TLS negotiation and
+login. A message the server rejects costs that message, not the batch; the
+return value is how many were accepted.
+
 ### Custom backend
 
 ```python

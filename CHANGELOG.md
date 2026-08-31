@@ -299,6 +299,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`send_many()` opened one SMTP connection per message.** It inherited a loop
+  over `send()`, and `send()` uses aiosmtplib's one-shot helper — connect,
+  negotiate TLS, authenticate, quit, for every message. Counted against a local
+  server: five messages, five connections. The whole reason to batch is to pay
+  that once, so the method was costing exactly what it existed to save. The SMTP
+  backend now connects once, logs in once and sends the batch through it — five
+  messages, one connection. A message the server rejects costs that message
+  rather than the batch.
+
 - **`from buraq.contrib.email import get_connection` raised ImportError.** The
   function lives in `buraq.contrib.email.send` and was never re-exported from
   the package, while the email page shows exactly that import. It is exported
