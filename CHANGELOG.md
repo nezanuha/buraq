@@ -299,6 +299,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`from buraq.contrib.email import get_connection` raised ImportError.** The
+  function lives in `buraq.contrib.email.send` and was never re-exported from
+  the package, while the email page shows exactly that import. It is exported
+  now, and a test asserts every name the page tells you to import is importable.
+  The page also now shows `send_many()`, which is how several messages go over
+  one backend — there is no connection object to open and close, so the batching
+  is a method rather than a context manager.
+
 - **A broken `admin.py` made a model vanish from the admin, silently.**
   `autodiscover()` wrapped the import in `suppress(ModuleNotFoundError)` to skip
   apps that have no `admin.py` — and that also swallowed a failed import

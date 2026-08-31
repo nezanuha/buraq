@@ -67,7 +67,16 @@ conn = get_connection(using="bulk")
 await conn.send(message)
 ```
 
-Backends are cached after the first call — no new connections on repeated calls.
+Backends are cached after the first call — no new connections on repeated calls,
+so there is no connection object to open, pass around and close. To send several
+messages over one connection, hand them all to the backend at once:
+
+```python
+conn = get_connection(using="bulk")
+sent = await conn.send_many([first, second, third])
+```
+
+`send_mass_mail()` is the same thing for plain-text messages given as tuples.
 
 ### Custom backend
 
