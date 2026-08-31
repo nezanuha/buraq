@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`buraq.db.transaction` is a real module.** `buraq/db/__init__.py` aliased it
+  as an attribute, so `from buraq.db import transaction` worked and
+  `from buraq.db.transaction import atomic` raised `ModuleNotFoundError`. The
+  package already meant `buraq.db` to be the namespace for database things —
+  the same shape as the framework this borrows from — so the alias is now a
+  module that re-exports the implementation. All three import paths work and
+  every one is the same object; two `atomic`s would be two context variables and
+  a transaction that did not nest.
+
 - **Viewsets and a router.** `ModelViewSet` states a model once and `Router`
   turns it into the five routes a JSON resource needs, with names, response
   models and the fixed paths registered before the one carrying a converter:
@@ -301,7 +310,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Fifteen documented imports did not import.** A sweep of every
   `from buraq… import …` shown in the documentation found lines that had rotted
-  as code moved: `buraq.db.transaction` (it is `buraq.orm.transaction`),
+  as code moved: `buraq.db.transaction` (an attribute alias, not a submodule —
+  made real rather than redirected, since `buraq.db` is the namespace the
+  package already meant to present),
   `buraq.core.auth.hash_password` (`buraq.contrib.auth.make_password`),
   `buraq.contrib.ratelimit` (no such module — the limiter lives on the
   application), `buraq.contrib.csrf.CSRFMiddleware` (`CsrfViewMiddleware`, in
