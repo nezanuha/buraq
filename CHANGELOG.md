@@ -126,6 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Three claims on that page had also stopped being true: that `startproject`
   installs dependencies, that a project contains an `alembic/` directory, and
   that `buraq` re-executes itself using `./.venv` so no activation is needed.
+  Quickstart repeated the first of them and has been corrected too; the rest of
+  that page was followed end to end against the current build and is accurate.
 
 - **BREAKING — `startproject` no longer creates a virtualenv.** It writes the
   files and stops; `--install` asks for the old behaviour. Whoever ran the
@@ -144,8 +146,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in it, so `python -m pip` inside a scaffolded project failed.
 
   `manage.py` is eleven lines now and re-executes nothing. `startproject` returns
-  in about two seconds rather than after an install, and prints the environment
-  step alongside the others.
+  in about two seconds rather than after an install, and prints only what is
+  left to do — `cd`, `migrate`, `runserver`. It briefly printed an environment
+  step as well, which was advice to do what running the command had just proved
+  was already done.
 
 - **BREAKING — a default table name is pluralised as English, not by adding
   `s`.** `Category` produced `categorys`, and so did `boxs`, `classs`,
