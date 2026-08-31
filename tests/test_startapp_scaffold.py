@@ -100,3 +100,17 @@ def test_the_templates_use_the_documented_csrf_form():
     templates = _app_templates("posts", "post", "posts")
     assert "{{ csrf_input }}" in templates["create.html"]
     assert "{{ csrf_input }}" in templates["edit.html"]
+
+
+def test_schemas_py_says_what_it_is_for(tmp_path):
+    """A generated file that needs a documentation page to explain it is a bug.
+
+    schemas.py arrived holding two classes with nothing about what they were,
+    when to write them, or that an app serving only HTML can delete the file.
+    """
+    schemas = _scaffold(tmp_path).joinpath("schemas.py").read_text(encoding="utf-8")
+
+    assert schemas.startswith('"""'), "no module docstring"
+    assert "JSON" in schemas
+    assert "can delete this file" in schemas, "it should say when it is not needed"
+    assert "docs/topics/schemas" in schemas, "and where the detail is"

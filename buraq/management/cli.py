@@ -994,6 +994,13 @@ def startapp(name: str = typer.Argument(..., help="App name")):
             "    created_at = models.DateTimeField(auto_now_add=True)\n"
         ),
         "schemas.py": (
+            # The file said nothing about itself, so a new app arrived holding
+            # two classes with no account of what they were for.
+            '"""Pydantic schemas -- the JSON this app accepts and returns.\n\n'
+            "Needed only for endpoints that serve JSON. A view that renders a\n"
+            "template reads the model directly, so an app with only HTML pages\n"
+            "can delete this file.\n\n"
+            'https://buraqproject.com/docs/topics/schemas\n"""\n\n'
             "from pydantic import BaseModel\n\n\n"
             f"class {model}Read(BaseModel):\n"
             "    id: int\n"
