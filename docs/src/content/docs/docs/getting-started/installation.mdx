@@ -16,7 +16,7 @@ You need **Python 3.11 or newer** — check with `python --version`.
 python -m venv .venv
 source .venv/bin/activate       # Windows: .venv\Scripts\activate
 
-pip install buraq
+python -m pip install buraq
 ```
 
 </TabItem>
@@ -72,7 +72,7 @@ at `/api/docs`.
 Into the same environment as Buraq:
 
 ```bash
-pip install httpx            # or: uv pip install httpx
+python -m pip install httpx     # or: uv pip install httpx
 ```
 
 Record them in the project's `pyproject.toml` so the next person gets them too.
@@ -94,8 +94,8 @@ uv add "buraq[mysql]"            # MySQL / MariaDB
 <TabItem label="pip">
 
 ```bash
-pip install "buraq[postgres]"    # PostgreSQL
-pip install "buraq[mysql]"       # MySQL / MariaDB
+python -m pip install "buraq[postgres]"    # PostgreSQL
+python -m pip install "buraq[mysql]"       # MySQL / MariaDB
 ```
 
 </TabItem>
@@ -118,8 +118,8 @@ uv add aiomcache                 # Memcached
 <TabItem label="pip">
 
 ```bash
-pip install "redis[hiredis]"     # Redis
-pip install aiomcache            # Memcached
+python -m pip install "redis[hiredis]"     # Redis
+python -m pip install aiomcache            # Memcached
 ```
 
 </TabItem>
@@ -128,7 +128,9 @@ pip install aiomcache            # Memcached
 ## Troubleshooting
 
 **`buraq: command not found`** — the environment is not activated. Activate it,
-or use `python -m buraq`. If you installed with `uv tool install`, run
+or use `python -m buraq`. Running things as `python -m …` is why the commands
+above do: it uses whichever Python you invoked, where a bare `pip` or `buraq`
+uses whatever your `PATH` happens to find first. If you installed with `uv tool install`, run
 `uv tool update-shell` and open a new terminal.
 
 **`ModuleNotFoundError`, or `buraq` behaving like a version you do not have** —
