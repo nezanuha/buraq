@@ -16,6 +16,8 @@ myblog/
 ├── static/
 │   ├── css/
 │   └── js/
+├── tests/
+│   └── test_smoke.py     # one passing test, so `buraq test` reports something
 ├── main.py               # ASGI entry point — builds the application
 ├── manage.py             # CLI — buraq <command>
 ├── pyproject.toml
@@ -35,6 +37,7 @@ myblog/
 │   ├── forms.py
 │   ├── admin.py
 │   ├── schemas.py        # Pydantic schemas for JSON endpoints — see Schemas
+│   ├── apps.py           # AppConfig: display name, startup hook — optional
 │   └── migrations/
 │       └── __init__.py
 ...
@@ -62,7 +65,8 @@ urlpatterns = [
 
 ### `manage.py`
 
-Works exactly like Django's `manage.py`. Auto-detects `.venv` so you don't need to activate it:
+The same entry point as the `buraq` command, run from inside the project. Both
+do the same thing, in whatever environment you are already in:
 
 ```bash
 buraq runserver

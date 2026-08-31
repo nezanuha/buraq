@@ -54,7 +54,7 @@ def _scaffold(tmp_path):
 def test_the_generated_files_are_all_written(tmp_path):
     app = _scaffold(tmp_path)
     for relative in (
-        "models.py", "views.py", "urls.py", "admin.py", "schemas.py",
+        "models.py", "views.py", "urls.py", "admin.py", "schemas.py", "apps.py",
         "templates/posts/list.html", "templates/posts/create.html",
         "templates/posts/detail.html", "templates/posts/edit.html",
     ):
@@ -114,3 +114,17 @@ def test_schemas_py_says_what_it_is_for(tmp_path):
     assert "JSON" in schemas
     assert "can delete this file" in schemas, "it should say when it is not needed"
     assert "docs/topics/schemas" in schemas, "and where the detail is"
+
+
+def test_apps_py_is_written_and_optional(tmp_path):
+    """The apps documentation says to create one; the scaffold did not.
+
+    ready() was therefore reachable only by somebody who had read that page and
+    knew the file was theirs to add.
+    """
+    apps = _scaffold(tmp_path).joinpath("apps.py").read_text(encoding="utf-8")
+
+    assert "class PostConfig(AppConfig)" in apps
+    assert "async def ready" in apps
+    assert "Optional" in apps, "it should say the app works without it"
+    assert "posts.apps.PostConfig" in apps, "and how to name it in INSTALLED_APPS"

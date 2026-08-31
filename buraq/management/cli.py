@@ -987,6 +987,23 @@ def startapp(name: str = typer.Argument(..., help="App name")):
 
     files = {
         "__init__.py": "",
+        "apps.py": (
+            # The documentation says to create one of these; the scaffold did
+            # not, so ready() was reachable only by somebody who had read that
+            # page and knew the file was theirs to add.
+            '"""Configuration for this app.\n\n'
+            "Optional: an app listed in INSTALLED_APPS by its own name works\n"
+            "without it. Name the config instead --\n"
+            f'INSTALLED_APPS = ["{name}.apps.{model}Config"] -- to give the app\n'
+            "a display name, or to run something once at startup.\n"
+            'https://buraqproject.com/docs/topics/apps\n"""\n\n'
+            "from buraq.apps import AppConfig\n\n\n"
+            f"class {model}Config(AppConfig):\n"
+            f'    name = "{name}"\n'
+            f'    verbose_name = "{plural.title()}"\n\n'
+            "    async def ready(self):\n"
+            '        """Runs once, after every app is loaded. Connect signals here."""\n'
+        ),
         "models.py": (
             "from buraq import models\n\n\n"
             f"class {model}(models.Model):\n"
@@ -1267,6 +1284,10 @@ def startproject(
         project_dir / "templates",
         project_dir / "static" / "css",
         project_dir / "static" / "js",
+        # pyproject.toml already points pytest here. Without the directory,
+        # `buraq test` collected nothing and said so in a way that reads like
+        # the runner is broken rather than like there is nowhere to look.
+        project_dir / "tests",
     ]
     for d in dirs:
         d.mkdir(parents=True)
@@ -1445,6 +1466,22 @@ def startproject(
         "from buraq import Buraq\n\n"
         "app = Buraq(settings_module='config.settings')\n"
     , encoding="utf-8")
+
+    # tests/test_smoke.py -- one passing test, so `buraq test` reports a result
+    # rather than "collected 0 items", and the shape of a test is on disk to
+    # copy rather than in a documentation page to find.
+    (project_dir / "tests" / "test_smoke.py").write_text(
+        '"""The application starts and answers a request.\n\n'
+        "Delete this once you have tests of your own -- it is here so\n"
+        "`buraq test` has something to report on the first run.\n"
+        '"""\n\n'
+        "from fastapi.testclient import TestClient\n\n"
+        "from main import app\n\n\n"
+        "def test_the_application_starts():\n"
+        "    with TestClient(app) as client:\n"
+        '        assert client.get("/").status_code in (200, 404)\n',
+        encoding="utf-8",
+    )
 
     # manage.py -- the same entry point as the `buraq` command, run from the
     # project so config.settings is importable without anything on PYTHONPATH.

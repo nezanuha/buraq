@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`startapp` writes an `apps.py`.** `AppConfig` and its `ready()` hook exist
+  and the apps documentation says to create the file — but the scaffold never
+  did, so a startup hook was reachable only by someone who had read that page
+  and knew the file was theirs to add. The generated one says it is optional,
+  shows the `INSTALLED_APPS` entry that activates it, and has an empty `ready()`
+  to fill in.
+- **`startproject` writes a `tests/` directory with one passing test.**
+  `pyproject.toml` already pointed pytest at `tests`, and nothing created it, so
+  the first `buraq test` on a new project reported `collected 0 items` and
+  exited 0 — which reads like a broken runner rather than like there is nowhere
+  to look. It now reports `1 passed`, and the example shows how to drive the
+  application with `TestClient`.
+
 - **A Schemas page, and a `schemas.py` that introduces itself.** `buraq startapp`
   writes a `schemas.py` with a `PostRead`
   and a `PostCreate` in it, and nothing explained what they were for — one line
