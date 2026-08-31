@@ -241,6 +241,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The tutorial's URL list could not reach half its own routes.** It put
+  `path("/<str:slug>", ...)` before `path("/new", ...)`, and routes match top to
+  bottom — so `/posts/new` matched the slug route with a slug of `"new"` and the
+  create page was unreachable. Anyone following the tutorial got a broken app.
+  Fixed segments now come before converters, with the rule stated, and the page
+  says which parts introduce `PostForm` and the templates it names, both of
+  which it used before the tutorial had written them.
+
 - **`{{ csrf_input }}` rendered the function, not a field.** `csrf_input` and
   `csrf_token` are Jinja environment globals, and a global is a value rather
   than something a bare `{{ name }}` calls — so the form shown on every
