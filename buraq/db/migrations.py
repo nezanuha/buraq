@@ -81,13 +81,11 @@ async def _run_async() -> None:
 
 
 def run() -> None:
-    """Run migrations for the project whose alembic.ini invoked this.
+    """Run the migrations Alembic was asked for.
 
-    Called from a project's ``alembic/env.py``::
-
-        from buraq.db.migrations import run
-
-        run()
+    Called from ``buraq/db/alembic/env.py``, which ships with the framework and
+    is reached as a package resource -- a project has no ``alembic/`` directory
+    and no ``alembic.ini`` of its own, and this used to say it did.
 
     Loads settings and imports every installed app's models before anything
     else — without that ``Base.metadata`` is empty, autogenerate sees no

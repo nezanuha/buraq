@@ -31,6 +31,15 @@ source .venv/bin/activate    # macOS / Linux
 uv pip install buraq
 ```
 
+Activating is what makes a bare `buraq` the one you just installed; without it
+the command comes from your `PATH`, which may be a different Buraq entirely.
+
+`uv run buraq …` works without activating, with one thing to know: run inside a
+project, it uses *that project's* environment — creating `.venv` and installing
+the dependencies its `pyproject.toml` declares, from the index. That is uv
+behaving as designed, and it is a different environment from the one you made
+here. Pick one and stay with it.
+
 No uv yet? `curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS and Linux,
 `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"` on Windows. It
 installs faster than pip; nothing here needs it.
@@ -140,8 +149,16 @@ holding Buraq and nothing of yours. Convenient for trying Buraq out, not enough
 to build with. Make an environment as above.
 
 **`buraq: command not found`** — the environment is not activated. Activate it,
-or use `python -m buraq` in place of `buraq`. If you installed with
+or use `python -m buraq`, or with uv `uv run buraq`. If you installed with
 `uv tool install`, run `uv tool update-shell` and open a new terminal.
+
+**`buraq` runs, but not the one you installed** — it came from your `PATH`, not
+from `.venv`. Activating fixes it, and so does `uv run buraq`. To see which one
+is running:
+
+```bash
+buraq shell -c "import buraq; print(buraq.__file__)"
+```
 
 **`ModuleNotFoundError` for a package you installed** — you are in a different
 environment from the one you installed into. `buraq shell -c "import buraq;
