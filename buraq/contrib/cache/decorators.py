@@ -30,7 +30,8 @@ def cache_result(key: str | None = None, timeout: int = 300):
                 cache_key = key
             else:
                 payload = [str(a) for a in args] + [f"{k}={v}" for k, v in kwargs.items()]
-                arg_hash = hashlib.md5(json.dumps(payload).encode()).hexdigest()[:8]
+                encoded = json.dumps(payload).encode()
+                arg_hash = hashlib.md5(encoded, usedforsecurity=False).hexdigest()[:8]
                 cache_key = f"fn:{func.__module__}.{func.__name__}:{arg_hash}"
 
             cached = await cache.get(cache_key)

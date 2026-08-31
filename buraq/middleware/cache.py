@@ -40,7 +40,7 @@ _UNCACHEABLE_STATUS = {206, 301, 302, 303, 304, 307, 308, 400, 401, 403, 404, 50
 
 def _make_cache_key(request: Request) -> str:
     url = str(request.url)
-    digest = hashlib.md5(url.encode()).hexdigest()
+    digest = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
     return f"{_CACHE_KEY_PREFIX}{digest}"
 
 

@@ -56,7 +56,8 @@ class MemcachedCacheBackend(BaseCacheBackend):
         full = self._prefix + key.encode()
         if len(full) > 250:
             import hashlib
-            full = self._prefix + hashlib.md5(key.encode()).hexdigest().encode()
+            digest = hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()
+            full = self._prefix + digest.encode()
         return full
 
     async def get(self, key: str) -> Any | None:

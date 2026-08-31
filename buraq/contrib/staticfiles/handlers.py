@@ -357,4 +357,4 @@ def _compress_collected(static_root: Path) -> int:
 
 
 def _file_hash(path: Path) -> str:
-    return hashlib.md5(path.read_bytes()).hexdigest()
+    return hashlib.md5(path.read_bytes(), usedforsecurity=False).hexdigest()

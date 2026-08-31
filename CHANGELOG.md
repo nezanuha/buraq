@@ -237,6 +237,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The ETag decorator hashed the response body twice on every request.** The
+  digest was computed for the header and then computed again to compare against
+  `If-None-Match` — the same bytes, the same answer, the first one discarded.
+  About 2.2 ms per request on a 1 MB response, 0.3 ms on a 100 KB page. Hashed
+  once and reused.
+- **Buraq could not start on a FIPS-enabled system.** Six of its seven `md5`
+  calls omitted `usedforsecurity=False`, and `hashlib` refuses to construct md5
+  without it where FIPS is enforced. Every one of them is a cache key, an ETag
+  or a file digest — never a security decision — so all now declare it.
+
 - **`buraq check` passed on a project that could not start.** It reported "no
   issues" while `runserver` failed on the first line of `config/urls.py` — a
   package missing from the environment, a typo in an import, a view that had

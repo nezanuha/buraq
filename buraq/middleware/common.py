@@ -105,7 +105,7 @@ class ConditionalGetMiddleware:
             return
 
         body = b"".join(body_chunks)
-        etag = f'"{hashlib.md5(body).hexdigest()}"'
+        etag = f'"{hashlib.md5(body, usedforsecurity=False).hexdigest()}"'
 
         request_headers = {k.lower(): v for k, v in scope.get("headers", [])}
         if_none_match = request_headers.get(b"if-none-match", b"").decode()
