@@ -181,12 +181,25 @@ MIDDLEWARE = [
 
 ## Rate limiting
 
-Buraq wires [SlowAPI](https://slowapi.readthedocs.io/) when it is installed, with
-`RATE_LIMIT` as the limit applied to every route:
+Buraq wires [SlowAPI](https://slowapi.readthedocs.io/), with `RATE_LIMIT` as the
+limit applied to every route, by IP:
 
 ```python title="config/settings.py"
 RATE_LIMIT = "100/minute"     # the default
+RATE_LIMIT = ""               # off; @ratelimit still works
 ```
+
+Enforcing it costs about 0.4 ms per request — slowapi checks the limit in a
+middleware, and the counter lives in memory. Set `RATE_LIMIT = ""` if something
+in front of the application already limits by IP, as Nginx and every CDN can:
+the middleware is then not installed at all, and per-route `@ratelimit` keeps
+working.
+
+:::caution[One counter per worker]
+The counter is in the process, so each worker counts separately: four workers
+with `100/minute` admit up to 400. Point slowapi at Redis for a shared counter,
+or limit at the edge where there is only one.
+:::
 
 To tighten it for one route, decorate the view:
 

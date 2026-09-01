@@ -202,18 +202,33 @@ class Buraq(FastAPI):
             self.add_middleware(middleware)
 
     def _register_rate_limiter(self) -> None:
-        """Wire slowapi's limiter when it is installed; it is an optional extra."""
+        """Build the limiter and, when RATE_LIMIT is set, enforce it everywhere.
+
+        Building the limiter is not enough to limit anything. slowapi applies
+        `default_limits` from its middleware; without that only routes carrying
+        an explicit @ratelimit are checked, and RATE_LIMIT -- documented as
+        applying to every route, and named in the admin documentation as what
+        protects the login page -- did nothing at all.
+
+        RATE_LIMIT = "" turns the global limit off and leaves @ratelimit
+        working, which is what an application wants when something in front of
+        it already limits by IP.
+        """
         try:
             from slowapi import Limiter, _rate_limit_exceeded_handler
             from slowapi.errors import RateLimitExceeded
+            from slowapi.middleware import SlowAPIMiddleware
             from slowapi.util import get_remote_address
-        except ImportError:
+        except ImportError:  # pragma: no cover - slowapi is a dependency
             return
 
+        default_limits = [settings.RATE_LIMIT] if settings.RATE_LIMIT else []
         self.state.limiter = Limiter(
-            key_func=get_remote_address, default_limits=[settings.RATE_LIMIT]
+            key_func=get_remote_address, default_limits=default_limits
         )
         self.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+        if default_limits:
+            self.add_middleware(SlowAPIMiddleware)
 
     def on_startup(self, func):
         """

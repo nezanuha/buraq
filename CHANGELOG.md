@@ -343,6 +343,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`RATE_LIMIT` limited nothing.** Buraq built slowapi's `Limiter` but never
+  installed its middleware, and `default_limits` are applied by that middleware
+  — so every route was unlimited whatever the setting said. With
+  `RATE_LIMIT = "3/minute"`, six requests to a route returned six `200`s. The
+  admin documentation names this setting as what protects the login page from
+  brute force; it was not protecting anything.
+
+  The middleware is installed when `RATE_LIMIT` is set. Enforcing costs about
+  0.4 ms per request, so `RATE_LIMIT = ""` turns the global limit off — and
+  leaves `@ratelimit` working — for an application behind something that already
+  limits by IP.
+
 - **Fifteen documented imports did not import.** A sweep of every
   `from buraq… import …` shown in the documentation found lines that had rotted
   as code moved: `buraq.db.transaction` (an attribute alias, not a submodule —
