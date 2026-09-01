@@ -34,11 +34,12 @@ class MemcachedCacheBackend(BaseCacheBackend):
         location: str | list[str] | None = None,
         key_prefix: str | None = None,
         timeout: int | None = None,
+        version: int | None = None,
     ):
         """``location`` is the server, or servers, when it comes from a CACHES
         entry -- what it means for Django's memcached backend."""
         from buraq.conf import settings
-        self._init_shared(key_prefix, timeout)
+        self._init_shared(key_prefix, timeout, version)
         self._client = None
 
         url = getattr(settings, "CACHE_MEMCACHED_URL", None)
@@ -92,8 +93,43 @@ class MemcachedCacheBackend(BaseCacheBackend):
 
     async def set(self, key: str, value: Any, timeout: int | None = None) -> None:
         client = await self._get_client()
-        exptime = timeout if timeout is not None else self._default_timeout
+        exptime = self._resolve_timeout(timeout) or 0
         await client.set(self._make_key(key), pickle.dumps(value), exptime=exptime)
+
+    async def add(self, key: str, value: Any, timeout: int | None = None) -> bool:
+        """Set the key only if it is not already there.
+
+        ADD is a memcached command, so the server decides and exactly one caller
+        wins. The inherited version checks and then sets, and both halves wait on
+        the network, so two callers can both find the key missing and both
+        believe they set it -- which defeats the point, since `add` is what people
+        build locks out of.
+
+        Falls back to the inherited version if the installed client has no
+        `add`, rather than failing: a slower correct-enough path beats an
+        AttributeError at the first lock.
+        """
+        client = await self._get_client()
+        if not hasattr(client, "add"):  # pragma: no cover - client dependent
+            return await super().add(key, value, timeout)
+        exptime = self._resolve_timeout(timeout) or 0
+        return bool(
+            await client.add(self._make_key(key), pickle.dumps(value), exptime=exptime)
+        )
+
+    async def incr(self, key: str, delta: int = 1) -> int:
+        """Not atomic here, unlike Redis and the database.
+
+        Memcached's own INCR works on values stored as ASCII decimals, and this
+        backend stores pickles -- so using it would mean a second storage format
+        for integers, and `get` guessing which one it is looking at. That guess
+        is wrong for any string that happens to look like a number.
+
+        The inherited read-then-write is used instead, and concurrent callers can
+        lose counts. For a counter that has to be right, use Redis or the
+        database backend.
+        """
+        return await super().incr(key, delta)
 
     async def delete(self, key: str) -> None:
         client = await self._get_client()

@@ -26,7 +26,10 @@ class BaseCacheBackend(ABC):
     supports_timeout = True
 
     def _init_shared(
-        self, key_prefix: str | None = None, timeout: int | None = None
+        self,
+        key_prefix: str | None = None,
+        timeout: int | None = None,
+        version: int | None = None,
     ) -> None:
         """Call from a subclass __init__ to pick up the shared settings."""
         from buraq.conf import settings
@@ -41,10 +44,47 @@ class BaseCacheBackend(ABC):
             if timeout is not None
             else getattr(settings, "CACHE_DEFAULT_TIMEOUT", 300)
         )
+        self._version = (
+            version if version is not None else getattr(settings, "CACHE_VERSION", 1)
+        )
 
-    def _make_key(self, key: str) -> str:
-        """The key as it is stored, with whatever prefix applies."""
-        return f"{getattr(self, '_prefix', '')}{key}"
+    def _make_key(self, key: str, version: int | None = None) -> str:
+        """The key as it is stored: prefix, version, then the key itself.
+
+        The version is what lets a deploy invalidate everything at once without
+        emptying the cache: raise ``CACHE_VERSION`` and yesterday's entries stop
+        being found, then age out on their own. Changing the prefix does that
+        too, but leaves no way to read the old value -- so every miss goes to the
+        database at once, which on a busy site is the stampede the cache existed
+        to prevent. With a version you can still ask for the old one while you
+        roll over.
+        """
+        if version is None:
+            version = getattr(self, "_version", 1)
+        return f"{getattr(self, '_prefix', '')}{version}:{key}"
+
+    def with_version(self, version: int):
+        """This cache, reading and writing at another version.
+
+        The point of versioning is a rollover you can survive: raise
+        CACHE_VERSION so new writes land under the new number, and read the old
+        one while the new entries fill in, rather than taking every miss at once
+        the moment the cache goes cold.
+
+            previous = cache.with_version(cache.version - 1)
+            value = await previous.get("key")
+
+        Shallow, so the connection is shared rather than opened again.
+        """
+        import copy
+
+        other = copy.copy(self)
+        other._version = version
+        return other
+
+    @property
+    def version(self) -> int:
+        return getattr(self, "_version", 1)
 
     def _resolve_timeout(self, timeout: int | None) -> int | None:
         """The timeout to use when the caller did not give one.

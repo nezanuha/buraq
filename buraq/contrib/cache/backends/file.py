@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import os
 import shutil
 import time
 from pathlib import Path
@@ -44,11 +45,13 @@ class FileCacheBackend(BaseCacheBackend):
         location: str | None = None,
         key_prefix: str | None = None,
         timeout: int | None = None,
+        version: int | None = None,
     ):
         """``location`` is the directory when it comes from a CACHES entry, which
         is what it means for Django's file-based cache."""
         self._dir = Path(cache_dir or location or getattr(settings, "CACHE_FILE_PATH", ".cache"))  # type: ignore[attr-defined]
-        self._init_shared(key_prefix, timeout)
+        self._init_shared(key_prefix, timeout, version)
+        self._lock: asyncio.Lock | None = None  # made lazily, inside the loop
         # Directory creation is deferred to _write_sync (which runs in a thread),
         # avoiding blocking I/O in the constructor which runs on the event loop thread.
 
@@ -66,8 +69,77 @@ class FileCacheBackend(BaseCacheBackend):
         return data["value"]
 
     def _write_sync(self, path: Path, document: str) -> None:
+        """Write the entry so a reader never sees half of it.
+
+        Writing in place leaves the file short and unparseable for as long as it
+        takes, and a crash partway leaves it that way for good. Writing beside it
+        and renaming is atomic on both POSIX and Windows, so a reader sees either
+        the old entry or the new one.
+        """
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(document, encoding="utf-8")
+        temporary = path.with_suffix(f".{os.getpid()}.tmp")
+        try:
+            temporary.write_text(document, encoding="utf-8")
+            os.replace(temporary, path)
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+
+    def _add_sync(self, path: Path, document: str) -> bool:
+        """Create the entry only if it is not already there.
+
+        O_CREAT|O_EXCL is one operation the operating system decides, so exactly
+        one caller wins even across processes -- which matters here, since a file
+        cache is usually shared by several.
+        """
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # An expired entry still occupies the name; clear it, or a lock could
+        # never be taken again once it had expired.
+        if self._read_sync(path) is None:
+            path.unlink(missing_ok=True)
+        try:
+            handle = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            return False
+        with os.fdopen(handle, "w", encoding="utf-8") as fh:
+            fh.write(document)
+        return True
+
+    async def add(self, key: str, value: Any, timeout: int | None = None) -> bool:
+        timeout = self._resolve_timeout(timeout)
+        document = _to_json(
+            {
+                "key": key,
+                "value": value,
+                "expires_at": time.time() + timeout if timeout and timeout > 0 else None,
+            },
+            key,
+            "FileCacheBackend",
+            subject=value,
+        )
+        return await asyncio.to_thread(self._add_sync, self._key_path(key), document)
+
+    async def incr(self, key: str, delta: int = 1) -> int:
+        """Add to the integer at the key.
+
+        Held under this process's lock, which is all that can be promised: making
+        a read-modify-write safe between processes needs an OS file lock, and the
+        portable ones behave differently enough on Windows that a wrong one is
+        worse than an honest limit. For a counter several processes share, use
+        Redis or the database backend.
+        """
+        async with self._get_lock():
+            current = await self.get(key)
+            if current is None:
+                raise ValueError(f"Cache key {key!r} not found.")
+            new_value = int(current) + delta
+            await self.set(key, new_value)
+            return new_value
+
+    def _get_lock(self) -> asyncio.Lock:
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
     async def get(self, key: str) -> Any | None:
         path = self._key_path(key)

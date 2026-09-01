@@ -17,13 +17,14 @@ class MemoryCacheBackend(BaseCacheBackend):
         location: str | None = None,
         key_prefix: str | None = None,
         timeout: int | None = None,
+        version: int | None = None,
     ):
         """``location`` names the cache in a CACHES entry, as in Django, where it
         separates one in-process cache from another. Aliases already do that
         here, so it is accepted and otherwise unused -- a CACHES entry that
         carries one must not fail to build."""
         self._name = location
-        self._init_shared(key_prefix, timeout)
+        self._init_shared(key_prefix, timeout, version)
         self._store: dict[str, tuple[Any, float | None]] = {}
         self._max_size = max_size
         self._lock: asyncio.Lock | None = None  # created lazily inside event loop

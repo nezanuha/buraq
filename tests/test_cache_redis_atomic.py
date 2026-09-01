@@ -86,7 +86,7 @@ async def test_add_asks_redis_not_to_overwrite():
 
 @pytest.mark.asyncio
 async def test_add_reports_that_an_existing_key_was_not_set():
-    backend = _backend({"k": '"taken"'})
+    backend = _backend({"1:k": '"taken"'})
     assert await backend.add("k", "mine") is False
 
 
@@ -131,7 +131,7 @@ async def test_a_timeout_of_zero_still_means_never_expire():
 
 @pytest.mark.asyncio
 async def test_incr_uses_redis_to_add_rather_than_reading_and_writing():
-    backend = _backend({"k": "5"})
+    backend = _backend({"1:k": "5"})
     assert await backend.incr("k") == 6
     assert "incrby" in backend._client.commands
     assert "set" not in backend._client.commands, "read-modify-write loses counts"
@@ -139,13 +139,13 @@ async def test_incr_uses_redis_to_add_rather_than_reading_and_writing():
 
 @pytest.mark.asyncio
 async def test_incr_takes_a_delta():
-    backend = _backend({"k": "5"})
+    backend = _backend({"1:k": "5"})
     assert await backend.incr("k", 10) == 15
 
 
 @pytest.mark.asyncio
 async def test_decr_goes_through_the_same_command():
-    backend = _backend({"k": "5"})
+    backend = _backend({"1:k": "5"})
     assert await backend.decr("k", 2) == 3
     assert "incrby" in backend._client.commands
 
@@ -167,22 +167,22 @@ async def test_what_incr_leaves_behind_is_what_get_reads_back():
     """
     import json
 
-    backend = _backend({"k": json.dumps(5)})
+    backend = _backend({"1:k": json.dumps(5)})
     await backend.incr("k")
-    assert json.loads(backend._client.store["k"]) == 6
+    assert json.loads(backend._client.store["1:k"]) == 6
 
 
 @pytest.mark.asyncio
 async def test_the_key_prefix_is_applied():
     """Whatever CACHE_KEY_PREFIX is set to has to reach these two as well."""
-    backend = _backend({"p:k": "1"})
+    backend = _backend({"p:1:k": "1"})
     backend._prefix = "p:"
 
     await backend.incr("k")
     await backend.add("other", "v")
 
-    assert ("incrby", "p:k", 1) in backend._client.calls
-    assert backend._client.calls[-1][1] == "p:other"
+    assert ("incrby", "p:1:k", 1) in backend._client.calls
+    assert backend._client.calls[-1][1] == "p:1:other"
 
 
 # --- why this matters -------------------------------------------------------
