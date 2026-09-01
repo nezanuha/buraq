@@ -181,27 +181,20 @@ MIDDLEWARE = [
 
 ## Rate limiting
 
-Buraq wires [SlowAPI](https://slowapi.readthedocs.io/), with `RATE_LIMIT` as the
-limit applied to every route, by IP:
+`RATE_LIMIT` limits every route by IP; `@ratelimit` tightens it for one. Both go
+through a single `RateLimiter`, so they count the same way and share one store.
+
+### Usage
+
+Global limit — every route, by IP:
 
 ```python title="config/settings.py"
-RATE_LIMIT = "100/minute"     # the default
-RATE_LIMIT = ""               # off; @ratelimit still works
+RATE_LIMIT = "100/minute"   # the default
+RATE_LIMIT = ""             # off; @ratelimit still works
 ```
 
-Enforcing it costs about 0.4 ms per request — slowapi checks the limit in a
-middleware, and the counter lives in memory. Set `RATE_LIMIT = ""` if something
-in front of the application already limits by IP, as Nginx and every CDN can:
-the middleware is then not installed at all, and per-route `@ratelimit` keeps
-working.
-
-:::caution[One counter per worker]
-The counter is in the process, so each worker counts separately: four workers
-with `100/minute` admit up to 400. Point slowapi at Redis for a shared counter,
-or limit at the edge where there is only one.
-:::
-
-To tighten it for one route, decorate the view:
+One route, tighter — `key` defaults to `"ip"`, right for login since there is no
+user yet:
 
 ```python title="accounts/views.py"
 from buraq.decorators import ratelimit
@@ -210,18 +203,243 @@ from buraq.decorators import ratelimit
 @ratelimit("5/minute")
 async def login(request):
     ...
+
+
+@ratelimit("5/minute", "50/day")     # both apply
+async def send_code(request):
+    ...
 ```
 
+By signed-in user — the limit follows them across devices and networks:
+
+```python title="accounts/views.py"
+@ratelimit("100/hour", key="user")
+async def send_invite(request):
+    ...
+```
+
+By anything else — API key, tenant, target account:
+
+```python title="api/views.py"
+@ratelimit("1000/hour", key=lambda r: r.headers.get("x-api-key", ""))
+async def search(request):
+    ...
+```
+
+Shared across workers — otherwise four workers with `100/minute` admit 400. If
+your cache is already Redis, the counters follow it and there is nothing to set:
+
+```python title="config/settings.py"
+CACHE_REDIS_URL = "redis://localhost:6379"   # the counters go here too
+
+# only to point them somewhere else, or to keep them per-worker on purpose
+RATE_LIMIT_STORAGE = "memory://"
+```
+
+Weight an expensive route — `cost` spends more of the allowance per call:
+
+```python title="reports/views.py"
+@ratelimit("10/minute", cost=5)     # two calls a minute, not ten
+async def export(request):
+    ...
+```
+
+Skip the limit for some callers — a health check, or staff:
+
+```python title="api/views.py"
+@ratelimit("60/minute", exempt=lambda r: r.scope["user"].is_staff)
+async def dashboard(request):
+    ...
+```
+
+Manual, for a key you compute yourself:
+
+```python title="accounts/views.py"
+from starlette.responses import JSONResponse
+
+from buraq.ratelimit import parse_rate
+
+ATTEMPTS = parse_rate("5/hour")
+
+
+async def reset_password(request, email: str):
+    if not await request.app.state.limiter.hit(ATTEMPTS, f"reset:{email}"):
+        return JSONResponse({"detail": "Too many attempts"}, status_code=429)
+```
+
+Over the limit is `429` with `{"detail": "Rate limit exceeded"}` and a
+`Retry-After` header, from both paths.
+
+A limited response also carries `X-RateLimit-Limit`, `-Remaining` and `-Reset`,
+so a client can pace itself rather than discovering the limit by hitting it.
+They describe the limit the caller is actually spending: a route's own
+`@ratelimit` where it has one, the global limit elsewhere, and the tightest of
+several where a route carries more than one. A route with no limit of its own,
+under `RATE_LIMIT = ""`, is not limited and sends none.
+
+The rest of this section is why each of those is shaped the way it is.
+
+### The global limit
+
+When `RATE_LIMIT` is set, Buraq installs `GlobalRateLimitMiddleware` — a small
+pure-ASGI middleware that checks the limit and answers `429`. The counter lives
+in memory and the check costs about a microsecond, so it is cheap enough to
+leave on — enforcement adds single-digit microseconds to a request, whatever the
+size of the project.
+
+Set `RATE_LIMIT = ""` if something in front of the application already limits by
+IP, as Nginx and every CDN can: the middleware is then not installed at all, and
+per-route `@ratelimit` keeps working.
+
+Limit strings are read by `parse_rate`, which takes `5/minute`, `5 per minute`,
+`10/5 minutes`, and the `s`/`m`/`h`/`d`/`w` abbreviations, over periods from a
+second to a week. The same parser reads `RATE_LIMIT` and `@ratelimit`, so both
+take the same spellings, and both reject a malformed one where it is written
+rather than at the first request it would have been checked against.
+
 Several limits may be given — `@ratelimit("5/minute", "50/day")` — and all of
-them apply. Stacking the decorator accumulates rather than replacing.
+them apply. Stacking the decorator accumulates rather than replacing. A limit on
+a route is counted separately from the global one and from every other route's;
+only the store is shared.
 
-The decorator records the limit and route registration applies it, so a views
-module never needs the application object. Reaching the limiter directly would:
-the app builds itself by loading `ROOT_URLCONF`, which imports the views, so a
-view importing the app back is a circular import and the project does not
-start.
+### What counts as one client
 
-Over the limit is `429 Too Many Requests`. Clients are told apart by IP.
+`key` decides. It defaults to `"ip"`, resolved by `client_ip()`: the first entry
+in `X-Forwarded-For` when that header is present, falling back to the socket
+address. Without the header every request behind a proxy would arrive from the
+proxy, and one heavy client would lock out everyone sharing it.
+
+:::caution[`X-Forwarded-For` is only as trustworthy as whatever sets it]
+Anyone can send that header. Treat a rate limit as a coarse guard against
+floods, not as an authorisation decision — and if your proxy does not strip and
+rewrite it, limit at the edge instead.
+:::
+
+For anything a *signed-in* user does, prefer `key="user"`. An office, a school
+or a phone network is one address, so limiting a signed-in action by IP rations
+it across everybody there at once. Counting the user also stops one person
+resetting their own allowance by changing networks. Anonymous callers have no
+identity to count, so `"user"` falls back to their address.
+
+A callable takes the request and returns a string, for limiting by anything else
+in it.
+
+### Sharing the count between workers
+
+A counter in the worker process is counted per worker: four of them with
+`100/minute` admit up to 400. `RATE_LIMIT_STORAGE` says where the counters go,
+and reaches both `RATE_LIMIT` and `@ratelimit`.
+
+It is empty by default, which means **wherever the cache is**. A project running
+Redis for its cache has already said where its shared state lives, so the limits
+go there and come out correct across workers without naming the same server
+twice. With no Redis cache configured, the counters stay in the process and
+nothing extra needs to run.
+
+Set it to override:
+
+| Value | Where the counters go | Needs |
+| --- | --- | --- |
+| *(empty — the default)* | `CACHE_REDIS_URL` if set, else in-process | — |
+| `memory://` | in-process, per worker, deliberately | nothing |
+| `async+redis://host:6379` | that Redis, not the cache's | `pip install buraq[ratelimit-shared] coredis` |
+| `async+mongodb://host:27017` | that MongoDB | `pip install buraq[ratelimit-shared] motor` |
+
+`resolve_storage()` is what works this out, if you want to check what a given
+settings file resolves to.
+
+:::caution[Following the cache needs `limits` installed]
+The shared counter is handed to [limits](https://limits.readthedocs.io/), an
+optional install. If your cache is Redis but `limits` is missing, Buraq warns
+and counts per worker rather than refusing to start — adding a Redis cache
+should not turn into a startup failure — but N workers then admit N times the
+limit. `pip install buraq[ratelimit-shared]` fixes it, and an explicit
+`RATE_LIMIT_STORAGE = "memory://"` says the per-worker count is deliberate and
+silences the warning.
+:::
+
+Why `limits` rather than the cache backend, when the cache is right there:
+counting a moving window needs the *times of the hits inside the window*, and a
+cache API of `get`/`set`/`incr` cannot express that. Building on it would force a
+fixed window — which admits twice the limit across a boundary, the exact flaw
+that ruled out SlowAPI. Doing it properly across processes is also where rate
+limiters go subtly wrong, and that correctness is worth the optional dependency.
+Only the *address* is shared with the cache, not the mechanism.
+
+The `async+` prefix is required for anything over the network. The synchronous
+clients in `limits` do blocking socket I/O, and one of those on the request path
+stalls every request the worker is serving — not just the one being checked — so
+Buraq refuses a URI without it rather than quietly costing you the event loop.
+
+Memcached cannot be used: `RATE_LIMIT` is a moving window, and memcached cannot
+read back the timestamps inside one. A missing driver, an unusable store and a
+blocking URI are all reported at startup, naming what to install or what to use
+instead — not at the first request.
+
+The clients are not bundled, since a project on the default counter should not
+have to carry a Redis dependency. Limiting at the edge instead — where there is
+only one counter anyway — is the other good answer, and costs the application
+nothing.
+
+### Checking a limit yourself
+
+The limiter is on the application as `app.state.limiter`, a `RateLimiter` — the
+same one `RATE_LIMIT` and `@ratelimit` use, so a manual check shares their store.
+Reach for it when the key is not a property of the caller but of what they are
+asking for: password resets per *target account*, as in the last example above,
+so that flooding one mailbox does not depend on the sender staying put.
+
+`hit(rate, key)` returns a `Verdict`, which is falsey once that key has spent the
+limit and carries `limit`, `remaining` and `reset_after`. Parse the rate once at
+import rather than per request, as `@ratelimit` does.
+
+To tell the caller what is left, as the decorator and the global limit both do,
+add `rate_headers(verdict)` to the response:
+
+```python
+from buraq.middleware.ratelimit import rate_headers
+
+verdict = await request.app.state.limiter.hit(ATTEMPTS, f"reset:{email}")
+response = JSONResponse({"sent": bool(verdict)})
+for name, value in rate_headers(verdict):
+    response.headers[name.decode()] = value.decode()
+```
+
+:::note[Why Buraq does not use SlowAPI]
+FastAPI has no rate limiting of its own, so this is always a third-party choice.
+Buraq used [SlowAPI](https://slowapi.readthedocs.io/) and moved off it, then off
+its `limits` dependency for the in-process path as well. The counting now lives
+in `buraq.ratelimit` — `parse_rate`, `MemoryBackend`, `Verdict` — so the default
+path carries no dependency at all.
+
+Three things ruled SlowAPI out, each measured rather than assumed:
+
+- **Its middleware scanned the routing table on every request.** It finds the
+  handler with `_find_route_handler`, which regex-matches the request against
+  *every* route and does not stop at the first match. So the cost grew with the
+  project — 207 µs of enforcement at five routes, 415 µs at two hundred, for a
+  check worth 20 µs. A global limit applies to everything, so there is no
+  handler to look up in the first place.
+- **Its default strategy is a fixed window,** which admits twice the limit
+  across a boundary: five at 11:59:59 and five more at 12:00:00.
+- **It cannot use an async store,** so its counters stayed in the worker process
+  however they were configured — which matters most on a login endpoint, where
+  per-worker counting multiplies a brute-force allowance by the number of
+  workers.
+
+Owning the in-process counter then made it 16× faster than the library (1.0 µs
+against 16.6 µs), and let it bound its own memory, which matters because the key
+is usually the caller's address and an open endpoint sees an unbounded number of
+those. Cost of enforcement per request, measured end to end:
+
+| routes | SlowAPI | now |
+| --- | --- | --- |
+| 5 | 207 µs | 3 µs |
+| 50 | 266 µs | 6 µs |
+| 200 | 415 µs | 5 µs |
+
+Per-route `@ratelimit` went from 62 µs to 7 µs over the same move.
+:::
 
 ## CSRF protection
 

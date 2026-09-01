@@ -54,7 +54,6 @@ dependencies = [
     "pydantic[email]>=2.7.0",
     "email-validator>=2.1.0",
     "pydantic-settings>=2.3.0",
-    "slowapi>=0.1.9",
     "aiosqlite>=0.20.0",
     "argon2-cffi>=23.1.0",
     "orjson>=3.10.0",
@@ -73,6 +72,7 @@ Tracker = "https://github.com/nezanuha/buraq/issues"
 Changelog = "https://github.com/nezanuha/buraq/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+ratelimit-shared = ["limits>=3.6"]   # a counter shared between workers
 postgres  = ["asyncpg>=0.29.0"]
 mysql     = ["aiomysql>=0.2.0"]
 memcached = ["aiomcache>=0.8.0"]

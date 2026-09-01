@@ -99,6 +99,17 @@ class BuraqSettings(BaseSettings):
 
     # Rate limiting
     RATE_LIMIT: str = "100/minute"
+    # Where the counters live. Empty means "wherever the cache is": if
+    # CACHE_REDIS_URL is set the counters go there, so the limit means what it
+    # says across every worker without naming the same Redis twice. With no
+    # Redis cache configured they stay in the worker process, and four workers
+    # with "100/minute" admit up to 400.
+    #
+    # Set it explicitly to override -- "memory://" to force per-worker counting
+    # even with a Redis cache, or another store entirely. Anything over the
+    # network must be an "async+" URI: a blocking client would stall the event
+    # loop on every request.
+    RATE_LIMIT_STORAGE: str = ""
 
     # Static & templates
     # Whether the application serves static and media files itself. False for a

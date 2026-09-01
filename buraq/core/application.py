@@ -202,33 +202,33 @@ class Buraq(FastAPI):
             self.add_middleware(middleware)
 
     def _register_rate_limiter(self) -> None:
-        """Build the limiter and, when RATE_LIMIT is set, enforce it everywhere.
+        """Build the limiter, and when RATE_LIMIT is set, enforce it everywhere.
 
-        Building the limiter is not enough to limit anything. slowapi applies
-        `default_limits` from its middleware; without that only routes carrying
-        an explicit @ratelimit are checked, and RATE_LIMIT -- documented as
-        applying to every route, and named in the admin documentation as what
-        protects the login page -- did nothing at all.
+        One limiter serves both the global limit and every @ratelimit, so the
+        two count the same way and share RATE_LIMIT_STORAGE. They did not when
+        @ratelimit went through slowapi: its default strategy is a fixed window,
+        which admits twice the limit across a boundary, and its storage was its
+        own, so pointing RATE_LIMIT_STORAGE at Redis left the per-route limits
+        counting separately in each worker -- on exactly the login endpoint the
+        admin documentation says RATE_LIMIT protects.
 
         RATE_LIMIT = "" turns the global limit off and leaves @ratelimit
         working, which is what an application wants when something in front of
         it already limits by IP.
         """
-        try:
-            from slowapi import Limiter, _rate_limit_exceeded_handler
-            from slowapi.errors import RateLimitExceeded
-            from slowapi.middleware import SlowAPIMiddleware
-            from slowapi.util import get_remote_address
-        except ImportError:  # pragma: no cover - slowapi is a dependency
-            return
-
-        default_limits = [settings.RATE_LIMIT] if settings.RATE_LIMIT else []
-        self.state.limiter = Limiter(
-            key_func=get_remote_address, default_limits=default_limits
+        from buraq.middleware.ratelimit import (
+            GlobalRateLimitMiddleware,
+            RateLimiter,
+            resolve_storage,
         )
-        self.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-        if default_limits:
-            self.add_middleware(SlowAPIMiddleware)
+
+        self.state.limiter = RateLimiter(resolve_storage())
+        if settings.RATE_LIMIT:
+            self.add_middleware(
+                GlobalRateLimitMiddleware,
+                limit=settings.RATE_LIMIT,
+                limiter=self.state.limiter,
+            )
 
     def on_startup(self, func):
         """
