@@ -31,6 +31,7 @@ def _build_from_entry(entry: dict) -> BaseCacheBackend:
         ("LOCATION", "location"),
         ("TIMEOUT", "timeout"),
         ("KEY_PREFIX", "key_prefix"),
+        ("VERSION", "version"),
     ):
         value = conf.pop(name, None)
         if value is not None:
@@ -41,8 +42,9 @@ def _build_from_entry(entry: dict) -> BaseCacheBackend:
         # production, and this is discovered at startup.
         raise ValueError(
             f"Unknown key(s) in a CACHES entry: {', '.join(sorted(conf))}. "
-            f"Buraq understands BACKEND, LOCATION, TIMEOUT, KEY_PREFIX and "
-            f"OPTIONS; anything a backend takes of its own goes in OPTIONS."
+            f"Buraq understands BACKEND, LOCATION, TIMEOUT, KEY_PREFIX, "
+            f"VERSION and OPTIONS; anything a backend takes of its own goes "
+            f"in OPTIONS."
         )
 
     opts = {_OPTION_ALIASES.get(name, name): value for name, value in opts.items()}
@@ -84,25 +86,40 @@ def _import_backend(backend_path: str):
     return getattr(importlib.import_module(module_path), class_name)
 
 
+def default_entry() -> dict:
+    """The CACHES entry for the default cache, whichever way it was written.
+
+    There is one way to build a backend, and every spelling turns into an entry
+    first. Two code paths is how the CACHES branch could crash on every backend
+    without anyone noticing: almost nobody used it, so almost nothing tested it,
+    while the flat settings everybody used stayed fine.
+    """
+    from buraq.conf import settings
+
+    caches_conf = getattr(settings, "CACHES", None)
+    if caches_conf and "default" in caches_conf:
+        return dict(caches_conf["default"])
+
+    url = getattr(settings, "CACHE_URL", "")
+    if url:
+        from buraq.contrib.cache.url import parse_cache_url
+
+        backend_path, opts = parse_cache_url(url)
+        return {"BACKEND": backend_path, "OPTIONS": opts}
+
+    return {
+        "BACKEND": getattr(
+            settings,
+            "CACHE_BACKEND",
+            "buraq.contrib.cache.backends.memory.MemoryCacheBackend",
+        )
+    }
+
+
 def _get_backend() -> BaseCacheBackend:
     global _backend
     if _backend is None:
-        from buraq.conf import settings
-        caches_conf = getattr(settings, "CACHES", None)
-        if caches_conf and "default" in caches_conf:
-            _backend = _build_from_entry(caches_conf["default"])
-        elif getattr(settings, "CACHE_URL", ""):
-            from buraq.contrib.cache.url import parse_cache_url
-
-            backend_path, opts = parse_cache_url(settings.CACHE_URL)
-            _backend = _load_backend_cls(backend_path, **opts)
-        else:
-            backend_path = getattr(
-                settings,
-                "CACHE_BACKEND",
-                "buraq.contrib.cache.backends.memory.MemoryCacheBackend",
-            )
-            _backend = _load_backend_cls(backend_path)
+        _backend = _build_from_entry(default_entry())
     return _backend
 
 

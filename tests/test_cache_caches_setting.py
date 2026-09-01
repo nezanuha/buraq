@@ -221,7 +221,7 @@ def test_an_unknown_key_in_an_entry_is_refused(monkeypatch):
     one that refuses to start is found at startup. VERSION is Django's and Buraq
     has no equivalent, so it is exactly the sort of thing to say so about.
     """
-    caches = _configure(monkeypatch, {"default": {"BACKEND": MEMORY, "VERSION": 2}})
+    caches = _configure(monkeypatch, {"default": {"BACKEND": MEMORY, "NONSENSE": 2}})
     with pytest.raises(ValueError, match="Unknown key"):
         caches["default"]
 
@@ -280,10 +280,29 @@ def test_an_option_the_backend_does_not_take_names_what_it_does(monkeypatch):
     assert "max_size" in message, "it should list what the backend accepts"
 
 
-@pytest.mark.parametrize("key", ["VERSION", "KEY_FUNCTION"])
+@pytest.mark.parametrize("key", ["KEY_FUNCTION"])
 def test_django_keys_buraq_has_no_answer_for_are_refused(monkeypatch, key):
-    """Loudly, at startup. Buraq has no key versioning or key function, and
-    accepting these would mean quietly ignoring them."""
+    """Loudly, at startup. Buraq builds keys from the prefix and version alone,
+    so there is nothing for a key function to hook into, and accepting it would
+    mean quietly ignoring it. VERSION, which Buraq does have, is supported."""
     caches = _configure(monkeypatch, {"default": {"BACKEND": MEMORY, key: "x"}})
     with pytest.raises(ValueError, match="Unknown key"):
         caches["default"]
+
+
+def test_a_per_entry_version_reaches_the_backend(monkeypatch):
+    """Django's VERSION, which Buraq now has: raising it makes every existing
+    entry in that cache unreachable at once."""
+    caches = _configure(monkeypatch, {"default": {"BACKEND": MEMORY, "VERSION": 3}})
+    assert caches["default"].version == 3
+
+
+def test_two_caches_can_be_on_different_versions(monkeypatch):
+    caches = _configure(
+        monkeypatch,
+        {
+            "default": {"BACKEND": MEMORY, "VERSION": 1},
+            "views": {"BACKEND": MEMORY, "VERSION": 2},
+        },
+    )
+    assert (caches["default"].version, caches["views"].version) == (1, 2)

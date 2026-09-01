@@ -453,6 +453,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CACHE_KEY_PREFIX` set it still matches every key in the database, including
   anything else sharing it; the documentation says so.
 
+- **BREAKING — cache keys now carry a version, and `CACHE_VERSION` invalidates
+  everything at once.** Keys are stored as `{KEY_PREFIX}{VERSION}:{key}`, so
+  raising `CACHE_VERSION` after a deploy that changes what the cached data means
+  makes every existing entry unreachable without deleting anything — they expire
+  on their own. Emptying the cache instead sends every miss to the database at
+  the same moment, which is the stampede a cache exists to prevent.
+  `cache.with_version(n)` reads another version, so the previous one can still
+  be served while the new one fills in. Existing entries are not found after
+  upgrading, since their keys lack the version component; they expire.
+
+- **`cache.add()` is now atomic on every backend**, and `incr()` on three of
+  five. `add` uses the primary key on the database table, `O_CREAT|O_EXCL` for
+  files, and memcached's own `ADD` — so a lock built out of it holds anywhere.
+  `incr` locks the row on the database (`SELECT … FOR UPDATE` where the dialect
+  has it). It stays a read-then-write on memcached, whose `INCR` needs ASCII
+  decimals where this backend stores pickles, and across processes on the file
+  backend, which would need an OS file lock; the documentation says which are
+  which.
+
+- **The database cache ignored `CACHE_KEY_PREFIX` entirely.** It read the
+  setting and then built every statement with the raw key, so two caches sharing
+  a table collided — and the test covering this asserted only that the attribute
+  was set, so it passed throughout. It is now checked by writing the same key
+  through two differently-prefixed caches and reading both back. `clear()` is
+  scoped to the prefix too, so one cache no longer wipes another's rows.
+
+- **The file cache could be read mid-write.** Entries were written in place, so
+  a reader could see a truncated file and a crash left one corrupt for good.
+  They are written beside the target and renamed, which is atomic on POSIX and
+  Windows alike.
+
+- **One code path builds every cache.** `CACHES`, `CACHE_URL` and the flat
+  settings all resolve to a `CACHES` entry first, rather than three branches
+  each constructing a backend. Two paths is how the `CACHES` branch could crash
+  on every backend without anyone noticing: almost nobody used it, so almost
+  nothing tested it.
+
 - **BREAKING — cache entries now expire by default.** `CACHE_DEFAULT_TIMEOUT`
   was read by exactly one backend. `cache.set(key, value)` with no timeout did
   four different things:

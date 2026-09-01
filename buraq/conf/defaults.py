@@ -161,6 +161,10 @@ class BuraqSettings(BaseSettings):
     CACHE_BACKEND: str = "buraq.contrib.cache.backends.memory.MemoryCacheBackend"
     CACHE_REDIS_URL: str | None = None
     CACHE_KEY_PREFIX: str = ""
+    # Raise this to make every existing entry unreachable at once -- the way to
+    # invalidate a cache after a deploy changes what the cached data means,
+    # without emptying it and sending every miss to the database together.
+    CACHE_VERSION: int = 1
     CACHE_FILE_PATH: str | None = None
     CACHE_DEFAULT_TIMEOUT: int = 300
     CACHE_TABLE: str = "buraq_cache_table"

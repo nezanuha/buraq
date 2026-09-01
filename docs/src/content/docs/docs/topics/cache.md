@@ -31,6 +31,30 @@ Two settings apply whatever the backend:
 ```python title="config/settings.py"
 CACHE_KEY_PREFIX      = "myapp:"   # prefix every key, to share a store safely
 CACHE_DEFAULT_TIMEOUT = 300        # seconds, when set() is given no timeout
+CACHE_VERSION         = 1          # raise to invalidate everything at once
+```
+
+Keys are stored as `{KEY_PREFIX}{VERSION}:{key}`. `default_entry()` shows what
+your settings resolve to, whichever way they were written.
+
+### Invalidating everything after a deploy
+
+Raising `CACHE_VERSION` makes every existing entry unreachable, so a deploy that
+changes what the cached data means does not have to serve stale values:
+
+```python title="config/settings.py"
+CACHE_VERSION = 2
+```
+
+Nothing is deleted — the old entries stop being found and expire on their own.
+That matters on a busy site: emptying the cache instead sends every miss to the
+database at the same moment, which is the stampede the cache existed to prevent.
+
+While rolling over, the previous version is still readable:
+
+```python
+previous = cache.with_version(cache.version - 1)
+value = await previous.get("key") or await expensive()
 ```
 
 ### Several caches
@@ -191,11 +215,17 @@ indefinitely, set `CACHE_DEFAULT_TIMEOUT = 0` or pass `timeout=0` explicitly.
 Both are one operation on the Redis backend (`SET NX` and `INCRBY`) and are held
 under a lock in the in-memory one, so concurrent callers cannot interleave.
 
-The memcached, database and file backends inherit a read-then-write
-implementation, and both calls suspend there: concurrent callers all read the
-same value and all write back the same result. Measured against a backend that
-suspends, 500 concurrent `incr` calls landed as **1**. Use `add` as a lock, or
-`incr` as a counter you can trust, only on Redis or in memory.
+`add` is atomic on every backend: `SET NX` on Redis, memcached's own `ADD`, the
+primary key on the database table, and `O_CREAT|O_EXCL` for files — so it is safe
+to build a lock out of anywhere.
+
+`incr` is atomic on Redis (`INCRBY`), in memory (under a lock) and on the
+database (the row is locked for the transaction). It is **not** atomic on
+memcached, whose own `INCR` needs values stored as ASCII decimals where this
+backend stores pickles, nor across processes on the file backend, which would
+need an OS file lock. Measured against a backend that cannot lock, 500
+concurrent `incr` calls landed as **1**. For a counter several processes share,
+use Redis or the database.
 :::
 
 ### Sync access
