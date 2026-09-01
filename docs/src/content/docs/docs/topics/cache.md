@@ -1,39 +1,116 @@
 ﻿---
 title: "Cache"
-description: "Cache an entire view's response for a given number of seconds. Uses whatever backend is configured in CACHE_BACKEND."
+description: "Store values in Redis, memcached, files, the database or memory, and cache whole responses or parts of a page."
 ---
 
 ## Configuration
 
+One URL says which backend and where, the way `DATABASE_URL` does:
+
 ```python title="config/settings.py"
-# In-memory (default — single process only, resets on restart)
-CACHE_BACKEND = "buraq.contrib.cache.backends.memory.MemoryCacheBackend"
-
-# Redis (recommended for production)
-# Requires: uv add "buraq[redis]"  or  pip install "buraq[redis]"
-CACHE_BACKEND   = "buraq.contrib.cache.backends.redis.RedisCacheBackend"
-CACHE_REDIS_URL = "redis://localhost:6379/0"
-
-# Memcached
-CACHE_BACKEND       = "buraq.contrib.cache.backends.memcached.MemcachedCacheBackend"
-CACHE_MEMCACHED_URL = "memcached://localhost:11211"
-# For more than one server, list them instead -- this takes precedence
-# over CACHE_MEMCACHED_URL when both are set.
-CACHE_MEMCACHED_SERVERS = [("cache1", 11211), ("cache2", 11211)]
-
-# File
-CACHE_BACKEND   = "buraq.contrib.cache.backends.file.FileCacheBackend"
-CACHE_FILE_PATH = "/tmp/buraq_cache"
-
-# Database — create the table once with: buraq createcachetable
-CACHE_BACKEND          = "buraq.contrib.cache.backends.db.DatabaseCache"
-CACHE_TABLE            = "buraq_cache_table"
-CACHE_CULL_PROBABILITY = 0.1        # chance of evicting expired rows on write
-
-# Shared options
-CACHE_KEY_PREFIX      = "myapp:"   # prefix all keys to avoid collisions
-CACHE_DEFAULT_TIMEOUT = 300        # default TTL in seconds
+CACHE_URL = "redis://localhost:6379/0"
 ```
+
+| `CACHE_URL` | Backend | Install |
+| --- | --- | --- |
+| *(unset)* | in-process memory — the default | — |
+| `locmem://` | in-process memory | — |
+| `redis://host:6379/0` | Redis | `pip install "buraq[redis]"` |
+| `rediss://user:pw@host:6380/0` | Redis over TLS | `pip install "buraq[redis]"` |
+| `memcached://host:11211` | Memcached | `pip install "buraq[memcached]"` |
+| `file:///var/tmp/cache` | files on disk | — |
+| `db://buraq_cache_table` | a database table | `buraq createcachetable` |
+
+For more than one memcached server, separate them with commas:
+`memcached://a:11211,b:11211`. An unknown scheme is refused when the application
+starts, naming the ones that exist; `parse_cache_url()` is what reads it, if you
+want to check what a given URL resolves to.
+
+Two settings apply whatever the backend:
+
+```python title="config/settings.py"
+CACHE_KEY_PREFIX      = "myapp:"   # prefix every key, to share a store safely
+CACHE_DEFAULT_TIMEOUT = 300        # seconds, when set() is given no timeout
+```
+
+### Several caches
+
+Name them, and reach one with `caches["alias"]`:
+
+```python title="config/settings.py"
+REDIS = "buraq.contrib.cache.backends.redis.RedisCacheBackend"
+
+CACHES = {
+    "default":  {"BACKEND": REDIS, "LOCATION": "redis://localhost:6379/0",
+                 "KEY_PREFIX": "app:",  "TIMEOUT": 300},
+    "sessions": {"BACKEND": REDIS, "LOCATION": "redis://localhost:6379/0",
+                 "KEY_PREFIX": "sess:", "TIMEOUT": 1209600},
+    "views":    {"BACKEND": "buraq.contrib.cache.backends.memory.MemoryCacheBackend"},
+}
+```
+
+```python
+from buraq.contrib.cache import caches
+
+await caches["sessions"].set("key", value)
+await caches["views"].clear()
+```
+
+`cache` remains a shortcut for `caches["default"]`.
+
+`LOCATION` means what it does in Django, which differs by backend: the server
+for Redis and memcached, the directory for the file cache, the table for the
+database cache, and a name for the in-process one. `TIMEOUT` and `KEY_PREFIX`
+override the settings above for that cache alone — two caches can share one
+Redis database as long as their prefixes differ. Anything else a backend accepts
+goes in `OPTIONS`, such as `{"OPTIONS": {"max_size": 5000}}`.
+
+Any other key in an entry is refused at startup rather than ignored: a setting
+that silently does nothing is discovered in production.
+
+:::note[Porting a Django `CACHES` dict]
+The keys mean the same things, so a Django entry usually needs only its
+`BACKEND` path changed to Buraq's. `MAX_ENTRIES` in `OPTIONS` is understood as
+Buraq's `max_size`.
+
+Two Django keys have no equivalent here and are refused rather than ignored:
+`VERSION` (Buraq does not version keys) and `KEY_FUNCTION` (keys are built from
+`KEY_PREFIX` alone). An option a backend does not accept is refused too, naming
+the ones it does.
+:::
+
+`CACHES` takes precedence over `CACHE_URL`, which takes precedence over
+`CACHE_BACKEND`.
+
+<details>
+<summary>Per-backend settings (older style)</summary>
+
+`CACHE_URL` replaced these, and they still work. Each is read only by the
+backend it belongs to, which is why one URL is easier to get right.
+
+```python title="config/settings.py"
+CACHE_BACKEND = "buraq.contrib.cache.backends.redis.RedisCacheBackend"
+
+CACHE_REDIS_URL         = "redis://localhost:6379/0"
+CACHE_MEMCACHED_URL     = "memcached://localhost:11211"
+CACHE_MEMCACHED_SERVERS = [("cache1", 11211), ("cache2", 11211)]  # wins over the URL
+CACHE_FILE_PATH         = "/tmp/buraq_cache"
+CACHE_TABLE             = "buraq_cache_table"
+CACHE_CULL_PROBABILITY  = 0.1   # chance of evicting expired rows on write
+```
+
+</details>
+
+:::note[Entries expire by default]
+`cache.set(key, value)` with no timeout uses `CACHE_DEFAULT_TIMEOUT`, which is
+`300` seconds unless you change it. Pass `timeout=0` for an entry that should
+never expire.
+
+This was not always so: Redis, in-memory and file entries used to be written
+with no expiry at all whatever the setting said, and the database backend used a
+hardcoded 300 seconds. If a project relied on cached values persisting
+indefinitely, set `CACHE_DEFAULT_TIMEOUT = 0` or pass `timeout=0` explicitly.
+:::
 
 :::note
 The database backend's table is created by `buraq createcachetable`, not by a
@@ -41,7 +118,9 @@ model, so migrations leave it alone — see
 [what autogeneration ignores](/docs/topics/orm/migrations).
 :::
 
-## Basic usage
+## Using the cache
+
+### Reading and writing
 
 ```python
 from buraq.contrib.cache import cache
@@ -68,7 +147,21 @@ async def my_view(request):
     await cache.clear()
 ```
 
-## Atomic helpers
+### Several keys at once
+
+```python
+# Get multiple keys
+values = await cache.get_many(["key1", "key2", "key3"])
+# → {"key1": ..., "key2": ..., "key3": ...}
+
+# Set multiple keys
+await cache.set_many({"key1": val1, "key2": val2}, timeout=300)
+
+# Delete multiple keys
+await cache.delete_many(["key1", "key2"])
+```
+
+### Atomic helpers
 
 ```python
 # add — set only if key is not already present
@@ -76,14 +169,36 @@ was_set = await cache.add("lock:user:42", True, timeout=30)
 if not was_set:
     return  # already locked
 
-# incr / decr — atomic counter operations
+# incr / decr — counter operations
 await cache.set("page_views", 0)
 views = await cache.incr("page_views")        # → 1
 views = await cache.incr("page_views", delta=5)  # → 6
 views = await cache.decr("page_views")        # → 5
 ```
 
-## Sync access
+:::note[Entries expire by default]
+`cache.set(key, value)` with no timeout uses `CACHE_DEFAULT_TIMEOUT`, which is
+`300` seconds unless you change it. Pass `timeout=0` for an entry that should
+never expire.
+
+This was not always so: Redis, in-memory and file entries used to be written
+with no expiry at all whatever the setting said, and the database backend used
+a hardcoded 300 seconds. If a project relied on cached values persisting
+indefinitely, set `CACHE_DEFAULT_TIMEOUT = 0` or pass `timeout=0` explicitly.
+:::
+
+:::caution[`add` and `incr` are atomic on Redis and in memory only]
+Both are one operation on the Redis backend (`SET NX` and `INCRBY`) and are held
+under a lock in the in-memory one, so concurrent callers cannot interleave.
+
+The memcached, database and file backends inherit a read-then-write
+implementation, and both calls suspend there: concurrent callers all read the
+same value and all write back the same result. Measured against a backend that
+suspends, 500 concurrent `incr` calls landed as **1**. Use `add` as a lock, or
+`incr` as a counter you can trust, only on Redis or in memory.
+:::
+
+### Sync access
 
 For code that runs outside an async context (e.g. management commands, startup scripts):
 
@@ -95,7 +210,9 @@ cache.delete_many_sync(["key1", "key2"])
 cache.clear_sync()
 ```
 
-## `@cache_page` decorator
+## Caching responses
+
+### `@cache_page`
 
 Cache an entire view's response for a given number of seconds. Uses whatever backend is configured in `CACHE_BACKEND`.
 
@@ -119,7 +236,7 @@ async def article_list(request):
     ...
 ```
 
-## `@never_cache` decorator
+### `@never_cache`
 
 ```python
 from buraq.decorators import never_cache
@@ -130,7 +247,7 @@ async def user_dashboard(request):
     ...
 ```
 
-## `@cache_result` decorator
+### `@cache_result`, for a function's return value
 
 Cache the return value of **any async function** — not just views. Useful for expensive database queries or external API calls called from non-view code:
 
@@ -155,21 +272,7 @@ async def site_stats():
 
 When no key is given, one is auto-generated from the module + function name + argument hash.
 
-## Batch operations
-
-```python
-# Get multiple keys
-values = await cache.get_many(["key1", "key2", "key3"])
-# → {"key1": ..., "key2": ..., "key3": ...}
-
-# Set multiple keys
-await cache.set_many({"key1": val1, "key2": val2}, timeout=300)
-
-# Delete multiple keys
-await cache.delete_many(["key1", "key2"])
-```
-
-## Caching in views
+### Reaching the cache from a view
 
 ```python
 async def post_detail(request, slug: str):
@@ -183,62 +286,7 @@ async def post_detail(request, slug: str):
     return await render(request, "posts/detail.html", {"post": post})
 ```
 
-## Multi-cache `CACHES` dict
-
-Configure multiple named backends the same way as Django's `CACHES` setting:
-
-```python title="config/settings.py"
-CACHES = {
-    "default": {
-        "BACKEND": "buraq.contrib.cache.backends.redis.RedisCacheBackend",
-        "LOCATION": "redis://localhost:6379/0",
-    },
-    "sessions": {
-        "BACKEND": "buraq.contrib.cache.backends.redis.RedisCacheBackend",
-        "LOCATION": "redis://localhost:6379/1",
-    },
-    "views": {
-        "BACKEND": "buraq.contrib.cache.backends.memory.MemoryCacheBackend",
-    },
-}
-```
-
-Access any backend by alias via the `caches` proxy:
-
-```python
-from buraq.contrib.cache import caches
-
-await caches["default"].set("key", value)
-await caches["sessions"].get("session:abc")
-await caches["views"].clear()
-```
-
-`cache` (the default-backend shortcut) still works as before.
-
-## `DatabaseCache` backend
-
-Store cached values in a database table — no Redis or Memcached required:
-
-```python title="config/settings.py"
-CACHE_BACKEND = "buraq.contrib.cache.backends.db.DatabaseCache"
-```
-
-Create the table first:
-
-```bash
-python manage.py createcachetable
-# or with a custom name:
-python manage.py createcachetable --table my_cache
-```
-
-By default `DatabaseCache` automatically culls expired entries on ~10% of writes to prevent unbounded table growth. Tune or disable via `CACHE_CULL_PROBABILITY`:
-
-```python title="config/settings.py"
-CACHE_CULL_PROBABILITY = 0.05   # cull on 5% of writes (default 0.1)
-CACHE_CULL_PROBABILITY = 0.0    # disable automatic culling
-```
-
-## `CacheMiddleware`
+### `CacheMiddleware`, for the whole site
 
 Full per-view response caching as middleware — caches all `GET`/`HEAD` responses automatically:
 
@@ -266,7 +314,7 @@ app.add_middleware(CacheMiddleware, cache_timeout=600, cache_alias="views")
 
 Responses with `Cache-Control: no-store`, `private`, or `no-cache` headers are never stored.
 
-## `{% cache %}` template tag
+### `{% cache %}`, for part of a page
 
 Cache a block of template output for a given number of seconds. Rendered HTML is stored in the default cache backend — no DB or view involvement needed.
 
@@ -307,7 +355,30 @@ The tag uses the default cache backend configured in `CACHE_BACKEND`. There is n
 | `MemcachedCacheBackend` | `uv add aiomcache` | Production, high-throughput |
 | `DatabaseCache` | built-in | Persistent cache, no extra service |
 
-## What each backend can store
+### `DatabaseCache`
+
+Store cached values in a database table — no Redis or Memcached required:
+
+```python title="config/settings.py"
+CACHE_BACKEND = "buraq.contrib.cache.backends.db.DatabaseCache"
+```
+
+Create the table first:
+
+```bash
+python manage.py createcachetable
+# or with a custom name:
+python manage.py createcachetable --table my_cache
+```
+
+By default `DatabaseCache` automatically culls expired entries on ~10% of writes to prevent unbounded table growth. Tune or disable via `CACHE_CULL_PROBABILITY`:
+
+```python title="config/settings.py"
+CACHE_CULL_PROBABILITY = 0.05   # cull on 5% of writes (default 0.1)
+CACHE_CULL_PROBABILITY = 0.0    # disable automatic culling
+```
+
+### What each backend can store
 
 Backends do not all serialize the same way, and the difference decides both what
 you can cache and how much you must trust the store.
