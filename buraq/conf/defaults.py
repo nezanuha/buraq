@@ -152,6 +152,12 @@ class BuraqSettings(BaseSettings):
     MAILERS: dict = {}
 
     # Cache
+    # One URL for the cache, as DATABASE_URL is for the database: the scheme
+    # picks the backend and the rest configures it.
+    #   redis://localhost:6379/0     memcached://localhost:11211
+    #   file:///var/tmp/cache        db://my_cache_table        locmem://
+    # Leave it empty to use CACHE_BACKEND and the per-backend settings below.
+    CACHE_URL: str = ""
     CACHE_BACKEND: str = "buraq.contrib.cache.backends.memory.MemoryCacheBackend"
     CACHE_REDIS_URL: str | None = None
     CACHE_KEY_PREFIX: str = ""
