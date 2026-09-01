@@ -120,8 +120,10 @@ class _LazyEngine:
 
     def reset(self) -> None:
         """Forget the engine, so the next use builds one from current settings."""
-        self._engine = None
+        engine, self._engine = self._engine, None
         self._session_factory = None
+        if engine is not None:
+            _dispose(engine)
 
     def __call__(self, *args, **kwargs):
         self._init()
@@ -130,6 +132,41 @@ class _LazyEngine:
     def __getattr__(self, name):
         self._init()
         return getattr(self._engine, name)
+
+
+def _dispose(engine) -> None:
+    """Close an engine being abandoned, rather than leaving it to the collector.
+
+    Dropping the reference alone leaves its connections open until something
+    finalises them, and for an async driver that happens after the event loop
+    has gone -- surfacing as "Event loop is closed" raised from a finaliser and
+    blamed on whichever test happened to be running. Six of eight CI jobs failed
+    that way; the two that passed were Windows, where the timing differs.
+
+    Disposing needs the loop the connections were opened on. When one is
+    running the close is scheduled on it; when none is, the pool is closed
+    synchronously, which is all that is left to do by then.
+    """
+    import asyncio
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop is not None and loop.is_running():
+        task = loop.create_task(engine.dispose())
+        # Nobody awaits this, and an exception on a task nobody reads is a
+        # warning of its own. There is nothing to do about a failed close.
+        task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+        return
+
+    try:
+        asyncio.run(engine.dispose())
+    except RuntimeError:
+        # A loop exists but is not running, or one is closing down. The pool
+        # still holds sockets, and this closes them without needing a loop.
+        engine.sync_engine.dispose()
 
 
 DEFAULT_DB_ALIAS = "default"

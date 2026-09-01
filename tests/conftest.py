@@ -12,6 +12,8 @@ module level and imports nothing from the package.
 
 import os
 
+import pytest
+
 os.environ.setdefault("SECRET_KEY", "test-only-secret-key-not-used-outside-the-suite")
 os.environ.setdefault("DEBUG", "True")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -34,4 +36,19 @@ def use_test_database(settings) -> None:
 
     settings.DATABASE_URL = TEST_DATABASE_URL
     settings.DATABASES = {}
+    reset_connections()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _close_connections_at_the_end():
+    """Dispose every engine before the interpreter goes.
+
+    The last engine the suite built is never reset, so nothing ever closed it.
+    Its connections were finalised at shutdown instead -- after the event loop
+    had gone, which raises "Event loop is closed" from a finaliser and gets
+    blamed on whichever test was unlucky enough to be running.
+    """
+    yield
+    from buraq.core.db import reset_connections
+
     reset_connections()
