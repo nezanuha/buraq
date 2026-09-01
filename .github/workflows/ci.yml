@@ -36,8 +36,20 @@ jobs:
       - name: Lint
         run: uv run ruff check buraq/
 
+      # Failures are echoed as ::error:: so they land in the run's annotations,
+      # which are readable without admin rights on the repository. Without this
+      # a failure here is just "exit code 1" to anyone who cannot download the
+      # log, which is everyone but the owner.
       - name: Run tests
-        run: uv run pytest
+        shell: bash
+        run: |
+          set -o pipefail
+          uv run pytest -q 2>&1 | tee pytest.log || {
+            grep -E '^(FAILED|ERROR)' pytest.log | head -30 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            exit 1
+          }
         env:
           SECRET_KEY: "ci-test-secret-key-not-for-production-use"
           DATABASE_URL: "sqlite+aiosqlite:///./test.db"
@@ -110,7 +122,15 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev --extra postgres
       - name: Run tests
-        run: uv run pytest
+        shell: bash
+        run: |
+          set -o pipefail
+          uv run pytest -q 2>&1 | tee pytest.log || {
+            grep -E '^(FAILED|ERROR)' pytest.log | head -30 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            exit 1
+          }
         env:
           SECRET_KEY: "ci-test-secret-key-not-for-production-use"
           DATABASE_URL: "postgresql+asyncpg://buraq:buraq@127.0.0.1:5432/buraq_test"
@@ -146,7 +166,15 @@ jobs:
           mysql -h 127.0.0.1 -uroot -pburaq -e
           "ALTER DATABASE buraq_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
       - name: Run tests
-        run: uv run pytest
+        shell: bash
+        run: |
+          set -o pipefail
+          uv run pytest -q 2>&1 | tee pytest.log || {
+            grep -E '^(FAILED|ERROR)' pytest.log | head -30 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            exit 1
+          }
         env:
           SECRET_KEY: "ci-test-secret-key-not-for-production-use"
           DATABASE_URL: "mysql+aiomysql://root:buraq@127.0.0.1:3306/buraq_test"
