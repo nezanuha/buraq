@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`@ratelimit("5/minute")` on a view.** `RATE_LIMIT` applies to every route
+  and there was no supported way to tighten one: the limiter lives on the
+  application, and a views module cannot reach it. The app builds itself by
+  loading `ROOT_URLCONF`, which imports the views, so a view importing the app
+  back is a circular import and the project refuses to start — which is what
+  the documented `@app.state.limiter.limit(...)` produced.
+
+  The decorator records the limit and route registration applies it, which is
+  the first moment both the view and the application exist. Several limits may
+  be given and stacking accumulates. A limit with no limiter configured warns
+  rather than silently serving an unlimited route.
+
 - **`backend.open()` — one connection to send several messages over.**
   `send_many()` covers the case where every message is known up front;
   this covers the one it cannot, where work happens between the sends:

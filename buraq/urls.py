@@ -420,6 +420,38 @@ def _patch_cbv_signature(view: Callable, full_path: str, param_types: dict = Non
     return cbv_wrapper
 
 
+def _apply_ratelimits(app: Any, view: Callable) -> Callable:
+    """Apply any @ratelimit() the view carries, now that the app exists.
+
+    The decorator only records the limits: reaching the limiter at decoration
+    time means importing the app into the module the views live in, and that is
+    circular -- the app builds itself by loading ROOT_URLCONF, which imports the
+    views. Registration is the first moment both exist.
+    """
+    limits = getattr(view, "_ratelimits", None)
+    if not limits:
+        return view
+
+    limiter = getattr(getattr(app, "state", None), "limiter", None)
+    if limiter is None:
+        # slowapi is a dependency, so this is a stripped install rather than a
+        # normal one. Silently serving an unlimited route would be the wrong
+        # way to find that out.
+        import warnings
+
+        warnings.warn(
+            f"@ratelimit on {getattr(view, '__name__', view)!r} does nothing: "
+            f"no rate limiter is configured on the application.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return view
+
+    for limit in limits:
+        view = limiter.limit(limit)(view)
+    return view
+
+
 def register_urlpatterns(
     app: Any,
     patterns: list,
@@ -467,7 +499,8 @@ def register_urlpatterns(
 
         elif isinstance(item, URLPattern):
             full_path = (prefix + item.path).replace("//", "/") or "/"
-            view = _inject_request(item.view)
+            view = _apply_ratelimits(app, item.view)
+            view = _inject_request(view)
             view = _patch_cbv_signature(view, full_path, item.param_types)
             kw = dict(item.extra)
             if item.name:

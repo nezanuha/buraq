@@ -228,6 +228,40 @@ def csrf_exempt(func):
     return func
 
 
+def ratelimit(*limits: str):
+    """Limit how often one client may call this view.
+
+    ``RATE_LIMIT`` applies to every route; this tightens it for one::
+
+        @ratelimit("5/minute")
+        async def login(request):
+            ...
+
+    Several limits may be given -- ``@ratelimit("5/minute", "50/day")`` -- and
+    all of them apply.
+
+    The limit is recorded here and applied when the route is registered, which
+    is the only moment both the view and the application exist. Reaching the
+    limiter directly instead means importing the app into the module the views
+    live in, and that is a circular import: the app builds itself by loading
+    ROOT_URLCONF, which imports the views.
+    """
+    if not limits:
+        raise ValueError('ratelimit() needs a limit, for example "5/minute".')
+    for limit in limits:
+        if not isinstance(limit, str) or "/" not in limit:
+            raise ValueError(
+                f"ratelimit() takes limits like '5/minute', not {limit!r}."
+            )
+
+    def decorator(view_func):
+        # Added to rather than replaced, so stacking the decorator accumulates.
+        view_func._ratelimits = list(getattr(view_func, "_ratelimits", ())) + list(limits)
+        return view_func
+
+    return decorator
+
+
 def user_passes_test(test_func, login_url: str = "/auth/login"):
     """
     Decorator that allows access only if ``test_func(user)`` returns True.

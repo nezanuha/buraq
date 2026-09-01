@@ -188,22 +188,27 @@ Buraq wires [SlowAPI](https://slowapi.readthedocs.io/) when it is installed, wit
 RATE_LIMIT = "100/minute"     # the default
 ```
 
-There is no `buraq.contrib.ratelimit` — the limiter is built at startup and kept
-on the application, which is where a per-route limit comes from:
+To tighten it for one route, decorate the view:
 
-```python
-from buraq.urls import path
-
-app = Buraq(settings_module="config.settings")
+```python title="accounts/views.py"
+from buraq.decorators import ratelimit
 
 
-@app.state.limiter.limit("5/minute")
+@ratelimit("5/minute")
 async def login(request):
     ...
 ```
 
-Without SlowAPI installed the limiter is not created and no limiting happens;
-nothing else changes.
+Several limits may be given — `@ratelimit("5/minute", "50/day")` — and all of
+them apply. Stacking the decorator accumulates rather than replacing.
+
+The decorator records the limit and route registration applies it, so a views
+module never needs the application object. Reaching the limiter directly would:
+the app builds itself by loading `ROOT_URLCONF`, which imports the views, so a
+view importing the app back is a circular import and the project does not
+start.
+
+Over the limit is `429 Too Many Requests`. Clients are told apart by IP.
 
 ## CSRF protection
 
