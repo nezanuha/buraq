@@ -38,13 +38,22 @@ class FileCacheBackend(BaseCacheBackend):
     Persistent across restarts. Useful for staging/low-traffic apps.
     """
 
-    def __init__(self, cache_dir: str | None = None):
-        self._dir = Path(cache_dir or getattr(settings, "CACHE_FILE_PATH", ".cache"))  # type: ignore[attr-defined]
+    def __init__(
+        self,
+        cache_dir: str | None = None,
+        location: str | None = None,
+        key_prefix: str | None = None,
+        timeout: int | None = None,
+    ):
+        """``location`` is the directory when it comes from a CACHES entry, which
+        is what it means for Django's file-based cache."""
+        self._dir = Path(cache_dir or location or getattr(settings, "CACHE_FILE_PATH", ".cache"))  # type: ignore[attr-defined]
+        self._init_shared(key_prefix, timeout)
         # Directory creation is deferred to _write_sync (which runs in a thread),
         # avoiding blocking I/O in the constructor which runs on the event loop thread.
 
     def _key_path(self, key: str) -> Path:
-        hashed = hashlib.sha256(key.encode()).hexdigest()
+        hashed = hashlib.sha256(self._make_key(key).encode()).hexdigest()
         return self._dir / hashed[:2] / f"{hashed}.json"
 
     def _read_sync(self, path: Path) -> Any | None:
@@ -65,11 +74,12 @@ class FileCacheBackend(BaseCacheBackend):
         return await asyncio.to_thread(self._read_sync, path)
 
     async def set(self, key: str, value: Any, timeout: int | None = None) -> None:
+        timeout = self._resolve_timeout(timeout)
         path = self._key_path(key)
         payload = {
             "key": key,
             "value": value,
-            "expires_at": time.time() + timeout if timeout else None,
+            "expires_at": time.time() + timeout if timeout and timeout > 0 else None,
         }
         # Serialized here rather than in the thread, so an unserializable value
         # raises from the call that cached it.

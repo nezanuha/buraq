@@ -4,6 +4,58 @@ from typing import Any
 
 
 class BaseCacheBackend(ABC):
+    """A cache backend.
+
+    Two things every backend has to agree on live here, because leaving them to
+    each backend meant they disagreed. `cache.set(key, value)` with no timeout
+    did four different things -- never expired on Redis, on memory and in files,
+    expired after a hardcoded 300s in the database -- and only memcached read
+    CACHE_DEFAULT_TIMEOUT at all. A cache whose entries never expire is not a
+    cache; it is a memory leak with a lookup method.
+
+    CACHE_KEY_PREFIX had the same problem from the other end: honoured by Redis
+    and memcached, ignored by the rest, so a prefix separating two environments
+    in one store silently stopped separating them if the backend changed.
+
+    Subclasses take `key_prefix` and `timeout` so a CACHES entry can set them per
+    cache, and fall back to the settings when it does not.
+    """
+
+    #: Set by a subclass that applies expiry itself and wants no default filled
+    #: in -- nothing does today, but a backend with no notion of TTL would.
+    supports_timeout = True
+
+    def _init_shared(
+        self, key_prefix: str | None = None, timeout: int | None = None
+    ) -> None:
+        """Call from a subclass __init__ to pick up the shared settings."""
+        from buraq.conf import settings
+
+        self._prefix = (
+            key_prefix
+            if key_prefix is not None
+            else getattr(settings, "CACHE_KEY_PREFIX", "")
+        ) or ""
+        self._default_timeout = (
+            timeout
+            if timeout is not None
+            else getattr(settings, "CACHE_DEFAULT_TIMEOUT", 300)
+        )
+
+    def _make_key(self, key: str) -> str:
+        """The key as it is stored, with whatever prefix applies."""
+        return f"{getattr(self, '_prefix', '')}{key}"
+
+    def _resolve_timeout(self, timeout: int | None) -> int | None:
+        """The timeout to use when the caller did not give one.
+
+        ``0`` and negative values mean "do not expire", which is how a caller
+        asks for that deliberately -- distinct from not passing one at all.
+        """
+        if timeout is not None:
+            return timeout
+        return getattr(self, "_default_timeout", None)
+
     @abstractmethod
     async def get(self, key: str) -> Any | None: ...
 

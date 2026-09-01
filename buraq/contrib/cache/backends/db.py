@@ -50,12 +50,28 @@ def _checked_table_name(name: str) -> str:
     return name
 
 
+#: Ten years. The row format stores an expiry, so "never" needs a stand-in.
+_FOREVER = 10 * 365 * 24 * 3600
+
+
 class DatabaseCache(BaseCacheBackend):
     """Cache backend that persists entries in a database table."""
 
     def __init__(
-        self, table: str | None = None, *, cull_probability: float | None = None, **kwargs
+        self,
+        table: str | None = None,
+        *,
+        location: str | None = None,
+        key_prefix: str | None = None,
+        timeout: int | None = None,
+        cull_probability: float | None = None,
+        **kwargs,
     ):
+        """``location`` is the table name when it comes from a CACHES entry,
+        which is what it means for Django's database cache."""
+        self._init_shared(key_prefix, timeout)
+        if table is None:
+            table = location
         if table is None:
             # Falls back to the setting so CACHE_TABLE actually takes effect; an
             # explicit table (from CACHES OPTIONS) still wins.
@@ -113,11 +129,12 @@ class DatabaseCache(BaseCacheBackend):
         except Exception:
             return None
 
-    async def set(self, key: str, value: Any, timeout: int | None = 300) -> None:
+    async def set(self, key: str, value: Any, timeout: int | None = None) -> None:
         import random
 
         import sqlalchemy as sa
-        expires = time.time() + (timeout if timeout is not None else 300)
+        timeout = self._resolve_timeout(timeout)
+        expires = time.time() + (timeout if timeout and timeout > 0 else _FOREVER)
         raw = self._serialize(value)
         # Upsert via DELETE + INSERT in a single transaction for atomicity
         from buraq.core.db import SessionLocal
