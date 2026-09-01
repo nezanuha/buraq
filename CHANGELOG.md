@@ -350,10 +350,280 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   admin documentation names this setting as what protects the login page from
   brute force; it was not protecting anything.
 
-  The middleware is installed when `RATE_LIMIT` is set. Enforcing costs about
-  0.4 ms per request, so `RATE_LIMIT = ""` turns the global limit off — and
-  leaves `@ratelimit` working — for an application behind something that already
-  limits by IP.
+  A middleware is installed when `RATE_LIMIT` is set. `RATE_LIMIT = ""` turns
+  the global limit off — and leaves `@ratelimit` working — for an application
+  behind something that already limits by IP.
+
+- **`@ratelimit` and `RATE_LIMIT` disagreed about what a limit looks like.** The
+  decorator validated by looking for a `/`, which passed `"5/"` — not a limit —
+  and rejected `"5 per minute"`, which is one, and which `RATE_LIMIT` accepted
+  because it is parsed by `limits` directly. Both now validate with
+  `limits.parse`, so the two settings take exactly the same spellings and the
+  false accept is gone.
+
+- **`RATE_LIMIT_STORAGE`, for a counter shared between workers.** The counter
+  lived in the worker process, so four workers with `"100/minute"` admitted up
+  to 400 — and the documentation's advice to "point slowapi at Redis" named no
+  setting that could do it. `RATE_LIMIT_STORAGE = "async+redis://localhost:6379"`
+  now does, as does `async+mongodb://`. The default `memory://` needs nothing
+  running. Memcached cannot serve as a store here — `RATE_LIMIT` is a moving
+  window and memcached cannot read back the timestamps inside one.
+
+  None of these clients is a dependency, since a project on the default counter
+  should not have to carry a Redis client. A missing one, an unusable store, and
+  a URI that would block the loop are all reported at startup rather than at the
+  first request, and each names the fix: the package to `pip install`, a store
+  that can count a window, or the `async+` form of the URI.
+
+  A URI without the `async+` prefix is refused at startup rather than accepted:
+  the synchronous clients in `limits` do blocking socket I/O, and one of those on
+  the request path stalls every request the worker is serving, not just the one
+  being checked. The error names the `async+` form to use.
+
+- **Two routes with the same limit shared one counter.** `limits` derives its
+  storage key from the limit and the identifier, so `@ratelimit("5/minute")` on
+  both a login and a signup view put them in the same bucket for a given caller:
+  spending one spent the other, and the second view could answer `429` on its
+  very first request. The view now names its own bucket, so each route's limit
+  counts only that route.
+
+- **`@ratelimit(key=...)`, to count something other than the address.** Limits
+  were always by IP, which is the wrong unit for anything a signed-in user does:
+  an office, a school or a phone network is one address, so a per-IP limit on a
+  signed-in action rations it across everyone there at once, and one user can
+  reset their own allowance by changing networks.
+
+  `key="user"` counts the authenticated user, falling back to the address while
+  anonymous — the equivalent of DRF's `UserRateThrottle`. A callable takes the
+  request and returns a string, for limiting by API key or tenant. The default
+  is unchanged, `key="ip"`.
+
+- **The rate limiter follows the cache instead of naming Redis twice.**
+  `RATE_LIMIT_STORAGE` defaults to empty, which now means "wherever the cache
+  is": a project with `CACHE_REDIS_URL` set gets its counters there, and the
+  limit means what it says across every worker without a second setting holding
+  the same address in a different format. With no Redis cache configured the
+  counters stay in the process, exactly as before.
+
+  Set it explicitly to override — `"memory://"` to keep the count per-worker on
+  purpose, or another URI to point somewhere other than the cache. If the cache
+  is Redis but the optional `limits` package is missing, Buraq warns and counts
+  per worker rather than refusing to start, since adding a Redis cache should
+  not become a startup failure.
+
+  Only the address is shared. The counting still goes through `limits`, because
+  a moving window needs the times of the hits inside the window and a cache API
+  of `get`/`set`/`incr` cannot express that — building on it would force a fixed
+  window, the flaw that ruled out slowapi.
+
+- **A Django `CACHES` dict now ports across with only its `BACKEND` paths
+  changed.** `BACKEND`, `LOCATION`, `TIMEOUT`, `KEY_PREFIX` and `OPTIONS` all
+  mean what they mean in Django, and `MAX_ENTRIES` in `OPTIONS` is understood as
+  Buraq's `max_size` rather than raising about a keyword argument. An option a
+  backend does not accept is refused naming the ones it does, instead of
+  surfacing as a bare `TypeError` from a constructor. `VERSION` and
+  `KEY_FUNCTION` have no equivalent and are refused rather than ignored.
+
+- **`CACHE_URL`, one setting for the whole cache.** Configuring a cache took a
+  backend path plus whichever of six settings that backend happened to read —
+  `CACHE_REDIS_URL`, `CACHE_MEMCACHED_URL`, `CACHE_MEMCACHED_SERVERS`,
+  `CACHE_FILE_PATH`, `CACHE_TABLE`. Most are meaningless for any given backend,
+  and nothing in a settings file said which were live, so the same address could
+  be written twice with only one of them read.
+
+  The scheme now picks the backend, as it already does for `DATABASE_URL`:
+
+      redis://localhost:6379/0      rediss://user:pw@host:6380/0
+      memcached://host:11211        memcached://a:11211,b:11211
+      file:///var/tmp/cache         db://buraq_cache_table
+      locmem://
+
+  An unknown scheme is refused at startup, naming the ones that exist. The older
+  per-backend settings still work; `CACHES` beats `CACHE_URL`, which beats
+  `CACHE_BACKEND`.
+
+- **`cache.set_many()` wrote entries that never expired.** `set()` applies
+  `CACHE_DEFAULT_TIMEOUT` and `set_many()` did not, which is the same unbounded
+  growth by a different door.
+
+- **`cache.clear()` blocked Redis while it ran.** It used `KEYS`, which walks the
+  entire keyspace in one call and serves nothing else meanwhile — on a large
+  database a stall measured in seconds, and the reason Redis documents `KEYS` as
+  unsuitable for production. It scans in batches now. Note that with no
+  `CACHE_KEY_PREFIX` set it still matches every key in the database, including
+  anything else sharing it; the documentation says so.
+
+- **BREAKING — cache entries now expire by default.** `CACHE_DEFAULT_TIMEOUT`
+  was read by exactly one backend. `cache.set(key, value)` with no timeout did
+  four different things:
+
+      Redis      never expired
+      memory     never expired
+      file       never expired
+      database   expired after a hardcoded 300s
+      memcached  expired after CACHE_DEFAULT_TIMEOUT
+
+  So the setting did nothing on four backends out of five, and a Redis cache
+  grew until it evicted or died — a cache that never evicts is a memory leak
+  with a lookup method. Every backend now applies it, `timeout=0` means "never
+  expire" as a deliberate choice, and a project that relied on values persisting
+  should set `CACHE_DEFAULT_TIMEOUT = 0` or pass `timeout=0`.
+
+- **`CACHE_KEY_PREFIX` was ignored by three backends out of five.** Honoured by
+  Redis and memcached, ignored by memory, file and the database — so a prefix
+  keeping two environments apart in one store silently stopped keeping them
+  apart if the backend changed. Every backend applies it now, to reads, writes
+  and deletes alike.
+
+- **`TIMEOUT` and `KEY_PREFIX` in a `CACHES` entry were read and thrown away.**
+  Only `BACKEND`, `LOCATION` and `OPTIONS` were passed on. Two caches sharing one
+  Redis and told apart by `KEY_PREFIX` therefore wrote into the same keyspace,
+  where each overwrote the other's `user:42`. Both reach the backend now, and any
+  key an entry carries that Buraq does not understand is refused at startup
+  rather than dropped.
+
+  Both settings now live on `BaseCacheBackend` rather than in each backend's
+  constructor, which is what let five backends disagree about them in the first
+  place.
+
+- **The `CACHES` dict could not build any backend that had a `LOCATION`.** The
+  loader passes it on as `location=`, and no backend accepted that argument, so
+  the configuration the documentation shows — Redis with a `LOCATION`, which is
+  where the server address goes — raised at the first use of the cache:
+
+      TypeError: RedisCacheBackend.__init__() got an unexpected keyword
+                 argument 'location'
+
+  `LOCATION` now means per backend what it means in Django: the server for Redis
+  and memcached, the directory for the file cache, the table for the database
+  cache, and a name for the in-process one. Memcached also takes a list of
+  servers, or `"host:port"` as a `CACHES` entry writes it, rather than only the
+  `("host", port)` tuples the flat setting used.
+
+- **`cache.incr()` and `cache.add()` were not atomic, on any backend.** Both were
+  inherited from the base backend as a read and then a write, and both of those
+  calls suspend on a network backend — so concurrent callers all read the same
+  value and all write back the same result. Measured against a backend that
+  suspends, **500 concurrent `incr` calls landed as 1**. The documentation called
+  `incr` "atomic counter operations" and showed `add` used as a lock, which is
+  precisely the use a racy version defeats.
+
+  Redis now issues `INCRBY` and `SET NX`, one command each. The in-memory backend
+  holds its lock across the read and the write; it was in fact safe already,
+  because nothing in it suspends, but that was an accident of having no I/O
+  rather than anything to rely on.
+
+  The memcached, database and file backends still inherit the read-then-write
+  version, and the cache documentation now says so rather than promising
+  atomicity everywhere. Memcached's native `incr` needs values stored as ASCII
+  decimals, and that backend pickles them, so fixing it means changing how it
+  serialises — worth doing, but not something to slip in unverified.
+
+- **Several limits on one view spent each other.** The in-process counter keyed
+  on the caller alone, so `@ratelimit("5/minute", "50/day")` counted both into
+  one log: every call spent two, and three calls under a loose limit exhausted a
+  tight one that had not been reached. It keys on the limit as well now, so one
+  call spends one from each.
+
+- **The rate-limit headers described the wrong limit.** A login route capped at
+  `5/minute` under a global `100/minute` answered `X-RateLimit-Limit: 100,
+  Remaining: 99` — a client pacing itself by that would think it had 99 calls
+  left when it had 4, which is worse than sending nothing. A route now reports
+  the allowance it is actually spending: its own where it has one, the tightest
+  where it carries several, and the global limit elsewhere. They also appear now
+  when `RATE_LIMIT = ""` and only `@ratelimit` is limiting, where previously
+  there were none.
+
+- **The headers were sent twice on a route with its own limit.** The global
+  middleware appended its numbers on top of the route's, which a client reads as
+  one header with two comma-joined values. It leaves them alone now.
+
+- **The global limit and per-route limits used two separate counters.** The
+  middleware built a `RateLimiter` of its own rather than the application's, so
+  a project ran two in-process backends — two LRUs, twice the memory bound — and
+  a shared `RATE_LIMIT_STORAGE` opened two connections to count into one place.
+
+- **Rate limiting is Buraq's own, and `limits` is now optional.** The counting
+  lives in `buraq.ratelimit` — `parse_rate`, `MemoryBackend`, `Verdict`. The
+  in-process counter is what nearly every project runs, so it is worth owning:
+  it is **16x faster** than the library it replaced (1.0 µs against 16.6 µs) and
+  the default path now carries **no dependency at all**.
+
+  Enforcement per request, measured end to end:
+
+      routes     5        50       200
+      slowapi  207 µs   266 µs   415 µs
+      now        3 µs     6 µs     5 µs
+
+  Per-route `@ratelimit` went from 62 µs to 7 µs.
+
+  A counter shared between workers still goes to `limits`, installed with
+  `pip install buraq[ratelimit-shared]`. Check-and-increment across processes is
+  where rate limiters go subtly wrong, and that correctness is worth more than
+  avoiding the dependency for a store most projects never reach for.
+
+  New in the process:
+
+  - **`X-RateLimit-Limit`, `-Remaining` and `-Reset` on every response.** A
+    client that cannot see what it has left has to discover the limit by hitting
+    it. Neither slowapi nor DRF sends these.
+  - **`@ratelimit(cost=5)`**, to weight a route that costs more to serve than an
+    ordinary one.
+  - **`@ratelimit(exempt=...)`**, to skip the limit for a health check or a
+    staff user.
+  - **The counter bounds its own memory.** The key is usually the caller's
+    address and an open endpoint sees an unbounded number of those, so the
+    backend keeps an LRU of at most `max_keys` (100,000) rather than a dict that
+    a scan or a botnet turns into an outage.
+  - **A refused call no longer spends allowance**, so a client hammering a limit
+    can still recover from it.
+  - Rates accept `5/minute`, `5 per minute`, `10/5 minutes`, and the `s`/`m`/`h`/
+    `d`/`w` abbreviations. `0/minute` is refused rather than guessed at.
+
+- **BREAKING — slowapi is no longer a dependency.** `limits` — the library
+  slowapi is built on — replaces it, and is now a direct dependency. Nothing in
+  the documented API changes: `RATE_LIMIT`, `RATE_LIMIT_STORAGE` and
+  `@ratelimit` all work as before, and both paths now answer alike, with
+  `{"detail": "Rate limit exceeded"}` and a `Retry-After` header. A project
+  importing slowapi itself, or reaching for `app.state.limiter` expecting
+  slowapi's `Limiter`, has to change: `app.state.limiter` is now a
+  `buraq.middleware.ratelimit.RateLimiter`, whose API is `await hit(item, key)`.
+
+  Three things drove it, each measured rather than assumed:
+
+  - Its middleware scanned the routing table per request (see the entry below).
+  - **Its default strategy is a fixed window**, so `@ratelimit("5/minute")`
+    admitted ten requests across a boundary — five at 11:59:59 and five at
+    12:00:00. `RATE_LIMIT` used a moving window, so the two limits counted
+    differently for no stated reason. Both are moving windows now.
+  - **It cannot use an async store** — it asserts against one — so `@ratelimit`
+    kept its counters in the worker process however `RATE_LIMIT_STORAGE` was
+    set. Four workers turned `@ratelimit("5/minute")` on a login view into
+    twenty attempts a minute. `RATE_LIMIT_STORAGE` now reaches both.
+
+  Per-route enforcement also got cheaper: 62 µs → 38 µs per request.
+
+- **The global rate limit's cost grew with the size of the project.** Enforcement
+  went through `SlowAPIMiddleware`, which finds the handler with
+  `_find_route_handler` — a loop that regex-matches the request against *every*
+  route on *every* request, with no early break, keeping the last match rather
+  than the first. The limit check itself is about 20 µs; the scan around it was
+  the rest. Measured at the ASGI level, cost per request:
+
+      routes     5        50       200
+      before   207 µs   266 µs   415 µs
+      after    192 µs    36 µs    66 µs
+
+  A global limit applies to everything, so there is no handler to find. It is now
+  checked by a small pure-ASGI middleware against the same `limits` library
+  slowapi uses, with the limit string parsed once at startup instead of per
+  request. The cost no longer depends on how many routes the project has.
+
+  Per-route `@ratelimit` still goes through slowapi, where the decorator is
+  attached to the endpoint and no lookup is needed. Rejections now carry
+  `Retry-After`, and a client behind a proxy is identified by `X-Forwarded-For`
+  rather than the proxy's own address — previously one client hitting the limit
+  could lock out everyone sharing that proxy.
 
 - **Fifteen documented imports did not import.** A sweep of every
   `from buraq… import …` shown in the documentation found lines that had rotted
