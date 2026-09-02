@@ -993,7 +993,6 @@ class Manager:
             await db.commit()
 
     async def bulk_create(self, records: list[dict], ignore_conflicts: bool = False) -> list:
-        from sqlalchemy.engine import make_url as _make_url
 
         from buraq.core.db import SessionLocal, _current_session
         col_names = {c.name for c in self._model.__table__.columns}
@@ -1001,19 +1000,11 @@ class Manager:
         active = _current_session.get()
         if ignore_conflicts:
             from buraq.conf import settings
-            try:
-                dialect = _make_url(settings.DATABASE_URL).get_dialect().name
-            except Exception:
-                dialect = "postgresql"
-            if dialect == "sqlite":
-                from sqlalchemy.dialects.sqlite import insert as _insert
-            elif dialect in ("mysql", "mariadb"):
-                from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
-            else:
-                from sqlalchemy.dialects.postgresql import (
-                    insert as _insert,  # type: ignore[no-redef]
-                )
-            stmt = _insert(self._model.__table__).values(clean_records).on_conflict_do_nothing()
+            from buraq.orm.upsert import insert_ignoring_duplicates
+
+            stmt = insert_ignoring_duplicates(
+                self._model.__table__, clean_records, settings.DATABASE_URL
+            )
             if active is not None:
                 await active.execute(stmt)
                 await active.flush()

@@ -522,22 +522,9 @@ class _M2MManager:
             reverse=False, model=target_model, pk_set=pk_set,
         )
         url = settings.DATABASE_URL
+        from buraq.orm.upsert import insert_ignoring_duplicates
         async with SessionLocal() as db:
-            try:
-                from sqlalchemy.engine import make_url as _make_url
-                dialect = _make_url(url).get_dialect().name
-            except Exception:
-                dialect = "postgresql"
-            if dialect == "sqlite":
-                from sqlalchemy.dialects.sqlite import insert as _insert
-            elif dialect in ("mysql", "mariadb"):
-                from sqlalchemy.dialects.mysql import insert as _insert  # type: ignore[no-redef]
-            else:
-                from sqlalchemy.dialects.postgresql import (
-                    insert as _insert,  # type: ignore[no-redef]
-                )
-            stmt = _insert(assoc).values(rows).on_conflict_do_nothing()
-            await db.execute(stmt)
+            await db.execute(insert_ignoring_duplicates(assoc, rows, url))
             await db.commit()
         await m2m_changed.send(
             sender=assoc, action="post_add", instance=self._instance,
@@ -572,6 +559,7 @@ class _M2MManager:
         """Replace all related objects atomically (clear + add in one session)."""
         from buraq.conf import settings
         from buraq.core.db import SessionLocal
+        from buraq.orm.upsert import insert_ignoring_duplicates
         from buraq.signals import m2m_changed
         assoc = self._field._assoc_table
         target_model = self._field._to if not isinstance(self._field._to, str) else None
@@ -586,22 +574,9 @@ class _M2MManager:
                 assoc.delete().where(assoc.c.source_id == self._instance.id)
             )
             if rows:
-                try:
-                    from sqlalchemy.engine import make_url as _make_url
-                    dialect = _make_url(settings.DATABASE_URL).get_dialect().name
-                except Exception:
-                    dialect = "postgresql"
-                if dialect == "sqlite":
-                    from sqlalchemy.dialects.sqlite import insert as _insert
-                elif dialect in ("mysql", "mariadb"):
-                    from sqlalchemy.dialects.mysql import (
-                        insert as _insert,  # type: ignore[no-redef]
-                    )
-                else:
-                    from sqlalchemy.dialects.postgresql import (
-                        insert as _insert,  # type: ignore[no-redef]
-                    )
-                await db.execute(_insert(assoc).values(rows).on_conflict_do_nothing())
+                await db.execute(
+                    insert_ignoring_duplicates(assoc, rows, settings.DATABASE_URL)
+                )
             await db.commit()
         await m2m_changed.send(
             sender=assoc, action="post_add", instance=self._instance,
