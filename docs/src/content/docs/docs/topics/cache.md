@@ -147,11 +147,6 @@ CACHE_CULL_PROBABILITY  = 0.1   # chance of evicting expired rows on write
 `cache.set(key, value)` with no timeout uses `CACHE_DEFAULT_TIMEOUT`, which is
 `300` seconds unless you change it. Pass `timeout=0` for an entry that should
 never expire.
-
-This was not always so: Redis, in-memory and file entries used to be written
-with no expiry at all whatever the setting said, and the database backend used a
-hardcoded 300 seconds. If a project relied on cached values persisting
-indefinitely, set `CACHE_DEFAULT_TIMEOUT = 0` or pass `timeout=0` explicitly.
 :::
 
 :::note
@@ -228,21 +223,7 @@ views = await cache.incr("page_views", delta=5)  # → 6
 views = await cache.decr("page_views")        # → 5
 ```
 
-:::note[Entries expire by default]
-`cache.set(key, value)` with no timeout uses `CACHE_DEFAULT_TIMEOUT`, which is
-`300` seconds unless you change it. Pass `timeout=0` for an entry that should
-never expire.
-
-This was not always so: Redis, in-memory and file entries used to be written
-with no expiry at all whatever the setting said, and the database backend used
-a hardcoded 300 seconds. If a project relied on cached values persisting
-indefinitely, set `CACHE_DEFAULT_TIMEOUT = 0` or pass `timeout=0` explicitly.
-:::
-
-:::caution[`add` and `incr` are atomic on Redis and in memory only]
-Both are one operation on the Redis backend (`SET NX` and `INCRBY`) and are held
-under a lock in the in-memory one, so concurrent callers cannot interleave.
-
+:::caution[`incr` is not atomic everywhere]
 `add` is atomic on every backend: `SET NX` on Redis, memcached's own `ADD`, the
 primary key on the database table, and `O_CREAT|O_EXCL` for files — so it is safe
 to build a lock out of anywhere.

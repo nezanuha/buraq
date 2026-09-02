@@ -148,9 +148,3 @@ empty and autogeneration would find nothing to create.
 Adding an app to `INSTALLED_APPS` is therefore the only step: its models are
 picked up, and its `migrations` package is searched. There is no list of imports
 and no list of paths to maintain.
-
-:::note[Coming from a project made before this]
-An `alembic.ini` left over from an earlier version is simply ignored — the
-configuration is built regardless, so nothing needs migrating. You can delete
-that file and the `alembic/` directory beside it.
-:::

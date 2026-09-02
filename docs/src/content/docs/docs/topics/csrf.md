@@ -125,8 +125,8 @@ masked = mask_token(secret)      # secret -> a value safe to put in a response
 secret = unmask_token(masked)    # back again, before comparing
 ```
 
-`unmask_token` returns its argument unchanged if it is not a masked value, so a
-token issued before this existed still compares correctly.
+`unmask_token` returns its argument unchanged when handed something that is not
+masked, so a token from any source compares correctly.
 
 **How it works:**
 

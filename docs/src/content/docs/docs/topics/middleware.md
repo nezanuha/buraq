@@ -361,8 +361,8 @@ silences the warning.
 Why `limits` rather than the cache backend, when the cache is right there:
 counting a moving window needs the *times of the hits inside the window*, and a
 cache API of `get`/`set`/`incr` cannot express that. Building on it would force a
-fixed window — which admits twice the limit across a boundary, the exact flaw
-that ruled out SlowAPI. Doing it properly across processes is also where rate
+fixed window — which admits twice the limit across a boundary. Doing it properly
+across processes is also where rate
 limiters go subtly wrong, and that correctness is worth the optional dependency.
 Only the *address* is shared with the cache, not the mechanism.
 
@@ -405,40 +405,34 @@ for name, value in rate_headers(verdict):
     response.headers[name.decode()] = value.decode()
 ```
 
-:::note[Why Buraq does not use SlowAPI]
-FastAPI has no rate limiting of its own, so this is always a third-party choice.
-Buraq used [SlowAPI](https://slowapi.readthedocs.io/) and moved off it, then off
-its `limits` dependency for the in-process path as well. The counting now lives
-in `buraq.ratelimit` — `parse_rate`, `MemoryBackend`, `Verdict` — so the default
-path carries no dependency at all.
+:::note[Why the counting is Buraq's own]
+FastAPI has no rate limiting, so this is always a choice. Buraq counts in
+`buraq.ratelimit` — `parse_rate`, `MemoryBackend`, `Verdict` — rather than
+through a library, for three reasons.
 
-Three things ruled SlowAPI out, each measured rather than assumed:
+**The check has to be cheap, and stay cheap.** The obvious way to enforce a
+global limit is a middleware that finds the route's handler first, which means
+matching the request against every route on every request — a cost that grows
+with the project, 207 µs of enforcement at five routes against 415 µs at two
+hundred, for a check worth 20 µs. A global limit applies to everything, so there
+is no handler to look up. Enforcement here is 3–6 µs and flat, whatever the
+size of the project; per-route `@ratelimit` is 7 µs.
 
-- **Its middleware scanned the routing table on every request.** It finds the
-  handler with `_find_route_handler`, which regex-matches the request against
-  *every* route and does not stop at the first match. So the cost grew with the
-  project — 207 µs of enforcement at five routes, 415 µs at two hundred, for a
-  check worth 20 µs. A global limit applies to everything, so there is no
-  handler to look up in the first place.
-- **Its default strategy is a fixed window,** which admits twice the limit
-  across a boundary: five at 11:59:59 and five more at 12:00:00.
-- **It cannot use an async store,** so its counters stayed in the worker process
-  however they were configured — which matters most on a login endpoint, where
-  per-worker counting multiplies a brute-force allowance by the number of
-  workers.
+**A fixed window is not good enough.** It admits twice the limit across a
+boundary — five at 11:59:59 and five more at 12:00:00 — which on a login form
+is the difference between a limit and the appearance of one. The window here
+moves.
 
-Owning the in-process counter then made it 16× faster than the library (1.0 µs
-against 16.6 µs), and let it bound its own memory, which matters because the key
-is usually the caller's address and an open endpoint sees an unbounded number of
-those. Cost of enforcement per request, measured end to end:
+**The counter has to bound its own memory.** The key is usually the caller's
+address, and an open endpoint sees an unbounded number of those, so a dictionary
+that only grows is a memory leak a port scan turns into an outage.
 
-| routes | SlowAPI | now |
-| --- | --- | --- |
-| 5 | 207 µs | 3 µs |
-| 50 | 266 µs | 6 µs |
-| 200 | 415 µs | 5 µs |
-
-Per-route `@ratelimit` went from 62 µs to 7 µs over the same move.
+Doing the counting directly is also 16× faster than the library it would
+otherwise call — 1.0 µs against 16.6 µs — and leaves the default path with no
+dependency at all. A counter shared between workers is the exception: that goes
+to [limits](https://limits.readthedocs.io/), because check-and-increment across
+processes is where rate limiters go subtly wrong and that correctness is worth
+the optional install.
 :::
 
 ## CSRF protection
