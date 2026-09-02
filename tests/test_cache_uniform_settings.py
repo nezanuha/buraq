@@ -329,3 +329,92 @@ def test_an_unknown_dialect_does_not_claim_to_lock():
         bind = None
 
     assert "FOR UPDATE" not in _for_update("SELECT 1", _Session())
+
+
+# --- touch, version moves, close, dummy --------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_touch_extends_an_entry_without_rewriting_it():
+    """For something expensive to build that is still current, where set()
+    would mean re-serialising a value that has not changed."""
+    backend = MemoryCacheBackend()
+    await backend.set("k", "v", timeout=60)
+
+    assert await backend.touch("k", 3600) is True
+    assert await backend.get("k") == "v"
+
+
+@pytest.mark.asyncio
+async def test_touch_reports_a_key_that_was_already_gone():
+    """So a caller can tell "kept alive" from "expired, rebuild it"."""
+    assert await MemoryCacheBackend().touch("nope", 60) is False
+
+
+@pytest.mark.asyncio
+async def test_incr_version_moves_the_value_and_leaves_nothing_behind():
+    """The per-key counterpart to raising CACHE_VERSION: it invalidates one
+    entry for readers on the current version."""
+    backend = MemoryCacheBackend()
+    await backend.set("n", 5)
+
+    assert await backend.incr_version("n") == 2
+    assert await backend.get("n") is None
+    assert await backend.with_version(2).get("n") == 5
+
+
+@pytest.mark.asyncio
+async def test_decr_version_moves_it_back():
+    backend = MemoryCacheBackend(version=2)
+    await backend.set("n", 5)
+
+    assert await backend.decr_version("n") == 1
+    assert await backend.with_version(1).get("n") == 5
+
+
+@pytest.mark.asyncio
+async def test_incr_version_on_a_missing_key_raises():
+    with pytest.raises(ValueError, match="not found"):
+        await MemoryCacheBackend().incr_version("nope")
+
+
+@pytest.mark.asyncio
+async def test_close_is_available_on_every_backend():
+    """Not abstract: every backend can be closed and most need do nothing."""
+    for name, backend in _every_backend():
+        assert await backend.close() is None, name
+
+
+# --- the dummy backend -------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_the_dummy_backend_keeps_nothing():
+    """Every write succeeds and every read misses, so the surrounding code runs
+    exactly as it will in production while nothing is remembered."""
+    from buraq.contrib.cache.backends.dummy import DummyCacheBackend
+
+    cache = DummyCacheBackend()
+    await cache.set("k", "v")
+
+    assert await cache.get("k") is None
+    assert await cache.exists("k") is False
+    assert await cache.get_many(["k"]) == {}
+
+
+@pytest.mark.asyncio
+async def test_the_dummy_backend_cannot_hold_a_lock():
+    """`add` is always True, since nothing is stored and the key is never
+    already taken -- worth knowing before pointing a lock at it."""
+    from buraq.contrib.cache.backends.dummy import DummyCacheBackend
+
+    cache = DummyCacheBackend()
+    assert await cache.add("lock", True) is True
+    assert await cache.add("lock", True) is True
+
+
+def test_dummy_has_a_url_scheme():
+    from buraq.contrib.cache.url import parse_cache_url
+
+    backend, _options = parse_cache_url("dummy://")
+    assert backend.endswith("DummyCacheBackend")

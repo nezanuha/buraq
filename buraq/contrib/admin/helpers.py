@@ -46,8 +46,11 @@ def _is_auto_col(col) -> bool:
     return getattr(col, "onupdate", None) is not None
 
 
-def get_form_fields(model_admin) -> list[dict]:
-    editable = set(model_admin.get_fields())
+def get_form_fields(model_admin, request=None, obj=None) -> list[dict]:
+    # From the fieldsets, which fall back to get_fields() when none are
+    # declared -- so declaring them cannot leave a field on the form that
+    # no section mentions.
+    editable = set(model_admin.fieldset_fields(request, obj))
     readonly = set(model_admin.readonly_fields)
     result = []
     for col in model_admin._all_columns():
@@ -75,8 +78,10 @@ def obj_to_dict(obj) -> dict:
         return {}
 
 
-def coerce_form_data(form_data: dict, model_admin) -> dict:
-    editable = set(model_admin.get_fields())
+def coerce_form_data(form_data: dict, model_admin, request=None, obj=None) -> dict:
+    # The same set the form was built from. A field no section names is not
+    # on the page, so a value posted for it is not one this form asked for.
+    editable = set(model_admin.fieldset_fields(request, obj))
     result = {}
     for col in model_admin._all_columns():
         name = col.name

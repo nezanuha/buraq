@@ -15,6 +15,7 @@ CACHE_URL = "redis://localhost:6379/0"
 | --- | --- | --- |
 | *(unset)* | in-process memory — the default | — |
 | `locmem://` | in-process memory | — |
+| `dummy://` | stores nothing — see below | — |
 | `redis://host:6379/0` | Redis | `pip install "buraq[redis]"` |
 | `rediss://user:pw@host:6380/0` | Redis over TLS | `pip install "buraq[redis]"` |
 | `memcached://host:11211` | Memcached | `pip install "buraq[memcached]"` |
@@ -56,6 +57,23 @@ While rolling over, the previous version is still readable:
 previous = cache.with_version(cache.version - 1)
 value = await previous.get("key") or await expensive()
 ```
+
+### A cache that stores nothing
+
+`DummyCacheBackend` accepts every write and misses every read, so the code
+around it runs exactly as it will in production while nothing is remembered:
+
+```python title="config/settings.py"
+CACHE_URL = "dummy://"
+```
+
+In development that keeps a stale entry from hiding a change you just made. In
+tests it makes a cache-dependent path deterministic — a test that passes only
+because an earlier one warmed the cache will fail when run alone, or in a
+different order.
+
+It cannot hold a lock: `add` is always `True`, since nothing is stored and the
+key is never already taken.
 
 ### Several caches
 
@@ -192,6 +210,16 @@ await cache.delete_many(["key1", "key2"])
 was_set = await cache.add("lock:user:42", True, timeout=30)
 if not was_set:
     return  # already locked
+
+# touch — extend the lifetime without rewriting the value
+await cache.touch("session:abc", 3600)   # False if it had already gone
+
+# version moves — invalidate one key for readers on the current version
+await cache.incr_version("report:2026")
+await cache.decr_version("report:2026")
+
+# close — release whatever the backend holds open
+await cache.close()
 
 # incr / decr — counter operations
 await cache.set("page_views", 0)

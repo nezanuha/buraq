@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the admin can be scoped to a tenant
+
+`ModelAdmin.get_queryset(request)` narrows the rows a request may reach, and
+every read goes through it: the list, the filter sidebar, the bulk actions, and
+each of the fetches behind the change and delete pages.
+
+That last part is the whole of it. Narrowing only the list would hide rows on
+one page while leaving `/admin/app/model/41/change` open to anyone who typed it,
+and the bulk-delete endpoint took ids straight from the request body and deleted
+them unfiltered — so a scoped admin could still be asked to delete rows it was
+never allowed to see. The filter sidebar built its choices from every row in the
+table, which named other tenants' values in a dropdown.
+
+`get_object(request, pk)` fetches through the same queryset and returns `None`
+for a row outside it, so not-found and not-permitted look the same to the
+visitor. Only one of them can leak that the row exists.
+
+`has_module_permission`, `has_view_permission`, `has_add_permission`,
+`has_change_permission` and `has_delete_permission` decide what may be done.
+They take the row where Django's do, so a permission can say "yours, but not
+theirs" — `can_edit` is a class-wide flag and cannot. They are async, unlike
+Django's: deciding whether someone may edit a row usually means asking the
+database something, and there is no way to do that from a synchronous method
+here. Each falls back to the matching `can_*` flag, so an existing admin behaves
+as it did.
+
+### Added — admin actions and fieldsets
+
+- **`actions`** — bulk operations on the selected rows, named as methods on the
+  admin class or given as callables. `delete_selected` is built in and offered
+  only when deletion is permitted, so a read-only admin does not show a button
+  that answers 403. An action the request may not run is not registered at all,
+  so it cannot be reached by posting its name.
+- **`fieldsets`** — fields grouped into titled sections. The form is built from
+  them and so is the set of fields that may be written, so a field left out of
+  every section is neither shown nor saved. Reading one from `fields` and the
+  other from `fieldsets` would let a value be posted for a field that was never
+  on the page.
+
+### Added — the rest of Django's cache API
+
+- **`touch(key, timeout)`** — a new lifetime without rewriting the value, for
+  something expensive to build that is still current. `False` when the key had
+  already gone, so a caller can tell that from "kept alive".
+- **`incr_version(key)`** / **`decr_version(key)`** — move one entry to another
+  version, the per-key counterpart to raising `CACHE_VERSION`.
+- **`close()`** on every backend, rather than only the two that hold a
+  connection.
+- **`dummy://`** — a backend that accepts every write and misses every read, so
+  the code around it runs as it will in production while nothing is remembered.
+  For development, where a stale entry hides the change you just made, and for
+  tests, where a path that passes only because an earlier test warmed the cache
+  fails when run alone.
+
+
 ### Fixed — `{{ cycle("a", "b") }}` rendered an object into the page
 
 `cycle` is built to be held in a variable and called — `{% set c = cycle("odd",

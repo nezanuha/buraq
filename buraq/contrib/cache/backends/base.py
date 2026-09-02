@@ -138,6 +138,50 @@ class BaseCacheBackend(ABC):
         """Decrement the integer value stored at key."""
         return await self.incr(key, -delta)
 
+    async def touch(self, key: str, timeout: int | None = None) -> bool:
+        """Give the entry a new lifetime without rewriting its value.
+
+        For something expensive to build that is still current -- a session, a
+        rendered page -- where set() would mean fetching and re-serialising a
+        value that has not changed.
+
+        Returns False when the key is not there, so a caller can tell "kept
+        alive" from "already gone" and rebuild.
+        """
+        value = await self.get(key)
+        if value is None:
+            return False
+        await self.set(key, value, timeout)
+        return True
+
+    async def incr_version(self, key: str, delta: int = 1) -> int:
+        """Move a value to a later version, leaving nothing behind at the old one.
+
+        The per-key counterpart to raising CACHE_VERSION: it invalidates one
+        entry for readers on the current version while keeping the value
+        reachable to anything that has already moved on.
+        """
+        value = await self.get(key)
+        if value is None:
+            raise ValueError(f"Cache key {key!r} not found.")
+        new_version = self.version + delta
+        await self.with_version(new_version).set(key, value)
+        await self.delete(key)
+        return new_version
+
+    async def decr_version(self, key: str, delta: int = 1) -> int:
+        """Move a value to an earlier version."""
+        return await self.incr_version(key, -delta)
+
+    async def close(self) -> None:
+        """Release whatever the backend holds open.
+
+        Nothing to do for a backend that keeps no connection, which is why this
+        is not abstract -- every backend can be closed, and most need not do
+        anything about it.
+        """
+        return None
+
     async def get_many(self, keys: list[str]) -> dict[str, Any]:
         values = await asyncio.gather(*(self.get(k) for k in keys))
         return dict(zip(keys, values, strict=True))

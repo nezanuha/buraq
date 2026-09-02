@@ -26,6 +26,7 @@ _BACKENDS = "buraq.contrib.cache.backends"
 #: Scheme -> the backend it names. Aliases are listed so that a URL copied from
 #: elsewhere -- a Heroku config var, a docker-compose file -- works as written.
 SCHEMES: dict[str, str] = {
+    "dummy": f"{_BACKENDS}.dummy.DummyCacheBackend",
     "locmem": f"{_BACKENDS}.memory.MemoryCacheBackend",
     "memory": f"{_BACKENDS}.memory.MemoryCacheBackend",
     "redis": f"{_BACKENDS}.redis.RedisCacheBackend",

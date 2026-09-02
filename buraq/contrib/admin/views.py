@@ -54,6 +54,20 @@ def _verify_cookie(cookie: str, secret: str) -> int | None:
         return None
 
 
+def _takes_request(func) -> bool:
+    """Whether this action is a bound method or a plain function.
+
+    A method on the admin class already has ``self``; a standalone function
+    written as ``def archive(modeladmin, request, queryset)`` -- the shape
+    Django uses -- has to be handed one.
+    """
+    import inspect
+
+    if inspect.ismethod(func):
+        return True
+    return len(inspect.signature(func).parameters) == 2
+
+
 def get_admin_router(admin_site: AdminSite) -> APIRouter:
     # No prefix: where the admin lives is chosen at the mount point, so a
     # deployment can move it off the first path every scanner tries.
@@ -154,17 +168,21 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             return _redirect_login()
 
         model_cards = []
-        for model, ma in admin_site._registry.items():
+        for _model, ma in admin_site._registry.items():
+            if not await ma.has_module_permission(request):
+                continue
             try:
-                count = await model.objects.count()
+                # Scoped, or the count tells a tenant how many rows every other
+                # tenant has.
+                count = await ma.get_queryset(request).count()
             except Exception:
-                count = "â€”"
+                count = "—"
             model_cards.append({
                 "app_label": ma.get_app_label(),
                 "model_name": ma.get_model_name(),
                 "verbose_name_plural": ma.get_verbose_name_plural(),
                 "count": count,
-                "can_create": ma.can_create,
+                "can_create": await ma.has_add_permission(request),
             })
 
         return _render(request, "admin/dashboard.html", {
@@ -188,7 +206,8 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         search = request.query_params.get("q", "").strip()
         ordering_param = request.query_params.get("o", "")
 
-        qs = ma.model.objects.all()
+        # Through get_queryset, so an admin scoped to a tenant stays scoped.
+        qs = ma.get_queryset(request)
 
         # â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if search and ma.search_fields:
@@ -238,7 +257,15 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         filter_groups = []
         for field in ma.list_filter:
             try:
-                raw_vals = await ma.model.objects.values_list(field, flat=True).distinct().all()
+                # Scoped: built from every row, the sidebar lists values a
+                # scoped admin is not allowed to see -- a "customer" filter
+                # naming every customer in the system.
+                raw_vals = (
+                    await ma.get_queryset(request)
+                    .values_list(field, flat=True)
+                    .distinct()
+                    .all()
+                )
                 vals = sorted({str(v) for v in raw_vals if v is not None})
                 filter_groups.append({
                     "field": field,
@@ -282,19 +309,36 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
 
         redirect_url = f"{admin_site.prefix}/{app_label}/{model_name}/"
 
-        if action == "delete_selected" and ma.can_delete and selected:
-            from buraq.orm.query import Q
-            ids = [int(i) for i in selected]
-            q = None
-            for id_ in ids:
-                clause = Q(id=id_)
-                q = clause if q is None else (q | clause)
-            try:
-                await ma.model.objects.filter(q).delete()
-                redirect_url += "?success=deleted"
-            except Exception:
-                pass
+        available = await ma.get_actions(request)
+        func = available.get(action)
+        if func is None or not selected:
+            # An action this request may not run is not there at all, so it
+            # cannot be reached by posting its name.
+            return RedirectResponse(redirect_url, status_code=303)
 
+        from buraq.orm.query import Q
+
+        clause = None
+        for id_ in (int(i) for i in selected):
+            piece = Q(id=id_)
+            clause = piece if clause is None else (clause | piece)
+
+        # Through get_queryset: the ids arrive in the request body, so acting on
+        # them unfiltered would let a scoped admin be asked to touch rows it was
+        # never allowed to see.
+        queryset = ma.get_queryset(request).filter(clause)
+
+        try:
+            message = await func(request, queryset) if _takes_request(func) else await func(
+                ma, request, queryset
+            )
+        except Exception:
+            return RedirectResponse(f"{redirect_url}?error=action", status_code=303)
+
+        from urllib.parse import quote
+
+        if message:
+            redirect_url += f"?success={quote(str(message))}"
         return RedirectResponse(redirect_url, status_code=303)
 
     # â”€â”€ Add â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -306,7 +350,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             return _redirect_login()
 
         ma = _find_ma(app_label, model_name)
-        if not ma or not ma.can_create:
+        if not ma or not await ma.has_add_permission(request):
             raise HTTPException(403)
 
         from buraq.contrib.admin.helpers import get_form_fields
@@ -316,7 +360,8 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             "ma": ma,
             "app_label": app_label,
             "model_name": model_name,
-            "form_fields": get_form_fields(ma),
+            "form_fields": get_form_fields(ma, request),
+            "fieldsets": ma.get_fieldsets(request),
             "obj": {},
             "is_add": True,
             "error": None,
@@ -329,14 +374,14 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             return _redirect_login()
 
         ma = _find_ma(app_label, model_name)
-        if not ma or not ma.can_create:
+        if not ma or not await ma.has_add_permission(request):
             raise HTTPException(403)
 
         from buraq.contrib.admin.helpers import coerce_form_data, get_form_fields
 
         form = await request.form()
         save_action = form.get("_save_action", "")
-        data = coerce_form_data(dict(form), ma)
+        data = coerce_form_data(dict(form), ma, request)
 
         try:
             obj = await ma.model.objects.create(**data)
@@ -360,7 +405,8 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 "ma": ma,
                 "app_label": app_label,
                 "model_name": model_name,
-                "form_fields": get_form_fields(ma),
+                "form_fields": get_form_fields(ma, request),
+            "fieldsets": ma.get_fieldsets(request),
                 "obj": dict(form),
                 "is_add": True,
                 "error": str(e),
@@ -381,7 +427,9 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             raise HTTPException(404)
 
         try:
-            obj = await ma.model.objects.get(id=obj_id)
+            obj = await ma.get_object(request, obj_id)
+            if obj is None:
+                raise HTTPException(404)
         except Exception:
             raise HTTPException(404) from None
 
@@ -392,7 +440,8 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             "ma": ma,
             "app_label": app_label,
             "model_name": model_name,
-            "form_fields": get_form_fields(ma),
+            "form_fields": get_form_fields(ma, request),
+            "fieldsets": ma.get_fieldsets(request),
             "obj": obj_to_dict(obj),
             "is_add": False,
             "error": None,
@@ -408,11 +457,13 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             return _redirect_login()
 
         ma = _find_ma(app_label, model_name)
-        if not ma or not ma.can_edit:
+        if not ma or not await ma.has_change_permission(request):
             raise HTTPException(403)
 
         try:
-            obj = await ma.model.objects.get(id=obj_id)
+            obj = await ma.get_object(request, obj_id)
+            if obj is None:
+                raise HTTPException(404)
         except Exception:
             raise HTTPException(404) from None
 
@@ -420,7 +471,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
 
         form = await request.form()
         save_action = form.get("_save_action", "")
-        data = coerce_form_data(dict(form), ma)
+        data = coerce_form_data(dict(form), ma, request)
 
         try:
             for k, v in data.items():
@@ -445,7 +496,8 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 "ma": ma,
                 "app_label": app_label,
                 "model_name": model_name,
-                "form_fields": get_form_fields(ma),
+                "form_fields": get_form_fields(ma, request),
+            "fieldsets": ma.get_fieldsets(request),
                 "obj": obj_to_dict(obj),
                 "is_add": False,
                 "error": str(e),
@@ -462,11 +514,13 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             return _redirect_login()
 
         ma = _find_ma(app_label, model_name)
-        if not ma or not ma.can_delete:
+        if not ma or not await ma.has_delete_permission(request):
             raise HTTPException(403)
 
         try:
-            obj = await ma.model.objects.get(id=obj_id)
+            obj = await ma.get_object(request, obj_id)
+            if obj is None:
+                raise HTTPException(404)
         except Exception:
             raise HTTPException(404) from None
 
@@ -490,11 +544,13 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
             return _redirect_login()
 
         ma = _find_ma(app_label, model_name)
-        if not ma or not ma.can_delete:
+        if not ma or not await ma.has_delete_permission(request):
             raise HTTPException(403)
 
         try:
-            obj = await ma.model.objects.get(id=obj_id)
+            obj = await ma.get_object(request, obj_id)
+            if obj is None:
+                raise HTTPException(404)
         except Exception:
             # Already deleted — treat as success
             return RedirectResponse(
