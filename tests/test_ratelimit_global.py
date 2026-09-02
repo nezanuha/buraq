@@ -10,6 +10,7 @@ the login page -- did nothing, and every route was unlimited.
       [200, 200, 200, 200, 200, 200]
 """
 
+import importlib.util
 import warnings
 
 import pytest
@@ -19,6 +20,14 @@ from starlette.responses import PlainTextResponse
 from buraq.conf import settings
 from buraq.decorators import ratelimit
 from buraq.urls import path
+
+#: `limits` is optional -- only a counter shared between workers needs it. The
+#: tests covering that path skip without it rather than failing, since a
+#: contributor who has not installed an optional extra has not broken anything.
+needs_limits = pytest.mark.skipif(
+    importlib.util.find_spec("limits") is None,
+    reason="limits is optional; install buraq[ratelimit-shared] to run this",
+)
 
 
 def _client(monkeypatch, limit, views=None):
@@ -167,6 +176,7 @@ def test_the_refusal_names_the_fix():
     assert "async+redis://localhost:6379" in str(caught.value)
 
 
+@needs_limits
 def test_an_async_storage_uri_is_accepted():
     """`async+memory://` needs no server, so the async path is testable here."""
     from buraq.middleware.ratelimit import GlobalRateLimitMiddleware
@@ -175,7 +185,10 @@ def test_an_async_storage_uri_is_accepted():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("storage", ["memory://", "async+memory://"])
+@pytest.mark.parametrize(
+    "storage",
+    ["memory://", pytest.param("async+memory://", marks=needs_limits)],
+)
 async def test_every_backend_actually_limits(storage):
     """Buraq's own in-process counter, and the `limits`-backed shared one."""
     from buraq.middleware.ratelimit import RateLimiter
@@ -188,7 +201,10 @@ async def test_every_backend_actually_limits(storage):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("storage", ["memory://", "async+memory://"])
+@pytest.mark.parametrize(
+    "storage",
+    ["memory://", pytest.param("async+memory://", marks=needs_limits)],
+)
 async def test_every_backend_reports_what_is_left(storage):
     """The headers a client paces itself by are only as good as these numbers."""
     from buraq.middleware.ratelimit import RateLimiter
@@ -237,6 +253,7 @@ def test_a_project_with_no_cache_configured_needs_nothing_running(monkeypatch):
         ("async+mongodb://localhost:27017", "motor"),
     ],
 )
+@needs_limits
 def test_a_missing_driver_names_the_package_to_install(uri, package):
     """
     None of these clients is a dependency -- a project on the default in-process
@@ -629,12 +646,20 @@ def test_the_global_limit_and_the_routes_share_one_store(monkeypatch):
 # --- where the counters go ---------------------------------------------------
 
 
-def _resolve(monkeypatch, cache=None, setting=""):
-    from buraq.middleware.ratelimit import resolve_storage
+def _resolve(monkeypatch, cache=None, setting="", limits_installed=True):
+    """Resolve storage with `limits` reported as installed unless asked otherwise.
 
+    What these check is the resolution -- which setting wins, and how a cache URL
+    is turned into a store -- not whether an optional package happens to be
+    present. Left to the real check they passed or failed by what the machine had
+    installed, which is how they passed here and failed in CI.
+    """
+    from buraq.middleware import ratelimit as module
+
+    monkeypatch.setattr(module, "_limits_installed", lambda: limits_installed)
     monkeypatch.setattr(settings, "CACHE_REDIS_URL", cache, raising=False)
     monkeypatch.setattr(settings, "RATE_LIMIT_STORAGE", setting, raising=False)
-    return resolve_storage()
+    return module.resolve_storage()
 
 
 def test_the_counters_follow_the_cache_when_it_is_redis(monkeypatch):

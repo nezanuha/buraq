@@ -90,6 +90,9 @@ dev = [
     "httpx>=0.27.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
+    # Optional at runtime -- only a shared rate-limit counter needs it -- but
+    # required here, or the tests covering that path silently do not run.
+    "limits>=3.6",
 ]
 
 [project.scripts]
