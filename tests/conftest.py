@@ -40,15 +40,38 @@ def use_test_database(settings) -> None:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _close_connections_at_the_end():
-    """Dispose every engine before the interpreter goes.
+def _database_lifecycle():
+    """Keep connections inside the loop that opened them, and close what is left.
 
-    The last engine the suite built is never reset, so nothing ever closed it.
-    Its connections were finalised at shutdown instead -- after the event loop
-    had gone, which raises "Event loop is closed" from a finaliser and gets
-    blamed on whichever test was unlucky enough to be running.
+    pytest-asyncio gives each test its own event loop, and a pooled connection
+    belongs to the loop that opened it. Handing one to the next test is what
+    "Event loop is closed" means, and it is why the PostgreSQL and MySQL jobs
+    failed while every SQLite one passed: aiosqlite has no socket to strand.
+
+    NullPool opens and closes a connection per use, so none outlives its loop.
+    That is slower and exactly wrong for production -- where the process has one
+    loop and pooling is the point -- so it is set here rather than in the
+    framework.
+
+    SQLite is left alone: its in-memory database exists only for as long as the
+    one connection holding it, which is why that backend pins StaticPool.
+
+    The teardown closes the last engine, which nothing resets and so nothing
+    ever closed -- its connections were finalised at interpreter shutdown, after
+    the loop had gone.
     """
-    yield
+    from buraq.conf import settings
     from buraq.core.db import reset_connections
+
+    if not TEST_DATABASE_URL.startswith("sqlite"):
+        from sqlalchemy.pool import NullPool
+
+        settings.DATABASE_OPTIONS = {
+            **(getattr(settings, "DATABASE_OPTIONS", None) or {}),
+            "poolclass": NullPool,
+        }
+        reset_connections()
+
+    yield
 
     reset_connections()
