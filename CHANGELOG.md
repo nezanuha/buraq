@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — `{{ cycle("a", "b") }}` rendered an object into the page
+
+`cycle` is built to be held in a variable and called — `{% set c = cycle("odd",
+"even") %}` then `{{ c() }}`. Rendered directly, which is the obvious
+translation of Django's `{% cycle %}`, it put `<_Cycle object at 0x...>` into
+the HTML: no error, no warning, just that on the page. It now yields its next
+value when rendered.
+
+Inside a loop, Jinja's own `loop.cycle("odd", "even")` is the better answer and
+needs nothing from Buraq — calling `cycle()` fresh on each iteration builds a
+new one every time and always returns the first value. The documentation says
+so.
+
+### Documentation — where Jinja's own features are
+
+Nothing in the documentation linked to Jinja's, so a reader wanting `groupby`,
+`selectattr`, `{% macro %}` or whitespace control had nowhere to go and would
+reasonably conclude Buraq had only what was listed. There is now a link to the
+Template Designer Documentation, a list of Jinja's filters by name so the shape
+of what exists is visible without leaving, and a Django-to-Jinja translation
+table for the differences that actually bite — filter arguments in parentheses
+rather than after a colon, `{% else %}` where Django writes `{% empty %}`,
+`loop.index` for `forloop.counter`, and the rest. Each row of that table is
+covered by a test, since a translation table is only worth having if every row
+is true.
+
+Both template pages claimed Buraq ships 21 filters. It ships 37, plus 10
+globals, alongside Jinja's own 54 — and the globals had no reference at all, so
+`url`, `static`, `csrf_token` and `regroup` were undocumented.
+
 ### Added — every Django built-in filter now has an answer
 
 Buraq renders with Jinja2, so most of Django's *tags* are Jinja's own syntax and

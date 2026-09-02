@@ -233,3 +233,64 @@ def test_every_django_filter_has_an_answer(env):
     available = set(env.filters) | set(env.globals)
 
     assert not (django_filters - available)
+
+
+# --- cycle -------------------------------------------------------------------
+
+
+def test_cycle_rendered_directly_gives_a_value_not_a_repr(env):
+    """
+    `{{ cycle("a", "b") }}` is the obvious translation of Django's
+    `{% cycle %}`, and it used to put `<_Cycle object at 0x...>` into the page.
+    No error, no warning -- that, in the HTML.
+    """
+    assert render(env, '{{ cycle("a", "b") }}') == "a"
+
+
+def test_cycle_kept_in_a_variable_advances_on_each_call(env):
+    """The form the docstring documents, for cycling across a loop."""
+    template = '{% set c = cycle("a", "b") %}{% for i in range(4) %}{{ c() }}{% endfor %}'
+    assert render(env, template) == "abab"
+
+
+def test_jinjas_own_loop_cycle_is_the_answer_inside_a_loop(env):
+    """Calling `cycle()` fresh on each iteration would build a new one every
+    time and always return the first value, so this is what the documentation
+    points at."""
+    template = '{% for i in range(4) %}{{ loop.cycle("odd", "even") }} {% endfor %}'
+    assert render(env, template) == "odd even odd even "
+
+
+# --- the Django-to-Jinja table in the documentation --------------------------
+
+
+@pytest.mark.parametrize(
+    "template,expected",
+    [
+        # Filter arguments are call parentheses, not a colon.
+        ('{% for i in [7, 8] %}{{ loop.index }}{% endfor %}', "12"),
+        ('{% for i in [7, 8] %}{{ loop.index0 }}{% endfor %}', "01"),
+        ('{% for i in [7, 8] %}{{ loop.revindex }}{% endfor %}', "21"),
+        # Django's {% empty %} is Jinja's {% else %}.
+        ("{% for i in [] %}x{% else %}none{% endfor %}", "none"),
+        # Django's {% comment %} is {# #}, and {% verbatim %} is {% raw %}.
+        ("{# hidden #}ok", "ok"),
+        ("{% raw %}{{ x }}{% endraw %}", "{{ x }}"),
+        # A missing variable renders empty, as in Django.
+        ("[{{ missing }}]", "[]"),
+    ],
+)
+def test_the_documented_translations_render_as_documented(env, template, expected):
+    """The table is only worth having if each row is true."""
+    assert render(env, template) == expected
+
+
+def test_strict_undefined_turns_a_typo_into_an_error():
+    """What the documentation offers for projects that would rather not have a
+    misspelled variable render as nothing."""
+    from jinja2 import Environment as JinjaEnvironment
+    from jinja2 import StrictUndefined, UndefinedError
+
+    strict = JinjaEnvironment(undefined=StrictUndefined)
+    with pytest.raises(UndefinedError):
+        strict.from_string("{{ nope }}").render()

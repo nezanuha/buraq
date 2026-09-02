@@ -62,6 +62,62 @@ async def my_view(request):
 
 ---
 
+## The Jinja language
+
+Buraq adds to Jinja rather than wrapping it, so the whole language is available
+and its documentation is the reference for it:
+
+- **[Template Designer Documentation](https://jinja.palletsprojects.com/en/stable/templates/)**
+  — the syntax, and every built-in filter and test in detail.
+
+Jinja's own filters are there under the names you would expect, alongside
+Buraq's:
+
+```
+abs attr batch capitalize center count default dictsort escape filesizeformat
+first float forceescape format groupby indent int items join last length list
+lower map max min pprint random reject rejectattr replace reverse round safe
+select selectattr slice sort string striptags sum title tojson trim truncate
+unique upper urlencode urlize wordcount wordwrap xmlattr
+```
+
+`groupby`, `selectattr`, `map` and `batch` have no Django equivalent and are
+worth knowing — `{{ posts|selectattr("published")|list }}` replaces a filter
+written in Python.
+
+The pages here cover what Buraq adds: [its own filters and
+globals](/docs/topics/template-tags), template loading, and the settings that
+configure the environment.
+
+---
+
+## Coming from Django
+
+The syntax is close enough to be misleading. These are the differences that
+actually bite:
+
+| Django | Buraq (Jinja) | |
+|---|---|---|
+| `{{ x\|date:"Y-m-d" }}` | `{{ x\|date("Y-m-d") }}` | filter arguments are call parentheses, not a colon |
+| `{% for %}…{% empty %}` | `{% for %}…{% else %}` | same meaning, different keyword |
+| `forloop.counter` | `loop.index` | both 1-based |
+| `forloop.counter0` | `loop.index0` | |
+| `forloop.first` / `.last` | `loop.first` / `loop.last` | |
+| `forloop.revcounter` | `loop.revindex` | |
+| `{% comment %}…{% endcomment %}` | `{# … #}` | |
+| `{% verbatim %}` | `{% raw %}` | |
+| `{% csrf_token %}` | `{{ csrf_input }}` | a global, not a tag |
+| `{% url 'name' pk=1 %}` | `{{ url("name", pk=1) }}` | |
+| `{% cycle 'a' 'b' %}` | `{{ loop.cycle("a", "b") }}` | inside a loop; Jinja's own, and it remembers per iteration |
+| `{% firstof a b %}` | `{{ firstof(a, b) }}` | |
+| `{% load %}` | — | not needed; tags are discovered at startup |
+
+A missing variable renders as empty in both, so a typo is silent in each. Set
+`TEMPLATE_OPTIONS = {"undefined": "jinja2.StrictUndefined"}` to make it raise
+instead — see [configuring Jinja](#configuring-jinja-itself).
+
+---
+
 ## Jinja2 vs Django template syntax
 
 Jinja2 and Django templates share similar syntax (`{{ var }}`, `{% block %}`, `{% for %}`, `{% if %}`) but they are not identical:
@@ -318,7 +374,7 @@ return await render(request, "posts/list.html", {"user": override_user})
 
 ## Built-in filters
 
-Buraq ships 21 built-in Jinja2 filters, registered automatically into every environment. No `{% load %}` required.
+Buraq ships 37 built-in filters and 10 globals, registered automatically into every environment — alongside Jinja's own 54. No `{% load %}` required.
 
 ### Date & time
 

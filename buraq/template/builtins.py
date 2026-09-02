@@ -668,6 +668,11 @@ def register_builtins(env) -> None:
             {% for item in items %}
             <tr class="{{ row_class() }}">...</tr>
             {% endfor %}
+
+        Inside a loop, Jinja's own ``loop.cycle("odd", "even")`` is the better
+        answer and needs nothing from here: calling ``cycle()`` fresh on each
+        iteration would build a new one every time and always return the first
+        value.
         """
         def __init__(self, *values):
             self._values = values
@@ -677,6 +682,16 @@ def register_builtins(env) -> None:
             val = self._values[self._index % len(self._values)]
             self._index += 1
             return val
+
+        def __str__(self) -> str:
+            """Rendering it directly advances it, rather than printing a repr.
+
+            ``{{ cycle("a", "b") }}`` is the obvious translation of Django's
+            ``{% cycle %}``, and it used to put
+            ``<_Cycle object at 0x...>`` into the page -- no error, just that,
+            in the HTML.
+            """
+            return str(self())
 
     env.globals.setdefault("cycle", _Cycle)
 
