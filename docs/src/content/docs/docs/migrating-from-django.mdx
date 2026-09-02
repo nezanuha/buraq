@@ -7,7 +7,9 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 Buraq is intentionally designed to mirror Django's patterns. If you know Django, most of what you know transfers directly — the main difference is adding `async`/`await` to your views and ORM calls.
 
-## Installation
+## Getting started
+
+### Installation
 
 <Tabs>
 <TabItem label="Django">
@@ -36,7 +38,32 @@ buraq runserver
 
 ---
 
-## Management Commands
+### Imports
+
+| Django | Buraq |
+|---|---|
+| `from django.urls import path, include` | `from buraq.urls import path, include` |
+| `from django.shortcuts import render, redirect` | `from buraq.shortcuts import render, redirect` |
+| `from django.shortcuts import get_object_or_404` | `from buraq.shortcuts import get_object_or_404` |
+| `from django.shortcuts import get_list_or_404` | `from buraq.shortcuts import get_list_or_404` |
+| `from django.urls import reverse_lazy` | `from buraq.urls import reverse_lazy` |
+| `from django.db import models` | `from buraq import models` |
+| `from django.views.generic import ListView` | `from buraq.views.generic import ListView` |
+| `from django.views.generic import DetailView` | `from buraq.views.generic import DetailView` |
+| `from django.views.generic import CreateView` | `from buraq.views.generic import CreateView` |
+| `from django.views.generic import UpdateView` | `from buraq.views.generic import UpdateView` |
+| `from django.views.generic import DeleteView` | `from buraq.views.generic import DeleteView` |
+| `from django import forms` | `from buraq.forms import ModelForm` |
+| `from django.contrib.auth.decorators import login_required` | `from buraq.contrib.auth.decorators import login_required` |
+| `from django.views.decorators.http import require_POST` | `from buraq.views.decorators.http import require_POST` |
+| `from django.views.decorators.cache import cache_page` | `from buraq.views.decorators.cache import cache_page` |
+| `from django.views.decorators.csrf import csrf_exempt` | `from buraq.views.decorators.csrf import csrf_exempt` |
+| `from django.views.decorators.vary import vary_on_headers` | `from buraq.views.decorators.vary import vary_on_headers` |
+| `from django.contrib import messages` | `from buraq.contrib.messages import success, error, info` |
+
+---
+
+### Management Commands
 
 | Django | Buraq |
 |---|---|
@@ -78,32 +105,66 @@ buraq runserver
 
 ---
 
-## Imports
+### Settings
 
-| Django | Buraq |
+Most settings follow the same naming convention. Key differences:
+
+| Django `settings.py` | Buraq `settings.py` |
 |---|---|
-| `from django.urls import path, include` | `from buraq.urls import path, include` |
-| `from django.shortcuts import render, redirect` | `from buraq.shortcuts import render, redirect` |
-| `from django.shortcuts import get_object_or_404` | `from buraq.shortcuts import get_object_or_404` |
-| `from django.shortcuts import get_list_or_404` | `from buraq.shortcuts import get_list_or_404` |
-| `from django.urls import reverse_lazy` | `from buraq.urls import reverse_lazy` |
-| `from django.db import models` | `from buraq import models` |
-| `from django.views.generic import ListView` | `from buraq.views.generic import ListView` |
-| `from django.views.generic import DetailView` | `from buraq.views.generic import DetailView` |
-| `from django.views.generic import CreateView` | `from buraq.views.generic import CreateView` |
-| `from django.views.generic import UpdateView` | `from buraq.views.generic import UpdateView` |
-| `from django.views.generic import DeleteView` | `from buraq.views.generic import DeleteView` |
-| `from django import forms` | `from buraq.forms import ModelForm` |
-| `from django.contrib.auth.decorators import login_required` | `from buraq.contrib.auth.decorators import login_required` |
-| `from django.views.decorators.http import require_POST` | `from buraq.views.decorators.http import require_POST` |
-| `from django.views.decorators.cache import cache_page` | `from buraq.views.decorators.cache import cache_page` |
-| `from django.views.decorators.csrf import csrf_exempt` | `from buraq.views.decorators.csrf import csrf_exempt` |
-| `from django.views.decorators.vary import vary_on_headers` | `from buraq.views.decorators.vary import vary_on_headers` |
-| `from django.contrib import messages` | `from buraq.contrib.messages import success, error, info` |
+| `DATABASES = {"default": {...}}` | `DATABASE_URL = "postgresql+asyncpg://..."`, or `DATABASES` as a dict of URLs |
+| `INSTALLED_APPS` | `INSTALLED_APPS` |
+| `MIDDLEWARE` | `MIDDLEWARE` |
+| `TEMPLATES = [{...}]` | `TEMPLATES_DIR`, `APP_DIRS`, `TEMPLATE_OPTIONS` |
+| `STATIC_URL` | `STATIC_URL` |
+| `MEDIA_URL` | `MEDIA_URL` |
+| `SECRET_KEY` | `SECRET_KEY` |
+| `DEBUG` | `DEBUG` |
+| `ALLOWED_HOSTS` | `ALLOWED_HOSTS` |
+
+### Why is `INSTALLED_APPS` shorter?
+
+A new Django project lists six apps; a new Buraq project lists one. Nothing is
+missing — in Django, listing an app is *how you switch it on*, and in Buraq four
+of those five are already on.
+
+| Django lists it because | In Buraq |
+|---|---|
+| `staticfiles` — registers the finders and `collectstatic` | mounted by the application; each app's `static/` is still found through `INSTALLED_APPS`, and `SERVE_STATIC = False` turns the serving off |
+| `admin` — app-directory templates and `AppConfig.ready()` autodiscovery | `path("/admin", admin.site.urls)` in your urlconf does both |
+| `messages` — a context processor and middleware | plain functions over the session; nothing to register |
+| `contenttypes` — models and migrations | the same, and optional: only generic relations need it |
+| `auth` — models, migrations, templates | the same, which is why it *is* listed |
+
+So `INSTALLED_APPS` in Buraq means one thing: **this app contributes models,
+migrations, templates, static files, management commands or a `ready()` hook.**
+Three of Django's five contribute none of those here, and listing them would
+change nothing at all.
+
+Two are worth adding when you use them:
+
+```python
+INSTALLED_APPS = [
+    "buraq.contrib.auth",
+    "buraq.contrib.sessions",      # only for SESSION_ENGINE = "...backends.db"
+    "buraq.contrib.contenttypes",  # only for generic relations
+]
+```
+
+Your own apps go here for the usual reasons — a listed app's models are found by
+`makemigrations`, its `templates/` and `static/` are searched, its
+`management/commands/` become `buraq <name>`, and its `AppConfig.ready()` runs.
+
+:::tip
+`buraq diffsettings --all` prints every setting with the value in force, which
+is the quickest answer to "does Buraq have an equivalent of…".
+:::
 
 ---
 
-## Models
+
+## Models and the ORM
+
+### Models
 
 <Tabs>
 <TabItem label="Django">
@@ -146,7 +207,16 @@ class Post(models.Model):
 
 ---
 
-## ORM Queries
+### Model Fields
+
+| Django | Buraq |
+|---|---|
+| `models.GeneratedField(expression=..., output_field=..., db_persist=True)` | `models.GeneratedField(expression=..., output_field=..., db_persist=True)` |
+| `models.CompositePrimaryKey("field1", "field2")` in `Meta.primary_key` | `models.CompositePrimaryKey("field1", "field2")` in `Meta.primary_key` |
+
+---
+
+### ORM Queries
 
 | Django | Buraq |
 |---|---|
@@ -164,7 +234,18 @@ The only difference: every ORM call needs `await`.
 
 ---
 
-## URLs
+### Aggregates
+
+| Django | Buraq |
+|---|---|
+| `from django.db.models import AnyValue` | `from buraq.orm.aggregates import AnyValue` |
+
+---
+
+
+## Requests and responses
+
+### URLs
 
 <Tabs>
 <TabItem label="Django">
@@ -201,7 +282,7 @@ urlpatterns = [
 
 ---
 
-## Views
+### Views
 
 ### Function-Based Views
 
@@ -287,7 +368,7 @@ class PostCreateView(CreateView):
 
 ---
 
-## Forms
+### Forms
 
 <Tabs>
 <TabItem label="Django">
@@ -318,7 +399,7 @@ class PostForm(ModelForm):
 
 ---
 
-## Templates
+### Templates
 
 Buraq uses Jinja2 instead of Django's template engine. The syntax is nearly identical.
 
@@ -335,7 +416,7 @@ Buraq uses Jinja2 instead of Django's template engine. The syntax is nearly iden
 
 ---
 
-## Static Files
+### Static Files
 
 ### Settings
 
@@ -398,7 +479,7 @@ Django requires `{% load static %}` before using `{% static %}`. Buraq registers
 
 ---
 
-## Flash Messages
+### Flash Messages
 
 <Tabs>
 <TabItem label="Django">
@@ -435,7 +516,10 @@ Template usage is identical in both:
 
 ---
 
-## Authentication
+
+## Authentication and security
+
+### Authentication
 
 <Tabs>
 <TabItem label="Django">
@@ -470,79 +554,17 @@ async def login_view(request):
 
 ---
 
-## Settings
-
-Most settings follow the same naming convention. Key differences:
-
-| Django `settings.py` | Buraq `settings.py` |
-|---|---|
-| `DATABASES = {"default": {...}}` | `DATABASE_URL = "postgresql+asyncpg://..."`, or `DATABASES` as a dict of URLs |
-| `INSTALLED_APPS` | `INSTALLED_APPS` |
-| `MIDDLEWARE` | `MIDDLEWARE` |
-| `TEMPLATES = [{...}]` | `TEMPLATES_DIR`, `APP_DIRS`, `TEMPLATE_OPTIONS` |
-| `STATIC_URL` | `STATIC_URL` |
-| `MEDIA_URL` | `MEDIA_URL` |
-| `SECRET_KEY` | `SECRET_KEY` |
-| `DEBUG` | `DEBUG` |
-| `ALLOWED_HOSTS` | `ALLOWED_HOSTS` |
-
-### Why is `INSTALLED_APPS` shorter?
-
-A new Django project lists six apps; a new Buraq project lists one. Nothing is
-missing — in Django, listing an app is *how you switch it on*, and in Buraq four
-of those five are already on.
-
-| Django lists it because | In Buraq |
-|---|---|
-| `staticfiles` — registers the finders and `collectstatic` | mounted by the application; each app's `static/` is still found through `INSTALLED_APPS`, and `SERVE_STATIC = False` turns the serving off |
-| `admin` — app-directory templates and `AppConfig.ready()` autodiscovery | `path("/admin", admin.site.urls)` in your urlconf does both |
-| `messages` — a context processor and middleware | plain functions over the session; nothing to register |
-| `contenttypes` — models and migrations | the same, and optional: only generic relations need it |
-| `auth` — models, migrations, templates | the same, which is why it *is* listed |
-
-So `INSTALLED_APPS` in Buraq means one thing: **this app contributes models,
-migrations, templates, static files, management commands or a `ready()` hook.**
-Three of Django's five contribute none of those here, and listing them would
-change nothing at all.
-
-Two are worth adding when you use them:
-
-```python
-INSTALLED_APPS = [
-    "buraq.contrib.auth",
-    "buraq.contrib.sessions",      # only for SESSION_ENGINE = "...backends.db"
-    "buraq.contrib.contenttypes",  # only for generic relations
-]
-```
-
-Your own apps go here for the usual reasons — a listed app's models are found by
-`makemigrations`, its `templates/` and `static/` are searched, its
-`management/commands/` become `buraq <name>`, and its `AppConfig.ready()` runs.
-
-:::tip
-`buraq diffsettings --all` prints every setting with the value in force, which
-is the quickest answer to "does Buraq have an equivalent of…".
-:::
-
----
-
-## Background Tasks
+### Authentication Backends
 
 | Django | Buraq |
 |---|---|
-| `from django.tasks import background_task` | `from buraq.contrib.tasks import background_task` |
-| `@background_task` | `@background_task` |
-| `@background_task(queue="q", priority=5)` | `@background_task(queue="q", priority=5)` |
-| `await task.aenqueue(...)` | `await task.aenqueue(...)` |
-| `BaseTaskBackend` | `buraq.contrib.tasks.backends.base.BaseTaskBackend` |
-| `TaskResult.arefresh()` | `result.arefresh()` |
-| `TASKS = {"default": {"BACKEND": "..."}}` | `TASKS = {"default": {"BACKEND": "..."}}` |
-
-Both frameworks use an identical API. The only difference is the import path.
+| `django.contrib.auth.backends.ModelBackend` | `buraq.contrib.auth.backends.ModelBackend` |
+| `django.contrib.auth.backends.AllowAllUsersModelBackend` | `buraq.contrib.auth.backends.AllowAllUsersModelBackend` |
+| `django.contrib.auth.backends.AllowAllUsersRemoteUserBackend` | `buraq.contrib.auth.backends.AllowAllUsersRemoteUserBackend` |
 
 ---
 
-## Content Security Policy
+### Content Security Policy
 
 | Django | Buraq |
 |---|---|
@@ -556,45 +578,7 @@ Both frameworks use an identical API. The only difference is the import path.
 
 ---
 
-## Authentication Backends
-
-| Django | Buraq |
-|---|---|
-| `django.contrib.auth.backends.ModelBackend` | `buraq.contrib.auth.backends.ModelBackend` |
-| `django.contrib.auth.backends.AllowAllUsersModelBackend` | `buraq.contrib.auth.backends.AllowAllUsersModelBackend` |
-| `django.contrib.auth.backends.AllowAllUsersRemoteUserBackend` | `buraq.contrib.auth.backends.AllowAllUsersRemoteUserBackend` |
-
----
-
-## Model Fields
-
-| Django | Buraq |
-|---|---|
-| `models.GeneratedField(expression=..., output_field=..., db_persist=True)` | `models.GeneratedField(expression=..., output_field=..., db_persist=True)` |
-| `models.CompositePrimaryKey("field1", "field2")` in `Meta.primary_key` | `models.CompositePrimaryKey("field1", "field2")` in `Meta.primary_key` |
-
----
-
-## Aggregates
-
-| Django | Buraq |
-|---|---|
-| `from django.db.models import AnyValue` | `from buraq.orm.aggregates import AnyValue` |
-
----
-
-## Test Utilities
-
-| Django | Buraq |
-|---|---|
-| `from django.test import TestCase` | `from buraq.test import TestCase` |
-| `self.captureOnCommitCallbacks()` | `captureOnCommitCallbacks()` context manager from `buraq.test` |
-| `MessagesTestMixin` + `assertMessages()` | `from buraq.test import MessagesTestMixin` |
-| `InMemoryStorage` | `from buraq.contrib.staticfiles.storage import InMemoryStorage` |
-
----
-
-## Cryptographic Signing
+### Cryptographic Signing
 
 Both frameworks sign data the same way — HMAC-SHA256 keyed with `SECRET_KEY`:
 
@@ -612,7 +596,40 @@ The API is identical — only the import path differs.
 
 ---
 
+
+## Tasks and testing
+
+### Background Tasks
+
+| Django | Buraq |
+|---|---|
+| `from django.tasks import background_task` | `from buraq.contrib.tasks import background_task` |
+| `@background_task` | `@background_task` |
+| `@background_task(queue="q", priority=5)` | `@background_task(queue="q", priority=5)` |
+| `await task.aenqueue(...)` | `await task.aenqueue(...)` |
+| `BaseTaskBackend` | `buraq.contrib.tasks.backends.base.BaseTaskBackend` |
+| `TaskResult.arefresh()` | `result.arefresh()` |
+| `TASKS = {"default": {"BACKEND": "..."}}` | `TASKS = {"default": {"BACKEND": "..."}}` |
+
+Both frameworks use an identical API. The only difference is the import path.
+
+---
+
+### Test Utilities
+
+| Django | Buraq |
+|---|---|
+| `from django.test import TestCase` | `from buraq.test import TestCase` |
+| `self.captureOnCommitCallbacks()` | `captureOnCommitCallbacks()` context manager from `buraq.test` |
+| `MessagesTestMixin` + `assertMessages()` | `from buraq.test import MessagesTestMixin` |
+| `InMemoryStorage` | `from buraq.contrib.staticfiles.storage import InMemoryStorage` |
+
+---
+
+
 ## What's Different
+
+### What's Different
 
 - **Every ORM call needs `await`** — this is the biggest change
 - **Views must be `async def`** — synchronous views are not supported

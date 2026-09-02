@@ -7,6 +7,8 @@ All settings live in `config/settings.py`. Buraq reads them at startup via the `
 
 ## Core settings
 
+### Core settings
+
 ```python title="config/settings.py"
 from pathlib import Path
 
@@ -54,7 +56,10 @@ MEDIA_DIR = str(BASE_DIR / "media")
 MEDIA_URL = "/media/"
 ```
 
+
 ## Database
+
+### Database
 
 ```python
 # SQLite (development)
@@ -140,7 +145,10 @@ commands too.
 DATABASE_ECHO = True
 ```
 
+
 ## Cache
+
+### Cache
 
 ```python
 # In-memory (default, single-process only)
@@ -163,7 +171,10 @@ CACHE_KEY_PREFIX      = "myapp:"
 CACHE_DEFAULT_TIMEOUT = 300   # seconds
 ```
 
+
 ## Email
+
+### Email
 
 ```python
 EMAIL_BACKEND      = "buraq.contrib.email.backends.smtp.SMTPEmailBackend"
@@ -179,7 +190,7 @@ EMAIL_BACKEND   = "buraq.contrib.email.backends.file.FileEmailBackend"
 EMAIL_FILE_PATH = "./sent_emails"
 ```
 
-## Multiple Mailers
+### Multiple Mailers
 
 ```python
 # Named email backends — select with send_mail(..., using="transactional")
@@ -203,7 +214,10 @@ MAILERS = {
 }
 ```
 
-## Security headers
+
+## Security
+
+### Security headers
 
 Configured via `buraq.middleware.SecurityMiddleware`:
 
@@ -232,32 +246,19 @@ SECURE_PERMISSIONS_POLICY = {
 
 See [Security Middleware](../topics/security-middleware.md) for setup instructions.
 
-## Template context processors
+### CORS
 
 ```python
-TEMPLATE_CONTEXT_PROCESSORS = [
-    "buraq.template.context_processors.request",   # injects request
-    "buraq.template.context_processors.auth",      # injects user
-    "buraq.template.context_processors.debug",     # injects DEBUG flag
-    "buraq.template.context_processors.i18n",      # injects LANGUAGE_CODE
-    "myapp.context_processors.site_settings",      # custom processor
-]
+CORS_ORIGINS            = ["https://myfrontend.com"]
+CORS_ALLOW_CREDENTIALS  = True
+CORS_ALLOW_METHODS      = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+CORS_ALLOW_HEADERS      = ["*"]
 ```
 
-See [Context Processors](../topics/context-processors.md) for writing custom processors.
 
-## Seeing every setting
+## Authentication and sessions
 
-Buraq has far more settings than a project names — anything absent keeps its
-default, which is why a scaffolded `config/settings.py` is short. To see the
-full list with the values actually in force:
-
-```bash
-buraq diffsettings --all     # every setting; ### marks the ones you changed
-buraq diffsettings           # only what differs from the defaults
-```
-
-## Authentication
+### Authentication
 
 ```python
 SECRET_KEY                 = "your-jwt-secret-key"
@@ -273,7 +274,7 @@ AUTH_USER_MODEL            = "myapp.models.MyUser"
 PASSWORD_RESET_TIMEOUT     = 259200
 ```
 
-## Password validators
+### Password validators
 
 Control which password-strength rules are enforced on registration and password-change:
 
@@ -308,14 +309,7 @@ Buraq silently ignores unrecognised setting keys (it does not raise on typos).
 Use an IDE with type hints for `BuraqSettings` to catch misspelled names early.
 :::
 
-## Timezone
-
-```python
-USE_TZ    = True     # store and return timezone-aware datetimes (default: True)
-TIME_ZONE = "UTC"    # default timezone — any IANA name, e.g. "America/New_York"
-```
-
-## Sessions
+### Sessions
 
 ```python
 SESSION_COOKIE_NAME     = "buraq_session"
@@ -324,16 +318,45 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "lax"
 ```
 
-## CORS
+
+## Templates and time
+
+### Template context processors
 
 ```python
-CORS_ORIGINS            = ["https://myfrontend.com"]
-CORS_ALLOW_CREDENTIALS  = True
-CORS_ALLOW_METHODS      = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-CORS_ALLOW_HEADERS      = ["*"]
+TEMPLATE_CONTEXT_PROCESSORS = [
+    "buraq.template.context_processors.request",   # injects request
+    "buraq.template.context_processors.auth",      # injects user
+    "buraq.template.context_processors.debug",     # injects DEBUG flag
+    "buraq.template.context_processors.i18n",      # injects LANGUAGE_CODE
+    "myapp.context_processors.site_settings",      # custom processor
+]
 ```
 
-## Loading settings yourself
+See [Context Processors](../topics/context-processors.md) for writing custom processors.
+
+### Timezone
+
+```python
+USE_TZ    = True     # store and return timezone-aware datetimes (default: True)
+TIME_ZONE = "UTC"    # default timezone — any IANA name, e.g. "America/New_York"
+```
+
+
+## Working with settings
+
+### Seeing every setting
+
+Buraq has far more settings than a project names — anything absent keeps its
+default, which is why a scaffolded `config/settings.py` is short. To see the
+full list with the values actually in force:
+
+```bash
+buraq diffsettings --all     # every setting; ### marks the ones you changed
+buraq diffsettings           # only what differs from the defaults
+```
+
+### Loading settings yourself
 
 The application and the CLI both find and apply your settings module on their
 own. A standalone script — a cron job, a data import, a migration run — runs in
@@ -354,7 +377,7 @@ alone and returns the module name, or `None` when the layout is ambiguous.
 Most scripts want [`buraq.apps.configure()`](/docs/topics/apps) instead, which
 does this *and* imports your models.
 
-## Full defaults reference
+### Full defaults reference
 
 All settings have defaults. You only need to specify what you want to override.
 See `buraq/conf/defaults.py` for the complete list.

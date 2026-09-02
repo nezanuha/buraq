@@ -7,6 +7,8 @@ All commands run via `buraq <command>`.
 
 ## Global options
 
+### Global options
+
 These options are accepted by every command:
 
 | Option | Env var | Description |
@@ -25,7 +27,10 @@ buraq createsuperuser
 
 When `--settings` is given, Buraq imports the named module and applies every upper-case attribute to the live settings object before the command runs. This lets you keep separate settings files for development, staging, and production without changing `manage.py`.
 
-## Server
+
+## Running the project
+
+### Server
 
 ```bash
 # Start development server (default: main:app on 127.0.0.1:8000)
@@ -45,7 +50,41 @@ buraq runserver --no-reload      # disable auto-reload
 buraq runserver --workers 4      # multiple workers (disables reload)
 ```
 
+### Test server
+
+```bash
+# Load fixtures then start the development server
+buraq testserver fixtures/posts.json fixtures/users.json
+buraq testserver fixtures/initial.json --port 8001
+buraq testserver fixtures/initial.json --no-input        # skip confirmation
+buraq testserver fixtures/initial.json --app main:app  # custom app path
+```
+
+Clears the database, loads the given fixture files, then starts the dev server. Useful for manual QA sessions with realistic data without touching the production database.
+
+### Background task worker
+
+```bash
+buraq worker
+buraq worker --queue high-priority --concurrency 4
+buraq worker --queue email --poll-interval 0.5 --max-tasks 100
+```
+
+Polls the task backend for pending tasks and executes them. Requires `DatabaseBackend` — the `DummyBackend` executes tasks in-process and needs no worker.
+
+| Flag | Default | Description |
+|---|---|---|
+| `--queue`, `-q` | `default` | Queue name to consume |
+| `--concurrency`, `-c` | `1` | Concurrent task coroutines |
+| `--poll-interval` | `1.0` | Seconds between database polls |
+| `--max-tasks` | `0` (∞) | Stop after processing N tasks |
+
+The worker exits cleanly on `SIGINT` / `SIGTERM`. See [Background Tasks](../topics/tasks.md).
+
+
 ## Database
+
+### Database
 
 ```bash
 # Generate migration from model changes
@@ -66,30 +105,32 @@ buraq rollback 3        # 3 migrations
 buraq showmigrations
 ```
 
-## Interactive shell
+### Migrations (advanced)
 
 ```bash
-# Open an interactive Python shell with models pre-imported
-buraq shell
+# Print the SQL a migration would run without executing it
+buraq sqlmigrate abc1234
+buraq sqlmigrate abc1234 --backwards   # downgrade SQL
 
-# Run a single expression and exit
-buraq shell -c "print(await Post.objects.count())"
+# Squash a range of migrations into one
+buraq squashmigrations abc1234 head
+buraq squashmigrations abc1234 head --name squashed_v2
+
+# Merge two divergent migration heads into one
+buraq optimizemigration abc1234 def5678
+buraq optimizemigration abc1234 def5678 --name merge_branches
+
+# Print the SQL that flush would run (without executing it)
+buraq sqlflush
+
+# Print SQL to reset PostgreSQL autoincrement sequences
+buraq sqlsequencereset
+buraq sqlsequencereset posts auth   # specific apps only
 ```
 
-All model classes from `INSTALLED_APPS` and `SessionLocal` are auto-imported so you can query the database immediately.
+`sqlflush` is useful for auditing or generating a manual reset script. `sqlsequencereset` is only needed for PostgreSQL after bulk data imports that bypass the ORM.
 
-## System checks
-
-```bash
-# Run all registered system checks
-buraq check
-```
-
-Prints results grouped by severity (`INFO`, `WARNING`, `ERROR`, `CRITICAL`). Exits with code `1` if any `ERROR`-level check fails.
-
-The checks themselves, and how to add your own, are in [System checks](../topics/checks.md).
-
-## Database shell
+### Database shell
 
 ```bash
 # Open the native CLI for the configured database
@@ -98,7 +139,34 @@ buraq dbshell
 
 Detects the dialect from `DATABASE_URL` and launches `sqlite3`, `psql`, or `mysql` with the correct connection arguments. Requires the database CLI to be installed on `PATH`.
 
-## Data import / export
+### Inspect database
+
+```bash
+# Print model class stubs inferred from the live schema
+buraq inspectdb
+
+# Inspect a specific table
+buraq inspectdb --table posts_post
+
+# Redirect to a file
+buraq inspectdb > myapp/models.py
+```
+
+Uses SQLAlchemy's `inspect()` to read table names, column types, and constraints, then maps them to Buraq field strings.
+
+### Flush
+
+```bash
+# Delete all rows from every table (schema is kept)
+buraq flush
+
+# Skip the confirmation prompt
+buraq flush --no-input
+```
+
+Tables are truncated in reverse dependency order to avoid FK violations. Prompts for confirmation unless `--no-input` is passed.
+
+### Data import / export
 
 ```bash
 # Dump all tables to JSON
@@ -114,78 +182,10 @@ buraq loaddata fixtures/initial.json --table posts_post
 
 `dumpdata` serialises every SQLAlchemy table to a JSON list. `loaddata` bulk-inserts rows; use `--table` to restrict which tables are loaded.
 
-## Flush
 
-```bash
-# Delete all rows from every table (schema is kept)
-buraq flush
+## Projects, apps and assets
 
-# Skip the confirmation prompt
-buraq flush --no-input
-```
-
-Tables are truncated in reverse dependency order to avoid FK violations. Prompts for confirmation unless `--no-input` is passed.
-
-## Change password
-
-```bash
-buraq changepassword alice
-```
-
-Prompts for a new password (with confirmation) and updates `hashed_password` for the named user via `hash_password()`.
-
-## Inspect database
-
-```bash
-# Print model class stubs inferred from the live schema
-buraq inspectdb
-
-# Inspect a specific table
-buraq inspectdb --table posts_post
-
-# Redirect to a file
-buraq inspectdb > myapp/models.py
-```
-
-Uses SQLAlchemy's `inspect()` to read table names, column types, and constraints, then maps them to Buraq field strings.
-
-## Diff settings
-
-```bash
-# Show settings that differ from defaults
-buraq diffsettings
-
-# Show every setting (including defaults)
-buraq diffsettings --all
-```
-
-Changed settings are marked with `###` so they're easy to spot.
-
-## Send test email
-
-```bash
-# Verify email configuration
-buraq sendtestemail alice@example.com
-```
-
-Sends a plain-text test message using the configured email backend (`EMAIL_HOST`, `EMAIL_PORT`, credentials). Use this to confirm SMTP settings before deploying.
-
-## Users
-
-```bash
-# Create a superuser (interactive — prompts for username, email, password)
-buraq createsuperuser
-
-# Pass values directly (password is still prompted if omitted)
-buraq createsuperuser --username admin --email admin@example.com
-
-# Fully non-interactive (for scripts / CI)
-buraq createsuperuser --username admin --email admin@example.com --password secret --no-input
-```
-
-The interactive flow asks for username, email, and password (with a confirmation prompt). It rejects empty passwords and mismatched confirmation attempts. Exits with an error if the username or email is already taken.
-
-## Apps & Projects
+### Apps & Projects
 
 ```bash
 # Scaffold a new app
@@ -206,7 +206,7 @@ buraq startproject myproject --postgres    # with PostgreSQL config
 The files land **directly** in the directory you name — no second folder is
 nested inside it. Without one, the project goes in `./<name>`.
 
-## Static files
+### Static files
 
 ```bash
 # Collect all static files into STATIC_ROOT
@@ -239,117 +239,74 @@ Done. Copied: 24, Skipped (unchanged): 8, Post-processed: 24
 /app/myapp/static/css/style.css
 ```
 
-## Cache
+### Package management
+
+Buraq has no package commands of its own. Use whatever the project already uses:
 
 ```bash
-# Clear all cached data
-buraq clearcache
-
-# Create the database cache table (DatabaseCache backend)
-buraq createcachetable
-buraq createcachetable --table my_cache_table
+uv add requests httpx          # uv
+poetry add requests httpx      # Poetry
+pip install requests httpx     # pip
 ```
 
-## Sessions
+There were wrappers here — `buraq install`, `uninstall`, `sync`, `pip` and
+`run` — and they forwarded one option each out of the sixty-odd their tools
+accept, under names that did not match. Anything past the simplest case had to
+be run against the real command anyway, so they are gone.
+
+
+## Users
+
+### Users
 
 ```bash
-# Delete all expired sessions from the database session table
-buraq clearsessions
+# Create a superuser (interactive — prompts for username, email, password)
+buraq createsuperuser
+
+# Pass values directly (password is still prompted if omitted)
+buraq createsuperuser --username admin --email admin@example.com
+
+# Fully non-interactive (for scripts / CI)
+buraq createsuperuser --username admin --email admin@example.com --password secret --no-input
 ```
 
-Only relevant when using `DatabaseSessionBackend`. Cookie-based sessions need no cleanup.
+The interactive flow asks for username, email, and password (with a confirmation prompt). It rejects empty passwords and mismatched confirmation attempts. Exits with an error if the username or email is already taken.
 
-## Internationalization
+### Change password
 
 ```bash
-# Extract translatable strings into .po files
-buraq makemessages -l ar
-buraq makemessages -l ar -l fr -l es          # multiple locales at once
-buraq makemessages -l ar --domain django       # custom domain
-
-# Compile .po files into binary .mo files
-buraq compilemessages
-
-# Custom domain
-buraq compilemessages --domain django
+buraq changepassword alice
 ```
 
-Requires `babel` (`pip install babel`). Strings are extracted from `.py` and `.html` files by default. Compiled `.mo` files are written next to the `.po` files in `locale/<lang>/LC_MESSAGES/`.
+Prompts for a new password (with confirmation) and updates `hashed_password` for the named user via `hash_password()`.
 
-See [Internationalization](../topics/i18n.md) for full usage.
 
-## Migrations (advanced)
+## Inspecting a project
+
+### System checks
 
 ```bash
-# Print the SQL a migration would run without executing it
-buraq sqlmigrate abc1234
-buraq sqlmigrate abc1234 --backwards   # downgrade SQL
-
-# Squash a range of migrations into one
-buraq squashmigrations abc1234 head
-buraq squashmigrations abc1234 head --name squashed_v2
-
-# Merge two divergent migration heads into one
-buraq optimizemigration abc1234 def5678
-buraq optimizemigration abc1234 def5678 --name merge_branches
-
-# Print the SQL that flush would run (without executing it)
-buraq sqlflush
-
-# Print SQL to reset PostgreSQL autoincrement sequences
-buraq sqlsequencereset
-buraq sqlsequencereset posts auth   # specific apps only
+# Run all registered system checks
+buraq check
 ```
 
-`sqlflush` is useful for auditing or generating a manual reset script. `sqlsequencereset` is only needed for PostgreSQL after bulk data imports that bypass the ORM.
+Prints results grouped by severity (`INFO`, `WARNING`, `ERROR`, `CRITICAL`). Exits with code `1` if any `ERROR`-level check fails.
 
-## Test runner
+The checks themselves, and how to add your own, are in [System checks](../topics/checks.md).
+
+### Diff settings
 
 ```bash
-# Run the test suite via pytest
-buraq test
-buraq test tests/
-buraq test --failfast
-buraq test --verbosity 2
+# Show settings that differ from defaults
+buraq diffsettings
+
+# Show every setting (including defaults)
+buraq diffsettings --all
 ```
 
-`BURAQ_ENV=test` is set automatically so settings can branch on it.
+Changed settings are marked with `###` so they're easy to spot.
 
-## CommandError / SystemCheckError
-
-Custom management commands raise `CommandError` to print an error message and exit with a non-zero code without a Python traceback:
-
-```python
-from buraq.management.base import CommandError
-
-class Command(BaseCommand):
-    async def handle(self, *args, **options):
-        if not options["name"]:
-            raise CommandError("--name is required.")
-```
-
-`SystemCheckError` is a subclass raised automatically by the `check` command when one or more registered system checks report an `ERROR`-level issue. You do not normally raise it directly.
-
-## execute_from_command_line
-
-`execute_from_command_line` is the entry point used by `manage.py`:
-
-```python title="manage.py"
-#!/usr/bin/env python
-"""Run: python manage.py <command>"""
-import os, sys
-from pathlib import Path
-
-if Path(".venv/bin/python").exists():
-    os.execv(".venv/bin/python", [".venv/bin/python"] + sys.argv)
-
-from buraq.management.cli import execute_from_command_line
-execute_from_command_line(sys.argv)
-```
-
-This is generated automatically when you run `buraq startproject`.
-
-## URL inspection
+### URL inspection
 
 ```bash
 # List all registered routes (default app: main:app)
@@ -372,7 +329,19 @@ Path                           View                                      Name
 
 Named routes appear in the `Name` column. Unnamed routes show an empty name.
 
-## Content types
+### Interactive shell
+
+```bash
+# Open an interactive Python shell with models pre-imported
+buraq shell
+
+# Run a single expression and exit
+buraq shell -c "print(await Post.objects.count())"
+```
+
+All model classes from `INSTALLED_APPS` and `SessionLocal` are auto-imported so you can query the database immediately.
+
+### Content types
 
 ```bash
 # Remove ContentType records for models that no longer exist
@@ -383,55 +352,112 @@ buraq remove_stale_contenttypes --include-stale-apps  # also check still-install
 
 Run this after removing an app or model from `INSTALLED_APPS` to clean up orphaned rows in the `contenttypes` table. See [Content Types](../topics/contenttypes.md).
 
-## Test server
-
-```bash
-# Load fixtures then start the development server
-buraq testserver fixtures/posts.json fixtures/users.json
-buraq testserver fixtures/initial.json --port 8001
-buraq testserver fixtures/initial.json --no-input        # skip confirmation
-buraq testserver fixtures/initial.json --app main:app  # custom app path
-```
-
-Clears the database, loads the given fixture files, then starts the dev server. Useful for manual QA sessions with realistic data without touching the production database.
-
-## Background task worker
-
-```bash
-buraq worker
-buraq worker --queue high-priority --concurrency 4
-buraq worker --queue email --poll-interval 0.5 --max-tasks 100
-```
-
-Polls the task backend for pending tasks and executes them. Requires `DatabaseBackend` — the `DummyBackend` executes tasks in-process and needs no worker.
-
-| Flag | Default | Description |
-|---|---|---|
-| `--queue`, `-q` | `default` | Queue name to consume |
-| `--concurrency`, `-c` | `1` | Concurrent task coroutines |
-| `--poll-interval` | `1.0` | Seconds between database polls |
-| `--max-tasks` | `0` (∞) | Stop after processing N tasks |
-
-The worker exits cleanly on `SIGINT` / `SIGTERM`. See [Background Tasks](../topics/tasks.md).
-
-## Version
+### Version
 
 ```bash
 buraq version
 # Buraq 0.1.0
 ```
 
-## Package management
 
-Buraq has no package commands of its own. Use whatever the project already uses:
+## Caching, sessions and translations
+
+### Cache
 
 ```bash
-uv add requests httpx          # uv
-poetry add requests httpx      # Poetry
-pip install requests httpx     # pip
+# Clear all cached data
+buraq clearcache
+
+# Create the database cache table (DatabaseCache backend)
+buraq createcachetable
+buraq createcachetable --table my_cache_table
 ```
 
-There were wrappers here — `buraq install`, `uninstall`, `sync`, `pip` and
-`run` — and they forwarded one option each out of the sixty-odd their tools
-accept, under names that did not match. Anything past the simplest case had to
-be run against the real command anyway, so they are gone.
+### Sessions
+
+```bash
+# Delete all expired sessions from the database session table
+buraq clearsessions
+```
+
+Only relevant when using `DatabaseSessionBackend`. Cookie-based sessions need no cleanup.
+
+### Internationalization
+
+```bash
+# Extract translatable strings into .po files
+buraq makemessages -l ar
+buraq makemessages -l ar -l fr -l es          # multiple locales at once
+buraq makemessages -l ar --domain django       # custom domain
+
+# Compile .po files into binary .mo files
+buraq compilemessages
+
+# Custom domain
+buraq compilemessages --domain django
+```
+
+Requires `babel` (`pip install babel`). Strings are extracted from `.py` and `.html` files by default. Compiled `.mo` files are written next to the `.po` files in `locale/<lang>/LC_MESSAGES/`.
+
+See [Internationalization](../topics/i18n.md) for full usage.
+
+
+## Testing and email
+
+### Test runner
+
+```bash
+# Run the test suite via pytest
+buraq test
+buraq test tests/
+buraq test --failfast
+buraq test --verbosity 2
+```
+
+`BURAQ_ENV=test` is set automatically so settings can branch on it.
+
+### Send test email
+
+```bash
+# Verify email configuration
+buraq sendtestemail alice@example.com
+```
+
+Sends a plain-text test message using the configured email backend (`EMAIL_HOST`, `EMAIL_PORT`, credentials). Use this to confirm SMTP settings before deploying.
+
+
+## Writing your own
+
+### CommandError / SystemCheckError
+
+Custom management commands raise `CommandError` to print an error message and exit with a non-zero code without a Python traceback:
+
+```python
+from buraq.management.base import CommandError
+
+class Command(BaseCommand):
+    async def handle(self, *args, **options):
+        if not options["name"]:
+            raise CommandError("--name is required.")
+```
+
+`SystemCheckError` is a subclass raised automatically by the `check` command when one or more registered system checks report an `ERROR`-level issue. You do not normally raise it directly.
+
+### execute_from_command_line
+
+`execute_from_command_line` is the entry point used by `manage.py`:
+
+```python title="manage.py"
+#!/usr/bin/env python
+"""Run: python manage.py <command>"""
+import os, sys
+from pathlib import Path
+
+if Path(".venv/bin/python").exists():
+    os.execv(".venv/bin/python", [".venv/bin/python"] + sys.argv)
+
+from buraq.management.cli import execute_from_command_line
+execute_from_command_line(sys.argv)
+```
+
+This is generated automatically when you run `buraq startproject`.
