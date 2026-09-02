@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — every Django built-in filter now has an answer
+
+Buraq renders with Jinja2, so most of Django's *tags* are Jinja's own syntax and
+its *filters* are what Buraq supplies. Fifty-one of Django's fifty-seven were
+already covered; these are the rest.
+
+- **`get_digit` was registered as `getdigit`**, so the name a Django template
+  actually writes raised an error. Both spellings work now.
+- **`add`** — numbers when both look like numbers, concatenation otherwise, so
+  it joins lists and strings too.
+- **`divisibleby`** — Jinja has this as a test (`n is divisibleby(3)`) but not as
+  a filter, and a ported template writes the filter.
+- **`stringformat`** — Python's `%` formatting without the leading `%`, which
+  would otherwise end the tag.
+- **`escapeseq`** and **`safeseq`** — applied to each item rather than to the
+  sequence, which is what a join actually escapes. `escapeseq` marks its results
+  safe, as Django's `escape` does; returning plain strings would have them
+  escaped a second time on the way out.
+
+Three of Django's tags have no Jinja equivalent and are now globals:
+
+- **`firstof`** — the first truthy value. Jinja's `|default` only catches an
+  undefined name, not the empty string a blank form field or missing column is.
+- **`widthratio`** — a bar's width. Zero when the maximum is zero rather than
+  raising: an empty dataset is a normal thing to hand a template.
+- **`querystring`** — the current query string with changes applied, so paging
+  keeps the filters a visitor already chose. `None` drops a parameter, a list
+  repeats one.
+
+`{% load %}` and `{% templatetag %}` are deliberately absent: Jinja has no tag
+libraries to load and no `{%` to escape, so neither has anything to do.
+
+The template documentation said Buraq registered 21 filters. It registers 37,
+plus 10 globals, and Jinja's own 54 alongside them.
+
+
 ### Fixed — the whole CI matrix, which had never been green
 
 Six of the eight jobs were failing on every run. The two that passed were

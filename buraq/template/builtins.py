@@ -496,6 +496,72 @@ def unordered_list_filter(value, indent: int = 1) -> str:
     return Markup(_list_to_html(list(value)))
 
 
+def add_filter(value, arg):
+    """Add ``arg`` to ``value``, as Django's ``add`` does.
+
+    Numbers where both look like numbers, concatenation otherwise -- so it works
+    on lists and strings as well. Django returns "" when neither applies rather
+    than raising, since a template is a poor place to discover a type error.
+    """
+    try:
+        return int(value) + int(arg)
+    except (TypeError, ValueError):
+        try:
+            return value + arg
+        except Exception:
+            return ""
+
+
+def divisibleby_filter(value, arg) -> bool:
+    """Whether ``value`` divides by ``arg`` exactly.
+
+    Jinja has this as a test -- ``{% if n is divisibleby(3) %}`` -- but not as a
+    filter, and a template ported from Django writes the filter.
+    """
+    try:
+        return int(value) % int(arg) == 0
+    except (TypeError, ValueError, ZeroDivisionError):
+        return False
+
+
+def stringformat_filter(value, arg) -> str:
+    """Format with Python's ``%`` syntax, without the leading ``%``.
+
+    ``{{ value|stringformat:"03d" }}`` -- the spelling Django uses, because the
+    percent sign would end the template tag.
+    """
+    try:
+        return ("%" + str(arg)) % value
+    except (TypeError, ValueError):
+        return ""
+
+
+def escapeseq_filter(value):
+    """Escape every item in a sequence, rather than the sequence's repr.
+
+    For a list on its way into a join or a JSON array, where escaping the whole
+    thing at the end would escape the separators too.
+
+    Each item comes back marked safe, as Django's ``escape`` does. Returning
+    plain strings would leave autoescaping to run over them a second time, and
+    ``<b>`` would render as ``&amp;lt;b&amp;gt;``.
+    """
+    from markupsafe import Markup
+
+    return [Markup(html_escape(str(item), quote=True)) for item in value]
+
+
+def safeseq_filter(value):
+    """Mark every item in a sequence safe, rather than the sequence itself.
+
+    Marking a list safe says nothing about its items, which is what a join
+    actually escapes.
+    """
+    from markupsafe import Markup
+
+    return [Markup(str(item)) for item in value]
+
+
 _FILTERS: dict = {
     "date":               date_filter,
     "time":               time_filter,
@@ -533,6 +599,13 @@ _FILTERS: dict = {
     "wordwrap":           wordwrap_filter,
     "force_escape":       force_escape_filter,
     "getdigit":           getdigit_filter,
+    # Django spells it with the underscore; a ported template writes that.
+    "get_digit":          getdigit_filter,
+    "add":                add_filter,
+    "divisibleby":        divisibleby_filter,
+    "stringformat":       stringformat_filter,
+    "escapeseq":          escapeseq_filter,
+    "safeseq":            safeseq_filter,
     "center":             center_filter,
     "ljust":              ljust_filter,
     "rjust":              rjust_filter,
@@ -619,6 +692,65 @@ def register_builtins(env) -> None:
         return _re.sub(r">\s+<", "><", html.strip())
 
     env.globals.setdefault("spaceless", _spaceless)
+
+    def _firstof(*values, default: str = ""):
+        """The first argument that is truthy, as Django's ``{% firstof %}`` does.
+
+        Jinja can chain ``|default``, but only against undefined -- not against
+        an empty string, which is what a missing form value or a blank field
+        actually looks like.
+        """
+        for value in values:
+            if value:
+                return value
+        return default
+    env.globals.setdefault("firstof", _firstof)
+
+    def _widthratio(value, max_value, max_width) -> int:
+        """``value / max_value * max_width``, rounded -- a bar chart's width.
+
+        Zero when the maximum is zero, rather than raising: an empty dataset is
+        a normal thing for a template to be handed, and a page that renders
+        nothing beats a page that 500s.
+        """
+        try:
+            ratio = float(value) / float(max_value) * float(max_width)
+        except (TypeError, ValueError, ZeroDivisionError):
+            return 0
+        return int(round(ratio))
+    env.globals.setdefault("widthratio", _widthratio)
+
+    def _querystring(request=None, **changes) -> str:
+        """The current query string with ``changes`` applied, ready for an href.
+
+        Keeps the filters and the page a visitor already has while changing one
+        of them, which is otherwise a rebuild of the whole string by hand:
+
+            <a href="{{ querystring(request, page=2) }}">Next</a>
+
+        A value of None drops the parameter. A list or tuple sets it several
+        times, for the checkbox-style filters that repeat a name.
+        """
+        from urllib.parse import urlencode
+
+        existing: list[tuple[str, str]] = []
+        if request is not None:
+            try:
+                existing = list(request.query_params.multi_items())
+            except AttributeError:
+                existing = list(getattr(request, "query_params", {}).items())
+
+        pairs = [(k, v) for k, v in existing if k not in changes]
+        for key, value in changes.items():
+            if value is None:
+                continue
+            if isinstance(value, (list, tuple)):
+                pairs.extend((key, str(item)) for item in value)
+            else:
+                pairs.append((key, str(value)))
+        query = urlencode(pairs)
+        return f"?{query}" if query else ""
+    env.globals.setdefault("querystring", _querystring)
 
     class _IfChanged:
         """

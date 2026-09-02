@@ -255,7 +255,58 @@ All decorators accept:
 
 ## Built-in filters
 
-Buraq registers 21 filters automatically — no `{% load %}` needed. They live in `buraq/template/builtins.py` and are installed via `register_builtins(env)` at startup.
+Buraq registers 37 filters and 10 globals automatically — no `{% load %}` needed.
+They live in `buraq/template/builtins.py` and are installed via
+`register_builtins(env)` at startup. Jinja's own 54 filters are there too, so
+`lower`, `join`, `length`, `slice` and the rest work under the names you expect.
+
+:::note[Coming from Django]
+Every one of Django's built-in filters has an answer here — most from Jinja
+under the same name, the rest supplied by Buraq. Django's *tags* are mostly
+Jinja's own syntax: `{% for %}`, `{% if %}`, `{% block %}`, `{% extends %}`,
+`{% include %}`, `{% with %}` and `{% filter %}` all work as written, `{% comment %}`
+is `{# … #}`, and `{% verbatim %}` is `{% raw %}`.
+
+Two have nothing to do here and are deliberately absent: `{% load %}`, because
+Jinja has no tag libraries to load, and `{% templatetag %}`, because there is no
+`{%` to escape.
+
+The rest — `firstof`, `widthratio`, `querystring`, `cycle`, `regroup`,
+`ifchanged`, `now`, `spaceless`, `lorem` (as Jinja's `lipsum`) — are globals,
+called rather than written as tags: `{{ firstof(a, b) }}` instead of
+`{% firstof a b %}`.
+:::
+
+### Built-in globals
+
+Called, not written as tags — Jinja has no tag-registration syntax.
+
+| Global | Usage |
+|---|---|
+| `url(name, **params)` | `{{ url("post-detail", pk=post.id) }}` |
+| `static(path)` | `{{ static("css/site.css") }}` — hashed when manifest storage is on |
+| `csrf_token(request)` / `csrf_input(request)` | the token, and a ready-made hidden input |
+| `now(fmt)` | `{{ now("Y-m-d") }}` |
+| `firstof(*values, default="")` | `{{ firstof(user.nickname, user.name, default="Anonymous") }}` |
+| `widthratio(value, max, width)` | `{{ widthratio(votes, total, 100) }}` — a bar's width |
+| `querystring(request, **changes)` | `{{ querystring(request, page=2) }}` — keeps the current filters |
+| `cycle(*values)` | alternating row classes |
+| `regroup(items, key)` | `{% set groups = regroup(people, "city") %}` |
+| `ifchanged(value)` | true only when the value differs from last time |
+| `spaceless(html)` | strips whitespace between tags |
+| `get_messages(request)` | the flash messages for this request |
+
+`firstof` earns its place over Jinja's `|default`, which only catches an
+undefined name — not the empty string a blank form field or missing column
+actually is. `querystring` keeps the filters and page a visitor already has
+while changing one of them, which is otherwise a rebuild of the whole string
+by hand:
+
+```html+jinja
+<a href="{{ querystring(request, page=page.next) }}">Next</a>
+```
+
+Pass `None` to drop a parameter, or a list to repeat one.
 
 ### Date & time
 
@@ -282,6 +333,12 @@ Buraq registers 21 filters automatically — no `{% load %}` needed. They live i
 | `default_if_none` | `{{ val\|default_if_none("—") }}` |
 | `phone2numeric` | `{{ "HELLO"\|phone2numeric }}` → `"43556"` |
 | `floatformat(n)` | `{{ 3.14159\|floatformat(2) }}` → `"3.14"` |
+| `stringformat(spec)` | `{{ 5\|stringformat("03d") }}` → `"005"` — Python's `%` syntax without the `%` |
+| `add(n)` | `{{ 4\|add(6) }}` → `10`; joins lists and strings when they are not numbers |
+| `divisibleby(n)` | `{{ 9\|divisibleby(3) }}` → `True` |
+| `get_digit(n)` | `{{ 123456789\|get_digit(2) }}` → `8` — counted from the right |
+| `escapeseq` | `{{ items\|escapeseq\|join(", ") }}` — escapes each item, not the joined string |
+| `safeseq` | `{{ items\|safeseq\|join(", ") }}` — marks each item safe |
 
 ### HTML (marked safe — output not auto-escaped)
 
