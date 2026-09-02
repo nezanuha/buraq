@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — the whole CI matrix, which had never been green
+
+Six of the eight jobs were failing on every run. The two that passed were
+Windows, which is the platform the project is developed on, so it went unseen:
+PostgreSQL, MySQL, both Ubuntu jobs and both macOS jobs were red throughout.
+Four separate causes, three of them faults in the framework rather than the
+tests.
+
+- **Many-to-many writes were broken on MySQL entirely.** Adding to a relation,
+  `.set()`, and `bulk_create(ignore_conflicts=True)` all built their statement
+  with `on_conflict_do_nothing()`, which is PostgreSQL's and SQLite's spelling.
+  MySQL has never had it, so every one of them raised `AttributeError: 'Insert'
+  object has no attribute 'on_conflict_do_nothing'`. It is written per dialect
+  now — `ON DUPLICATE KEY UPDATE` on MySQL and MariaDB — from one helper rather
+  than the same ladder repeated at three call sites.
+
+- **Engines were abandoned rather than disposed.** Resetting a connection set
+  the engine aside and left its connections open until something finalised them,
+  which for an async driver happens after the event loop has gone: "Event loop
+  is closed", raised from a finaliser and blamed on whichever test was running.
+  It leaks connections outside the test suite too, wherever a project resets.
+
+- **`pool_size` and `max_overflow` were passed to every pool**, and SQLAlchemy
+  refuses them rather than ignoring them. So `DATABASE_OPTIONS = {"poolclass":
+  NullPool}` — what a project sets to hand pooling to PgBouncer — could not
+  start at all. Whether a pool takes them is now asked of the class.
+
+- **A test hashed a file whose bytes depended on the platform.** The fixture
+  wrote its CSS with `write_text`, so Windows stored `
+` where every other
+  platform stored `
+`; the content hash differed, and the assertion named one.
+  It passed only on the machine the hash came from.
+
+Alongside those, the suite now keeps a database connection inside the event loop
+that opened it — pytest-asyncio gives each test its own, and a pooled connection
+belongs to the loop that opened it — and CI reports which tests failed as
+annotations, since downloading a job log needs admin rights on the repository
+and a failure was otherwise just "exit code 1" to everyone else.
+
+
 ### Added
 
 - **`@ratelimit("5/minute")` on a view.** `RATE_LIMIT` applies to every route

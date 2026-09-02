@@ -430,6 +430,21 @@ for post in posts:
 await Post.objects.bulk_update(posts, fields=["status"])
 ```
 
+:::note[What `ignore_conflicts` becomes]
+Every database can skip a row that is already there and no two agree how, so
+`insert_ignoring_duplicates()` writes it in the dialect's own spelling:
+`ON CONFLICT DO NOTHING` on PostgreSQL and SQLite, `ON DUPLICATE KEY UPDATE` on
+MySQL and MariaDB, which have never had the former.
+
+The same applies to adding to a many-to-many relation, which inserts into the
+association table the same way.
+
+MySQL's form updates a key column to the value it already has, which changes
+nothing. `INSERT IGNORE` would also skip duplicates, and would swallow a
+truncated value or a bad foreign key along with them — too much to discard for
+the convenience.
+:::
+
 ## Streaming large querysets
 
 ```python
