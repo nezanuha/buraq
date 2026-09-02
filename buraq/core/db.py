@@ -98,7 +98,50 @@ def _make_engine(alias: str = "default"):
     kwargs.update(options)
     if connect_args:
         kwargs["connect_args"] = connect_args
+    _drop_pool_sizing_if_unused(kwargs)
     return create_async_engine(url, **kwargs)
+
+
+def _drop_pool_sizing_if_unused(kwargs: dict) -> None:
+    """Leave out pool sizing for a pool that has none.
+
+    NullPool opens a connection per use and holds none, so pool_size and
+    max_overflow mean nothing to it -- and SQLAlchemy refuses them outright
+    rather than ignoring them:
+
+        TypeError: Invalid argument(s) 'pool_size','max_overflow' sent to
+        create_engine(), using configuration PGDialect_asyncpg/NullPool/Engine
+
+    Setting ``DATABASE_OPTIONS = {"poolclass": NullPool}`` -- which is what a
+    project does to hand pooling to PgBouncer, and what the test suite does to
+    keep a connection inside the loop that opened it -- therefore could not
+    start at all.
+    """
+    pool = kwargs.get("poolclass")
+    if pool is None:
+        return
+    # Only these two. `pool_recycle` and friends reach the Pool base class under
+    # other names, so asking whether the subclass names them would drop settings
+    # that do in fact apply.
+    for name in ("pool_size", "max_overflow"):
+        if name in kwargs and not _pool_accepts(pool, name):
+            del kwargs[name]
+
+
+def _pool_accepts(pool, name: str) -> bool:
+    """Whether a pool class takes this keyword, asked of the class itself.
+
+    Listing the pools that do would go stale the moment SQLAlchemy adds one.
+    """
+    import inspect
+
+    try:
+        parameters = inspect.signature(pool.__init__).parameters
+    except (TypeError, ValueError):  # pragma: no cover - exotic pool classes
+        return True
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+        return True
+    return name in parameters
 
 
 class _LazyEngine:

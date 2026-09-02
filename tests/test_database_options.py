@@ -125,3 +125,63 @@ def test_a_stray_key_is_not_silently_ignored(monkeypatch):
     }, raising=False)
     with pytest.raises(ImproperlyConfigured, match="pool_size"):
         db.database_config("default")
+
+
+# --- pool sizing that the chosen pool cannot take ----------------------------
+
+
+def test_pool_sizing_is_left_out_for_a_pool_that_has_none():
+    """
+    NullPool opens a connection per use and holds none, so pool_size and
+    max_overflow mean nothing to it -- and SQLAlchemy refuses them rather than
+    ignoring them:
+
+        TypeError: Invalid argument(s) 'pool_size','max_overflow' sent to
+        create_engine(), using configuration PGDialect_asyncpg/NullPool/Engine
+
+    So DATABASE_OPTIONS = {"poolclass": NullPool} -- what a project sets to hand
+    pooling to PgBouncer -- could not start at all.
+    """
+    from sqlalchemy.pool import NullPool
+
+    from buraq.core.db import _drop_pool_sizing_if_unused
+
+    kwargs = {"poolclass": NullPool, "pool_size": 10, "max_overflow": 20, "echo": False}
+    _drop_pool_sizing_if_unused(kwargs)
+
+    assert sorted(kwargs) == ["echo", "poolclass"]
+
+
+def test_pool_sizing_is_kept_for_a_pool_that_uses_it():
+    from sqlalchemy.pool import QueuePool
+
+    from buraq.core.db import _drop_pool_sizing_if_unused
+
+    kwargs = {"poolclass": QueuePool, "pool_size": 10, "max_overflow": 20}
+    _drop_pool_sizing_if_unused(kwargs)
+
+    assert kwargs["pool_size"] == 10
+    assert kwargs["max_overflow"] == 20
+
+
+def test_nothing_is_dropped_when_no_pool_was_chosen():
+    """The default pool takes them, and guessing otherwise would silently
+    discard a project's tuning."""
+    from buraq.core.db import _drop_pool_sizing_if_unused
+
+    kwargs = {"pool_size": 10, "max_overflow": 20}
+    _drop_pool_sizing_if_unused(kwargs)
+
+    assert kwargs == {"pool_size": 10, "max_overflow": 20}
+
+
+def test_a_pool_taking_arbitrary_keywords_keeps_them():
+    """Asked of the class rather than from a list, which would go stale the
+    moment SQLAlchemy adds a pool."""
+    from buraq.core.db import _pool_accepts
+
+    class _Anything:
+        def __init__(self, creator, **kw):
+            pass
+
+    assert _pool_accepts(_Anything, "pool_size") is True
