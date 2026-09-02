@@ -18,6 +18,7 @@ Usage:
 """
 import functools
 import logging
+from collections.abc import Callable
 
 from fastapi import HTTPException
 from starlette.responses import RedirectResponse
@@ -228,7 +229,12 @@ def csrf_exempt(func):
     return func
 
 
-def ratelimit(*limits: str):
+def ratelimit(
+    *limits: str,
+    key: str | Callable = "ip",
+    cost: int = 1,
+    exempt: Callable | None = None,
+):
     """Limit how often one client may call this view.
 
     ``RATE_LIMIT`` applies to every route; this tightens it for one::
@@ -240,6 +246,23 @@ def ratelimit(*limits: str):
     Several limits may be given -- ``@ratelimit("5/minute", "50/day")`` -- and
     all of them apply.
 
+    ``key`` decides what counts as one client:
+
+    ``"ip"``
+        The default. ``X-Forwarded-For`` when present, else the socket address.
+
+    ``"user"``
+        The signed-in user, falling back to their IP while anonymous. Prefer
+        this for anything a signed-in user does: an office behind one address
+        is a single IP, so limiting a logged-in action by IP rations it across
+        everybody there at once. It also follows a user between devices.
+
+    A callable
+        Takes the request, returns a string -- for limiting by API key, by
+        tenant, or by anything else in the request::
+
+            @ratelimit("1000/hour", key=lambda r: r.headers.get("x-api-key", ""))
+
     The limit is recorded here and applied when the route is registered, which
     is the only moment both the view and the application exist. Reaching the
     limiter directly instead means importing the app into the module the views
@@ -248,15 +271,35 @@ def ratelimit(*limits: str):
     """
     if not limits:
         raise ValueError('ratelimit() needs a limit, for example "5/minute".')
+
+    # Validated with the parser that will actually read it, rather than a rule
+    # of our own: "5/" satisfies a look-for-a-slash check and is still not a
+    # limit, and "5 per minute" fails one while being perfectly valid. The same
+    # parser reads RATE_LIMIT, so both settings take the same spellings.
+    from buraq.ratelimit import parse_rate
+
     for limit in limits:
-        if not isinstance(limit, str) or "/" not in limit:
+        try:
+            parse_rate(limit)
+        except ValueError as exc:
             raise ValueError(
                 f"ratelimit() takes limits like '5/minute', not {limit!r}."
-            )
+            ) from exc
+
+    if not (callable(key) or key in ("ip", "user")):
+        raise ValueError(
+            f"ratelimit(key=...) takes 'ip', 'user', or a function, not {key!r}."
+        )
+    if not isinstance(cost, int) or isinstance(cost, bool) or cost < 1:
+        raise ValueError(f"ratelimit(cost=...) takes a whole number >= 1, not {cost!r}.")
+    if exempt is not None and not callable(exempt):
+        raise ValueError("ratelimit(exempt=...) takes a function of the request.")
 
     def decorator(view_func):
         # Added to rather than replaced, so stacking the decorator accumulates.
-        view_func._ratelimits = list(getattr(view_func, "_ratelimits", ())) + list(limits)
+        view_func._ratelimits = list(getattr(view_func, "_ratelimits", ())) + [
+            (limit, key, cost, exempt) for limit in limits
+        ]
         return view_func
 
     return decorator

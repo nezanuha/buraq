@@ -11,7 +11,20 @@ class MemoryCacheBackend(BaseCacheBackend):
     Fast — zero network overhead. Not shared across processes.
     """
 
-    def __init__(self, max_size: int = 1000):
+    def __init__(
+        self,
+        max_size: int = 1000,
+        location: str | None = None,
+        key_prefix: str | None = None,
+        timeout: int | None = None,
+        version: int | None = None,
+    ):
+        """``location`` names the cache in a CACHES entry, as in Django, where it
+        separates one in-process cache from another. Aliases already do that
+        here, so it is accepted and otherwise unused -- a CACHES entry that
+        carries one must not fail to build."""
+        self._name = location
+        self._init_shared(key_prefix, timeout, version)
         self._store: dict[str, tuple[Any, float | None]] = {}
         self._max_size = max_size
         self._lock: asyncio.Lock | None = None  # created lazily inside event loop
@@ -25,6 +38,7 @@ class MemoryCacheBackend(BaseCacheBackend):
         return expires_at is not None and time.monotonic() > expires_at
 
     async def get(self, key: str) -> Any | None:
+        key = self._make_key(key)
         async with self._get_lock():
             entry = self._store.get(key)
             if entry is None:
@@ -36,15 +50,20 @@ class MemoryCacheBackend(BaseCacheBackend):
             return value
 
     async def set(self, key: str, value: Any, timeout: int | None = None) -> None:
+        key = self._make_key(key)
+        timeout = self._resolve_timeout(timeout)
         async with self._get_lock():
             if len(self._store) >= self._max_size and key not in self._store:
                 # Evict the oldest key (simple LRU approximation)
                 oldest = next(iter(self._store))
                 del self._store[oldest]
-            expires_at = time.monotonic() + timeout if timeout is not None else None
+            expires_at = (
+                time.monotonic() + timeout if timeout and timeout > 0 else None
+            )
             self._store[key] = (value, expires_at)
 
     async def delete(self, key: str) -> None:
+        key = self._make_key(key)
         async with self._get_lock():
             self._store.pop(key, None)
 
@@ -55,8 +74,32 @@ class MemoryCacheBackend(BaseCacheBackend):
         async with self._get_lock():
             self._store.clear()
 
+    async def incr(self, key: str, delta: int = 1) -> int:
+        """Add to the integer at the key, under the instance lock.
+
+        The inherited version awaits get() and then set(). Here that happens to
+        be safe, because neither suspends -- an uncontended asyncio.Lock returns
+        without yielding, so no other task gets in between. That is an accident
+        of this backend having no I/O, and not something to rely on: on any
+        backend whose get/set actually suspend, the same code loses almost every
+        increment (500 concurrent increments measured as 1). Holding the lock
+        across the read and the write says so explicitly.
+        """
+        key = self._make_key(key)
+        async with self._get_lock():
+            entry = self._store.get(key)
+            if entry is None or self._is_expired(entry[1]):
+                self._store.pop(key, None)
+                raise ValueError(f"Cache key {key!r} not found.")
+            value, expires_at = entry
+            new_value = int(value) + delta
+            self._store[key] = (new_value, expires_at)
+            return new_value
+
     async def add(self, key: str, value: Any, timeout: int | None = None) -> bool:
         """Set key only if not already present. Atomic under the instance lock."""
+        key = self._make_key(key)
+        timeout = self._resolve_timeout(timeout)
         async with self._get_lock():
             entry = self._store.get(key)
             if entry is not None:
@@ -67,6 +110,8 @@ class MemoryCacheBackend(BaseCacheBackend):
             if len(self._store) >= self._max_size:
                 oldest = next(iter(self._store))
                 del self._store[oldest]
-            expires_at = time.monotonic() + timeout if timeout is not None else None
+            expires_at = (
+                time.monotonic() + timeout if timeout and timeout > 0 else None
+            )
             self._store[key] = (value, expires_at)
             return True

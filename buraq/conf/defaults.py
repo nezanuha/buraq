@@ -99,6 +99,17 @@ class BuraqSettings(BaseSettings):
 
     # Rate limiting
     RATE_LIMIT: str = "100/minute"
+    # Where the counters live. Empty means "wherever the cache is": if
+    # CACHE_REDIS_URL is set the counters go there, so the limit means what it
+    # says across every worker without naming the same Redis twice. With no
+    # Redis cache configured they stay in the worker process, and four workers
+    # with "100/minute" admit up to 400.
+    #
+    # Set it explicitly to override -- "memory://" to force per-worker counting
+    # even with a Redis cache, or another store entirely. Anything over the
+    # network must be an "async+" URI: a blocking client would stall the event
+    # loop on every request.
+    RATE_LIMIT_STORAGE: str = ""
 
     # Static & templates
     # Whether the application serves static and media files itself. False for a
@@ -141,9 +152,19 @@ class BuraqSettings(BaseSettings):
     MAILERS: dict = {}
 
     # Cache
+    # One URL for the cache, as DATABASE_URL is for the database: the scheme
+    # picks the backend and the rest configures it.
+    #   redis://localhost:6379/0     memcached://localhost:11211
+    #   file:///var/tmp/cache        db://my_cache_table        locmem://
+    # Leave it empty to use CACHE_BACKEND and the per-backend settings below.
+    CACHE_URL: str = ""
     CACHE_BACKEND: str = "buraq.contrib.cache.backends.memory.MemoryCacheBackend"
     CACHE_REDIS_URL: str | None = None
     CACHE_KEY_PREFIX: str = ""
+    # Raise this to make every existing entry unreachable at once -- the way to
+    # invalidate a cache after a deploy changes what the cached data means,
+    # without emptying it and sending every miss to the database together.
+    CACHE_VERSION: int = 1
     CACHE_FILE_PATH: str | None = None
     CACHE_DEFAULT_TIMEOUT: int = 300
     CACHE_TABLE: str = "buraq_cache_table"

@@ -420,6 +420,41 @@ def _patch_cbv_signature(view: Callable, full_path: str, param_types: dict = Non
     return cbv_wrapper
 
 
+def _rate_headers(verdict) -> list[tuple[str, str]]:
+    """What a client needs to pace itself, as text headers for a Response."""
+    return [
+        ("X-RateLimit-Limit", str(verdict.limit)),
+        ("X-RateLimit-Remaining", str(verdict.remaining)),
+        ("X-RateLimit-Reset", str(verdict.reset_after)),
+    ]
+
+
+def _keyfunc(key: Any) -> Callable:
+    """What counts as one client, for @ratelimit(key=...).
+
+    An anonymous request has no user to count, so "user" falls back to the
+    address -- otherwise every signed-out caller would share one bucket and the
+    first of them would lock out the rest.
+
+    The user's key is prefixed so it cannot collide with an address: without it
+    a user whose pk is 12 and a caller from the IP "12" would share a counter.
+    """
+    from buraq.middleware.ratelimit import client_ip
+
+    if callable(key):
+        return key
+    if key == "user":
+
+        def by_user(request):
+            user = request.scope.get("user")
+            if user is not None and getattr(user, "is_authenticated", False):
+                return f"user:{user.pk}"
+            return client_ip(request.scope)
+
+        return by_user
+    return lambda request: client_ip(request.scope)
+
+
 def _apply_ratelimits(app: Any, view: Callable) -> Callable:
     """Apply any @ratelimit() the view carries, now that the app exists.
 
@@ -434,9 +469,8 @@ def _apply_ratelimits(app: Any, view: Callable) -> Callable:
 
     limiter = getattr(getattr(app, "state", None), "limiter", None)
     if limiter is None:
-        # slowapi is a dependency, so this is a stripped install rather than a
-        # normal one. Silently serving an unlimited route would be the wrong
-        # way to find that out.
+        # Built by the application at startup. Silently serving an unlimited
+        # route would be the wrong way to discover it is missing.
         import warnings
 
         warnings.warn(
@@ -447,9 +481,63 @@ def _apply_ratelimits(app: Any, view: Callable) -> Callable:
         )
         return view
 
-    for limit in limits:
-        view = limiter.limit(limit)(view)
-    return view
+    from fastapi import HTTPException
+
+    from buraq.ratelimit import parse_rate
+
+    # Parsed once at registration rather than per request.
+    rules = [
+        (parse_rate(limit), _keyfunc(key), cost, exempt)
+        for limit, key, cost, exempt in limits
+    ]
+    check = limiter.check
+    # The backend keys on the limit and the identifier, so two views both
+    # carrying "5/minute" would count into one bucket for a given caller --
+    # spending the login allowance would spend the signup one too. Naming the
+    # view keeps each route's limit its own.
+    scope = f"{getattr(view, '__module__', '')}.{getattr(view, '__qualname__', view)}"
+
+    @functools.wraps(view)
+    async def limited(*args, **kwargs):
+        request = kwargs.get("request") or next(
+            (a for a in args if hasattr(a, "scope")), None
+        )
+        binding = None
+        if request is not None:
+            for rate, keyfunc, cost, exempt in rules:
+                if exempt is not None and exempt(request):
+                    continue
+                verdict = await check(rate, f"{scope}:{keyfunc(request)}", cost)
+                if not verdict:
+                    raise HTTPException(
+                        status_code=429,
+                        detail="Rate limit exceeded",
+                        headers={
+                            "Retry-After": str(verdict.reset_after),
+                            "X-RateLimit-Limit": str(verdict.limit),
+                            "X-RateLimit-Remaining": "0",
+                            "X-RateLimit-Reset": str(verdict.reset_after),
+                        },
+                    )
+                # Of several limits, the one closest to biting is the one worth
+                # reporting -- "50/day" with 2 left matters more than "5/minute"
+                # with 4.
+                if binding is None or verdict.remaining < binding.remaining:
+                    binding = verdict
+
+        result = view(*args, **kwargs)
+        response = await result if inspect.isawaitable(result) else result
+
+        # The route's own allowance, which is the one the caller is actually
+        # spending here. Without this the response carries the global limit's
+        # numbers -- a login route capped at 5/minute reporting 99 remaining,
+        # which is worse for a client pacing itself than no headers at all.
+        if binding is not None and hasattr(response, "headers"):
+            for name, value in _rate_headers(binding):
+                response.headers[name] = value
+        return response
+
+    return limited
 
 
 def register_urlpatterns(
