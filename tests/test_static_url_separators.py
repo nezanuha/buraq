@@ -26,7 +26,13 @@ def collected(tmp_path, monkeypatch):
     """collectstatic over a nested source tree, with hashing on."""
     source = tmp_path / "src"
     (source / "css" / "vendor").mkdir(parents=True)
-    (source / "css" / "vendor" / "reset.css").write_text("*{box-sizing:border-box}\n" * 40)
+    # Bytes, not text: write_text turns "\n" into "\r\n" on Windows, so the file
+    # differed by platform and so did its content hash. The assertions below
+    # name a hash, so they passed on the machine it was taken from and failed on
+    # every other one -- which was four of the six CI jobs.
+    (source / "css" / "vendor" / "reset.css").write_bytes(
+        b"*{box-sizing:border-box}\n" * 40
+    )
     dest = tmp_path / "out"
 
     monkeypatch.setattr(settings, "STATIC_DIR", str(source), raising=False)
@@ -47,7 +53,7 @@ def collected(tmp_path, monkeypatch):
 def test_manifest_uses_forward_slashes(collected):
     _, dest = collected
     paths = json.loads((dest / "staticfiles.json").read_text())["paths"]
-    assert paths == {"css/vendor/reset.css": "css/vendor/reset.1adfaa2b.css"}
+    assert paths == {"css/vendor/reset.css": "css/vendor/reset.b204b0c5.css"}
     for key, value in paths.items():
         assert "\\" not in key and "\\" not in value
 
@@ -56,7 +62,7 @@ def test_hashed_url_is_found_and_is_a_valid_url(collected):
     from buraq.contrib.staticfiles.storage import get_storage
 
     url = get_storage().url("css/vendor/reset.css")
-    assert url == "https://my-zone.b-cdn.net/static/css/vendor/reset.1adfaa2b.css"
+    assert url == "https://my-zone.b-cdn.net/static/css/vendor/reset.b204b0c5.css"
     assert "\\" not in url, "a backslash here is a 404 on a CDN"
     assert url.rsplit("/", 1)[-1] != "reset.css", "fell back to the unhashed name"
 
