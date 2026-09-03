@@ -42,7 +42,8 @@ const NAV = [
         <Search />
       </div>
     )}
-    <div class="sl-hidden md:sl-flex bq-header-actions print:hidden">
+
+    <div class="bq-header-actions print:hidden">
       <VersionPicker />
       <div class="sl-flex social-icons">
         <SocialIcons />
@@ -50,8 +51,66 @@ const NAV = [
       <ThemeSelect />
       <LanguageSelect />
     </div>
+
+    {/*
+      Below the width where the nav links and the actions fit, both were simply
+      not rendered -- and Starlight's own mobile menu only exists on pages with
+      a sidebar. So on the splash page a phone had no navigation and no way to
+      change the theme at all.
+    */}
+    <details class="bq-header-menu print:hidden">
+      <summary aria-label="Menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </summary>
+
+      <div class="bq-header-menu__panel">
+        <nav aria-label="Site">
+          <ul>
+            {NAV.map((item) => (
+              <li><a href={item.href}>{item.label}</a></li>
+            ))}
+          </ul>
+        </nav>
+
+        <div class="bq-header-menu__prefs">
+          <ThemeSelect />
+          <VersionPicker />
+          <div class="sl-flex social-icons"><SocialIcons /></div>
+        </div>
+      </div>
+    </details>
   </div>
 </div>
+
+<script>
+  /* A <details> menu stays open until something closes it, and a menu that
+     survives the click that dismissed it reads as broken. The page-actions menu
+     in PageTitle.astro handles its own; this one is a different element. */
+  const closeMenus = (except?: EventTarget | null) => {
+    for (const menu of document.querySelectorAll('details.bq-header-menu[open]')) {
+      if (!except || !menu.contains(except as Node)) menu.removeAttribute('open');
+    }
+  };
+
+  document.addEventListener('click', (event) => closeMenus(event.target));
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    closeMenus();
+    // Focus goes back to the control that opened it, or it lands at the top of
+    // the page and a keyboard user has to tab all the way down again.
+    const open = document.querySelector('details.bq-header-menu > summary');
+    if (open instanceof HTMLElement) open.focus();
+  });
+
+  /* Following a link inside the menu leaves it open behind the new page on a
+     browser that restores scroll position rather than reloading. */
+  document.addEventListener('pageshow', () => closeMenus());
+</script>
 
 <style>
   /* Starlight makes .header a 3-column grid at >=50rem, which would trap
@@ -124,10 +183,118 @@ const NAV = [
     border-inline-end: 1px solid var(--sl-color-hairline);
   }
 
-  /* On narrow screens the centre column is empty — let search breathe */
+  /* ── Mobile menu ─────────────────────────────────────────────────────────
+     One control holding what the header cannot fit: the nav links, the theme
+     toggle, the version picker and the social links. Starlight's own mobile
+     menu carries the page sidebar and only exists where there is one, so the
+     splash page had nothing. */
+
+  .bq-header-menu {
+    position: relative;
+  }
+
+  /* The disclosure triangle would sit beside an icon already saying the same. */
+  .bq-header-menu > summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: var(--bq-radius-sm, 0.375rem);
+    color: var(--sl-color-gray-2);
+    cursor: pointer;
+  }
+
+  .bq-header-menu > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .bq-header-menu > summary:hover {
+    color: var(--sl-color-white);
+    background: var(--sl-color-gray-7);
+  }
+
+  .bq-header-menu__panel {
+    position: absolute;
+    inset-inline-end: 0;
+    top: calc(100% + 0.5rem);
+    z-index: 50;
+    min-width: 12rem;
+    padding: 0.5rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: var(--bq-radius-md, 0.5rem);
+    /* Opaque: the panel sits over page content, and the header's translucency
+       is for the bar itself, not for a menu you are trying to read. */
+    background: var(--sl-color-bg);
+    box-shadow: var(--bq-shadow-md, 0 8px 24px rgb(0 0 0 / 0.12));
+  }
+
+  .bq-header-menu__panel ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .bq-header-menu__panel a {
+    display: block;
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--bq-radius-sm, 0.375rem);
+    color: var(--sl-color-gray-2);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+
+  .bq-header-menu__panel a:hover {
+    background: var(--sl-color-gray-6);
+    color: var(--sl-color-white);
+  }
+
+  .bq-header-menu__prefs {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--sl-color-hairline);
+  }
+
+  /* ── What shows at which width ───────────────────────────────────────────
+     Below 64rem the nav links and the action row are hidden and the menu
+     carries them; at 64rem and above the header has room and the menu goes. */
+
+  .bq-header-actions {
+    display: none;
+  }
+
+  @media (min-width: 64rem) {
+    .bq-header-actions {
+      display: flex;
+    }
+
+    .bq-header-menu {
+      display: none;
+    }
+  }
+
+  /* Narrow screens: search takes the room the nav links are not using, but
+     leaves the menu its corner. */
   @media (max-width: 63.99rem) {
     .bq-header-search {
       max-width: none;
+    }
+  }
+
+  /* Under about 30rem the search field and the menu compete; the field keeps a
+     usable width and the title truncates instead. */
+  @media (max-width: 30rem) {
+    .bq-header.header-content {
+      gap: 0.5rem;
+    }
+
+    .bq-header-search {
+      min-width: 0;
     }
   }
 </style>
