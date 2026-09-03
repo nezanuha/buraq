@@ -31,7 +31,7 @@
   --sl-color-text-accent: var(--sl-color-accent);
 
   --sl-color-bg:             #ffffff;
-  --sl-color-bg-nav:         #ffffff;
+  --sl-color-bg-nav:         rgba(255, 255, 255, 0.82);
   --sl-color-bg-sidebar:     #ffffff;
   --sl-color-bg-inline-code: #f4f4f5;
 
@@ -71,7 +71,7 @@
   --sl-color-black:   #09090b;
 
   --sl-color-bg:             #09090b;
-  --sl-color-bg-nav:         #09090b;
+  --sl-color-bg-nav:         rgba(9, 9, 11, 0.78);
   --sl-color-bg-sidebar:     #09090b;
   --sl-color-bg-inline-code: #1c1c20;
 
@@ -96,11 +96,13 @@ body {
    ═══════════════════════════════════════════════════════════ */
 
 .page > .header {
-  /* Opaque. Translucent-with-blur reads as frosted only when what is behind is
-     soft; over a code block it is text showing through text, and no amount of
-     blur fixes that -- the page just looks broken. A solid bar with a hairline
-     under it separates the two cleanly. */
+  /* Frosted, and it has to hold up over a code block rather than only over
+     something soft. Two things make that work: enough blur that the text
+     underneath stops being letters (a large radius, not the 8-16px that reads
+     as a smear), and a base opaque enough to carry the header's own text.
+     The saturation lift is what stops the result looking grey. */
   background-color: var(--sl-color-bg-nav);
+  backdrop-filter: saturate(180%) blur(28px);
   border-bottom: 1px solid var(--sl-color-hairline);
   box-shadow: none;
 }
@@ -872,4 +874,29 @@ mobile-starlight-toc {
      Nothing here is sticky today, but the bar itself is the kind of thing
      that becomes sticky later. `clip` just cuts. */
   overflow-x: clip;
+}
+
+/* Safari wants the prefix, and the minifier collapses two identical
+   declarations inside one rule -- keeping whichever came last, so writing both
+   together silently dropped one of them. In its own rule it survives. */
+.page > .header {
+  -webkit-backdrop-filter: saturate(180%) blur(28px);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Frosted bars — the fallback
+   ═══════════════════════════════════════════════════════════
+   Without backdrop-filter the translucent base is simply
+   see-through, and the page scrolls under the header in full
+   contrast. Anything that leans on the blur gets an opaque
+   background instead of a broken one. */
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --sl-color-bg-nav: #ffffff;
+  }
+
+  :root[data-theme='dark'] {
+    --sl-color-bg-nav: #09090b;
+  }
 }

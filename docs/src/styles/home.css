@@ -3,9 +3,32 @@
    ═══════════════════════════════════════════════════════════ */
 
 .bq-home {
-  --bq-hero-bg:   #08080a;
   --bq-indigo:    #6366f1;
   --bq-violet:    #8b5cf6;
+
+  /* The hero and the closing call-to-action are one surface, and it follows the
+     theme rather than being dark in both. Everything drawn on it is expressed
+     against these four, so the whole surface inverts by swapping them.
+
+     --bq-hero-tint is an rgb triplet rather than a colour, so the translucent
+     overlays on it -- the grid, the badge, the card borders -- can keep their
+     own alpha while changing which way they tint. */
+  --bq-hero-bg:   #08080a;
+  --bq-hero-fg:   #ffffff;
+  --bq-hero-dim:  rgba(var(--bq-hero-tint), 0.62);
+  --bq-hero-tint: 255, 255, 255;
+
+  /* Pastels read well on the dark surface; on the light one they wash out, so
+     the light theme takes the same hues at full strength. */
+  --bq-hero-grad: linear-gradient(105deg, #a5b4fc 10%, #c4b5fd 50%, #93c5fd 90%);
+}
+
+[data-theme='light'] .bq-home {
+  --bq-hero-bg:   #fbfbfd;
+  --bq-hero-fg:   #09090b;
+  --bq-hero-dim:  rgba(9, 9, 11, 0.62);
+  --bq-hero-tint: 9, 9, 11;
+  --bq-hero-grad: linear-gradient(105deg, #4f46e5 10%, #7c3aed 50%, #2563eb 90%);
 }
 
 /* ─── Shared layout ──────────────────────────────────────── */
@@ -71,7 +94,7 @@
   background: var(--bq-hero-bg);
   padding: 7rem 1.5rem 5.5rem;
   text-align: center;
-  color: #fff;
+  color: var(--bq-hero-fg);
 }
 
 /* Radial brand glow */
@@ -93,8 +116,8 @@
   inset: 0;
   z-index: -1;
   background-image:
-    linear-gradient(to right,  rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    linear-gradient(to right,  rgba(var(--bq-hero-tint), 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--bq-hero-tint), 0.045) 1px, transparent 1px);
   background-size: 3.5rem 3.5rem;
   mask-image: radial-gradient(ellipse 78% 62% at 50% 32%, #000 35%, transparent 78%);
   -webkit-mask-image: radial-gradient(ellipse 78% 62% at 50% 32%, #000 35%, transparent 78%);
@@ -109,9 +132,9 @@
   font-size: 0.775rem;
   font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(var(--bq-hero-tint), 0.82);
+  background: rgba(var(--bq-hero-tint), 0.05);
+  border: 1px solid rgba(var(--bq-hero-tint), 0.12);
   border-radius: 999px;
   padding: 0.4rem 0.95rem;
   margin-bottom: 2rem;
@@ -146,14 +169,14 @@
   font-weight: 700;
   letter-spacing: -0.045em;
   line-height: 1.04;
-  color: #fff;
+  color: var(--bq-hero-fg);
   margin: 0 0 1.35rem;
   text-wrap: balance;
 }
 
 .bq-hero h1 em {
   font-style: normal;
-  background: linear-gradient(105deg, #a5b4fc 10%, #c4b5fd 50%, #93c5fd 90%);
+  background: var(--bq-hero-grad);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -162,7 +185,7 @@
 .bq-hero__sub {
   font-size: 1.1rem;
   line-height: 1.65;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(var(--bq-hero-tint), 0.62);
   max-width: 38rem;
   margin: 0 auto 2.5rem;
   text-wrap: pretty;
@@ -199,33 +222,34 @@
 
 .bq-btn:active { transform: translateY(0); }
 
-/* Primary — solid white on dark hero */
+/* Primary — the surface inverted, so it stays the strongest thing on it in
+   either theme rather than being white on a white hero. */
 .bq-btn-primary {
-  background: #fff;
-  color: #09090b;
+  background: var(--bq-hero-fg);
+  color: var(--bq-hero-bg);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2),
-              0 6px 20px -6px rgba(255, 255, 255, 0.35);
+              0 6px 20px -6px rgba(var(--bq-hero-tint), 0.35);
 }
 
 .bq-btn-primary:hover {
   background: #f4f4f5;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2),
-              0 10px 28px -6px rgba(255, 255, 255, 0.45);
+              0 10px 28px -6px rgba(var(--bq-hero-tint), 0.45);
 }
 
 /* Secondary — glass */
 .bq-btn-ghost {
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.92);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(var(--bq-hero-tint), 0.07);
+  color: rgba(var(--bq-hero-tint), 0.92);
+  border-color: rgba(var(--bq-hero-tint), 0.14);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 
 .bq-btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(var(--bq-hero-tint), 0.12);
+  border-color: rgba(var(--bq-hero-tint), 0.25);
   transform: translateY(-1px);
 }
 
@@ -236,6 +260,8 @@
   margin: 0 auto;
   text-align: left;
   background: rgba(14, 14, 18, 0.72);
+  /* Fixed white, not the surface tint: this window is dark in both themes, so
+     a border that followed the theme would vanish into it on the light one. */
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 0.875rem;
   overflow: hidden;
@@ -545,6 +571,7 @@
 .bq-ai-code {
   margin-top: 2rem;
   background: #0c0c10;
+  /* Dark in both themes, as above. */
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.875rem;
   overflow: hidden;
@@ -576,7 +603,7 @@
   padding: 4.5rem 2rem;
   border-radius: 1.25rem;
   background: var(--bq-hero-bg);
-  color: #fff;
+  color: var(--bq-hero-fg);
   margin-bottom: 6rem;
 }
 
@@ -595,7 +622,7 @@
   font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 1.15;
-  color: #fff;
+  color: var(--bq-hero-fg);
   margin: 0 0 0.85rem;
   text-wrap: balance;
 }
@@ -603,7 +630,7 @@
 .bq-cta p {
   font-size: 1rem;
   line-height: 1.65;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--bq-hero-tint), 0.6);
   max-width: 34rem;
   margin: 0 auto 2rem;
   text-wrap: pretty;
@@ -618,8 +645,8 @@
   gap: 0.6rem;
   padding: 0.7rem 1.3rem;
   margin-bottom: 2rem;
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(var(--bq-hero-tint), 0.055);
+  border: 1px solid rgba(var(--bq-hero-tint), 0.12);
   border-radius: 0.6rem;
   font-family: var(--sl-font-mono);
   font-size: 0.855rem;
@@ -631,7 +658,7 @@
 
 .bq-cta__install::before {
   content: '$';
-  color: rgba(255, 255, 255, 0.32);
+  color: rgba(var(--bq-hero-tint), 0.32);
   user-select: none;
 }
 
