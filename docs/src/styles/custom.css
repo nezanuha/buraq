@@ -289,7 +289,12 @@ main:has(.bq-hero) .bq-site-footer__inner {
    DOC PAGE TYPOGRAPHY
    ═══════════════════════════════════════════════════════════ */
 
-h1#_top {
+/* Scoped to the doc page's title block, not to `#_top` alone. The splash hero
+   also carries id="_top" -- it is the skip-link target on every page -- so an
+   unscoped ID selector reached it too, and beat `.bq-hero h1` on specificity.
+   The hero is dark in both themes, while --sl-color-white is near-black in the
+   light one, so the heading came out black on black. */
+.bq-page-head h1#_top {
   font-size: clamp(1.9rem, 4vw, 2.6rem);
   font-weight: 700;
   letter-spacing: -0.035em;
@@ -506,7 +511,7 @@ starlight-toc a[aria-current='true'] {
    ═══════════════════════════════════════════════════════════ */
 
 @media (max-width: 50rem) {
-  h1#_top                 { font-size: 1.75rem; }
+  .bq-page-head h1#_top   { font-size: 1.75rem; }
   .sl-markdown-content h2 { font-size: 1.28rem; }
   .sl-markdown-content h3 { font-size: 1.06rem; }
 }

@@ -42,6 +42,33 @@ const checks = [
   },
 ];
 
+/**
+ * An ID selector styling `#_top` without saying which page it means.
+ *
+ * `#_top` is the skip-link target on every page, including the splash hero, so
+ * an unscoped rule reaches both and wins on specificity over any class. That is
+ * how the home page heading came out black on black in the light theme: a rule
+ * written for doc titles set `color: var(--sl-color-white)`, which is near-black
+ * in that theme, on a hero that is dark in both.
+ */
+async function checkStylesheets() {
+  const astro = join(DIST, '_astro');
+  let found = 0;
+  for (const entry of await readdir(astro)) {
+    if (!entry.endsWith('.css')) continue;
+    const css = await readFile(join(astro, entry), 'utf8');
+    // A rule beginning at `h1#_top` or `#_top` with nothing scoping it.
+    for (const match of css.matchAll(/(^|[,}])\s*([a-z0-9]*#_top)\s*[,{]/g)) {
+      console.error(
+        `  ${entry}: "${match[2]}" is not scoped to a page -- it also matches ` +
+        `the splash hero, and beats any class on specificity`
+      );
+      found += 1;
+    }
+  }
+  return found;
+}
+
 let failures = 0;
 let scanned = 0;
 
@@ -56,9 +83,12 @@ for await (const page of pages(DIST)) {
   }
 }
 
+failures += await checkStylesheets();
+
 console.log(`  checked ${scanned} pages`);
 if (failures > 0) {
   console.error(`  ${failures} problem(s) found`);
   process.exit(1);
 }
-console.log('  no empty icons, no plaintext fallbacks, no unrendered expressions');
+console.log('  no empty icons, no plaintext fallbacks, no unrendered expressions,');
+console.log('  no unscoped #_top rules');
