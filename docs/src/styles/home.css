@@ -259,17 +259,30 @@
   max-width: 50rem;
   margin: 0 auto;
   text-align: left;
-  background: rgba(14, 14, 18, 0.72);
+  /* Opaque. At 72% over the light hero this composited to #505054 -- a grey
+     panel rather than a terminal, with the code at 6.3:1 instead of 15.2:1.
+     The translucency was only ever readable because the surface behind it
+     happened to be dark too. */
+  background: #0e0e12;
   /* Fixed white, not the surface tint: this window is dark in both themes, so
      a border that followed the theme would vanish into it on the light one. */
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 0.875rem;
   overflow: hidden;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.75),
               0 0 0 1px rgba(255, 255, 255, 0.03) inset;
   color: #e4e4e7;
+}
+
+/* A <pre> does not wrap, so without this the longest line of the sample sets
+   the width of the element -- and, since nothing above it is constrained
+   either, of the page. On a phone that pushed the whole layout sideways: the
+   headline was cut mid-word, the buttons ran off the edge, and the header's
+   search and menu were carried off-screen with it. */
+.bq-hero__code pre {
+  margin: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .bq-hero__code-bar {
@@ -577,6 +590,12 @@
   overflow: hidden;
   box-shadow: 0 16px 44px -18px rgba(0, 0, 0, 0.6);
   color: #e4e4e7;
+}
+
+.bq-ai-code pre {
+  margin: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .bq-ai-code-bar {
