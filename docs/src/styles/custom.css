@@ -689,6 +689,14 @@ starlight-tabs [role='tabpanel'] .expressive-code pre {
   color: var(--sl-color-white);
 }
 
+/* Matches the size Starlight's own <Icon> renders at, so the inline copy
+   glyph sits at the same weight as the icons beside it. */
+.bq-action__icon {
+  width: 0.85em;
+  height: 0.85em;
+  flex: none;
+}
+
 .bq-menu {
   position: relative;
 }

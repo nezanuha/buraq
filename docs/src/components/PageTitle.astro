@@ -35,7 +35,23 @@ const assistants = [
 
   <div class="bq-actions" data-markdown-url={markdownUrl}>
     <button type="button" class="bq-action" data-copy-page>
-      <Icon name="copy" size="0.85em" />
+      {/*
+        Inline rather than <Icon name="copy" />: Starlight ships no `copy`
+        icon, and an unknown name renders an empty <svg> -- no error, no
+        warning, just a button with a gap where its icon should be. The other
+        three here (open-book, down-caret, document) are real names and work.
+
+        Drawn on the same 24x24 grid as Starlight's own so it sits at the same
+        weight beside them.
+      */}
+      <svg
+        class="bq-action__icon" viewBox="0 0 24 24" width="16" height="16"
+        fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+      >
+        <rect x="9" y="9" width="11" height="11" rx="2" />
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      </svg>
       <span data-copy-label>Copy page</span>
     </button>
 
