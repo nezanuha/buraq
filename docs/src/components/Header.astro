@@ -60,10 +60,10 @@ const NAV = [
     */}
     <details class="bq-header-menu print:hidden">
       <summary aria-label="Menu">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+             stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
              aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" />
+          <path d="M4.5 7.5h15M4.5 12h15M4.5 16.5h15" />
         </svg>
       </summary>
 
@@ -278,23 +278,39 @@ const NAV = [
     }
   }
 
-  /* Narrow screens: search takes the room the nav links are not using, but
-     leaves the menu its corner. */
+  /* ── Search ──────────────────────────────────────────────────────────────
+     Starlight already hides the word "Search" below md, but the button kept
+     stretching to fill the row, so a phone got a wide empty box with a
+     magnifier at one end. Below 64rem it is a square icon button the same size
+     as the menu beside it. */
+
   @media (max-width: 63.99rem) {
     .bq-header-search {
+      flex: none;
       max-width: none;
+      width: auto;
+    }
+
+    .bq-header-search :global(site-search),
+    .bq-header-search :global(button[data-open-modal]) {
+      width: 2.25rem;
+    }
+
+    .bq-header-search :global(button[data-open-modal]) {
+      height: 2.25rem;
+      padding: 0;
+      justify-content: center;
+    }
+
+    /* The shortcut hint has no meaning without a keyboard. */
+    .bq-header-search :global(button[data-open-modal] kbd) {
+      display: none;
     }
   }
 
-  /* Under about 30rem the search field and the menu compete; the field keeps a
-     usable width and the title truncates instead. */
   @media (max-width: 30rem) {
     .bq-header.header-content {
       gap: 0.5rem;
-    }
-
-    .bq-header-search {
-      min-width: 0;
     }
   }
 </style>
