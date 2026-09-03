@@ -810,3 +810,44 @@ starlight-tabs [role='tabpanel'] .expressive-code pre {
     scroll-behavior: auto !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Mobile "On this page"
+   ═══════════════════════════════════════════════════════════
+   The bar that appears on scroll shows the heading you are inside.
+   Starlight already asks for an ellipsis on it — white-space: nowrap,
+   overflow: hidden, text-overflow: ellipsis — but none of that can
+   take effect, because a flex item's min-width defaults to `auto`
+   and so it refuses to shrink below its own content. A heading like
+   "Dynamic changefreq and priority" therefore widened the summary
+   past the screen instead of being cut, and took the page's
+   horizontal scroll with it. */
+
+#starlight__mobile-toc > summary {
+  min-width: 0;
+  overflow: hidden;
+  gap: 0.5rem;
+}
+
+/* The label and its caret are the fixed part; the heading takes what is
+   left and gets cut when there is not enough. */
+#starlight__mobile-toc > summary .toggle {
+  flex: none;
+}
+
+#starlight__mobile-toc > summary .display-current {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Nothing inside may widen the page. A mobile layout that scrolls
+   sideways is usually one element doing this. */
+mobile-starlight-toc {
+  display: block;
+  max-width: 100%;
+  /* clip, not hidden: `hidden` makes a scroll container, which forces the
+     other axis to `auto` and breaks `position: sticky` on anything inside.
+     Nothing here is sticky today, but the bar itself is the kind of thing
+     that becomes sticky later. `clip` just cuts. */
+  overflow-x: clip;
+}
