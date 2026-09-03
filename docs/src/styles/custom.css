@@ -763,10 +763,22 @@ starlight-tabs [role='tabpanel'] .expressive-code pre {
   color: var(--sl-color-white);
 }
 
-/* Narrow screens: the title needs the width more than the labels do. */
+/* The row must never widen the page, whatever is in it. */
+.bq-actions {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Narrow screens: the title needs the width more than the labels do, so the
+   other two become their icons. The copy button keeps its text -- that is
+   where "Copied" appears, and a confirmation nobody can see is not one. */
 @media (max-width: 30rem) {
   .bq-action span:not([data-copy-label]) {
     display: none;
+  }
+
+  .bq-action {
+    padding-inline: 0.5rem;
   }
 }
 

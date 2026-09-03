@@ -56,9 +56,15 @@ const assistants = [
     </button>
 
     <details class="bq-menu">
-      <summary class="bq-action">
+      {/*
+        The labels are wrapped so they can be hidden on a narrow screen. They
+        were bare text nodes, and the rule meant to hide them selects a span --
+        so it matched nothing and the row ran off the side of the page instead.
+        aria-label carries the name once the text is not shown.
+      */}
+      <summary class="bq-action" aria-label="Open in AI">
         <Icon name="open-book" size="0.85em" />
-        Open in AI
+        <span>Open in AI</span>
         <Icon name="down-caret" size="0.85em" class="bq-menu__caret" />
       </summary>
       <ul class="bq-menu__list">
@@ -70,9 +76,9 @@ const assistants = [
       </ul>
     </details>
 
-    <a class="bq-action" href={markdownUrl} rel="nofollow">
+    <a class="bq-action" href={markdownUrl} rel="nofollow" aria-label="View as Markdown">
       <Icon name="document" size="0.85em" />
-      Markdown
+      <span>Markdown</span>
     </a>
   </div>
 </div>
