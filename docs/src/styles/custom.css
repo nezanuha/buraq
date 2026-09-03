@@ -180,7 +180,10 @@ body {
 }
 
 .sidebar-content .caret {
-  color: var(--sl-color-gray-4);
+  /* gray-3, not gray-4: the caret says whether a section is open, so it is a
+     meaningful control rather than decoration, and 2.56:1 was under the 3:1
+     WCAG asks for one. */
+  color: var(--sl-color-gray-3);
   transition: transform 0.22s var(--bq-ease);
 }
 
@@ -494,7 +497,8 @@ starlight-toc a[aria-current='true'] {
 }
 
 .pagination-links svg {
-  color: var(--sl-color-gray-4);
+  /* The arrow carries the direction, so it has to be seen. */
+  color: var(--sl-color-gray-3);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -748,5 +752,48 @@ starlight-tabs [role='tabpanel'] .expressive-code pre {
 @media (max-width: 30rem) {
   .bq-action span:not([data-copy-label]) {
     display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Keyboard focus
+   ═══════════════════════════════════════════════════════════
+   Only the tab strip had a focus style, so every link, button and
+   sidebar item fell back to the browser's — which on these
+   backgrounds is somewhere between faint and invisible, and is the
+   only way someone navigating by keyboard knows where they are.
+
+   :focus-visible rather than :focus, so a mouse click does not leave
+   a ring behind. */
+
+:where(a, button, summary, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+  border-radius: var(--bq-radius-sm);
+}
+
+/* Inside a card or a code block the offset ring would be clipped, so it
+   sits just within the edge instead. */
+.sidebar-content a:focus-visible,
+.expressive-code button:focus-visible,
+.pagination-links a:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Reduced motion
+   ═══════════════════════════════════════════════════════════
+   Twelve transitions and animations ran regardless of the setting the
+   reader had already made. Someone who asks the operating system for
+   less movement is usually asking for a reason. */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
