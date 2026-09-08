@@ -10,7 +10,21 @@ on:
     paths:
       - 'docs/**'
       - '.github/workflows/deploy-docs.yml'
+  # A release publishes the package, which is the moment docs describing it stop
+  # being ahead of it. Without this the release push raced itself: the branch
+  # push started this workflow while release.yml was still building, so the
+  # check below asked PyPI for a version release.yml had not uploaded yet.
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
   workflow_dispatch:
+    inputs:
+      allow_unreleased:
+        description: >-
+          Publish even though pyproject's version is not on PyPI. For a fix that
+          does not touch installation or behaviour -- a typo, a broken link.
+        type: boolean
+        default: false
 
 concurrency:
   # A second push should replace a running deploy, not race it onto the server.
@@ -18,7 +32,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Docs describe the code in this commit; `pip install buraq` gives whatever
+  # PyPI has. When those differ the page is not merely stale, it is wrong in a
+  # way the reader cannot see -- the installation page told people to run
+  # `buraq startproject myproject .`, which the released version refuses
+  # outright, because accepting an existing directory had not shipped yet.
+  #
+  # A skip rather than a failure: on a release push this workflow starts before
+  # release.yml has finished uploading, and failing there would put a red cross
+  # on every release for a version that is seconds away from existing. The
+  # workflow_run trigger above brings us back once it does.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.check.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is the version these docs describe published yet?
+        id: check
+        run: |
+          # workflow_run fires however the Release ended; only a successful one
+          # means there is a package to describe.
+          if [ "${{ github.event_name }}" = "workflow_run" ] && [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "::notice::Release concluded '${{ github.event.workflow_run.conclusion }}' — nothing published, so nothing to deploy for."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ inputs.allow_unreleased }}" = "true" ]; then
+            echo "::notice::allow_unreleased set — publishing without the version check."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          version=$(grep -m1 '^version' pyproject.toml | cut -d'"' -f2)
+          if curl -sSf "https://pypi.org/pypi/buraq/$version/json" >/dev/null 2>&1; then
+            echo "buraq $version is on PyPI — docs may ship."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "::notice::Skipping deploy: buraq $version is not on PyPI. These docs describe $version, so publishing now would document behaviour nobody can install. The deploy runs again when Release finishes; re-run with allow_unreleased if the change is only wording."
+          echo "publish=false" >> "$GITHUB_OUTPUT"
+
   deploy:
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
