@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "buraq"
-version = "1.6.0"
+version = "1.7.0"
 description = "Async Python web framework with a Django-style ORM, admin and migrations, built on FastAPI"
 readme = "README.md"
 license = { text = "MIT" }
@@ -87,7 +87,10 @@ uv        = ["uv>=0.5.0"]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
-    "httpx>=0.27.0",
+    # httpx2, not httpx: starlette.testclient deprecated the latter and says
+    # so on every run. Same API surface -- ASGITransport, AsyncClient and the
+    # rest are all present under the new name.
+    "httpx2>=2.12.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
     # Optional at runtime -- only a shared rate-limit counter needs it -- but
@@ -128,6 +131,16 @@ ignore = ["B008"]  # FastAPI Depends() in default args
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+# Narrow by message, never a bare `ignore::DeprecationWarning`: the point is to
+# quieten two specific faults in dependencies, not to stop hearing about our
+# own. Both should be removed when the upstream fix lands.
+filterwarnings = [
+    # starlette/testclient.py annotates a type with anyio.abc.BlockingPortal,
+    # which anyio has renamed. It fires on import, so importing the module at
+    # all is enough, and nothing here can reach it.
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
 
 # ─── Mypy ─────────────────────────────────────────────────────────────────────
 [tool.mypy]
