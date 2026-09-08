@@ -2,7 +2,7 @@
 
 **A high-performance, batteries-included Python web framework — built for AI applications, high-traffic APIs, and developers who know Django.**
 
-Buraq delivers Rust-powered performance at every layer — Granian ASGI server, orjson, asyncpg, uv — with a complete full-stack framework: ORM, admin, forms, auth, migrations, templates, signals, cache, and email. All async, all fast.
+Buraq puts Rust where it counts — the Granian ASGI server, orjson, and Pydantic's core — behind a complete full-stack framework: ORM, admin, forms, auth, migrations, templates, signals, cache, and email. All async.
 
 If you know Django, you already know Buraq. Same views, same URLs, same templates, same ORM patterns — just add `await`. Built on FastAPI and SQLAlchemy 2.0 under the hood, so you get auto-generated API docs, Pydantic validation, and Rust-level performance out of the box.
 
@@ -19,7 +19,7 @@ Modern applications — especially AI backends, LLM APIs, and real-time services
 
 At the same time, Python web developers coming from Django shouldn't have to give up familiar patterns just to get async performance. Switching to a low-level async framework means losing everything Django provides out of the box.
 
-Buraq solves both problems. A complete, batteries-included web framework with Rust-powered performance at every layer — and zero re-learning curve for Django developers.
+Buraq solves both problems. A complete, batteries-included web framework with Rust-backed components in the hot paths — and zero re-learning curve for Django developers.
 
 ---
 
@@ -62,9 +62,12 @@ async def post_list(request):
 ## Quick Start
 
 ```bash
-pip install buraq
-buraq startproject myproject
+uvx buraq startproject myproject   # no install needed to scaffold
 cd myproject
+
+uv sync                          # .venv inside the project, with Buraq in it
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
 buraq migrate
 buraq runserver
 ```
@@ -210,7 +213,8 @@ await send_mail(
 
 ## Performance
 
-Buraq is built on the fastest available Python components at every layer:
+Buraq is built on fast components in the paths that run per request. Nothing here
+is a benchmark claim about Buraq itself — measure your own workload.
 
 | Layer            | Library              | Benefit                          |
 |------------------|----------------------|----------------------------------|
@@ -219,8 +223,7 @@ Buraq is built on the fastest available Python components at every layer:
 | Database driver  | asyncpg              | Fastest async PostgreSQL driver  |
 | ORM              | SQLAlchemy 2.0       | Native async, no sync wrapper    |
 | JSON             | orjson (Rust)        | 3–10× faster than stdlib json    |
-| Password hashing | Argon2id             | PHC winner — memory-hard, fast to verify |
-| Package manager  | uv (Rust)            | 10–100× faster than pip          |
+| Password hashing | Argon2id             | PHC winner — memory-hard, tunable cost |
 
 ---
 
@@ -238,7 +241,8 @@ Buraq is built on the fastest available Python components at every layer:
 - **Signals** — `post_save`, `pre_delete`, custom signals
 - **Cache backends** — Redis, Memcached, database, file, in-memory (all async)
 - **Email backends** — SMTP, console, file (all async)
-- **Static files** — WhiteNoise + `buraq collectstatic`
+- **Static files** — `buraq collectstatic`, served with cache headers and
+  pre-compressed `.gz` written at collect time, not per request
 - **Rate limiting** via SlowAPI
 - **Security headers** — HSTS, nosniff, frame options, referrer policy, CSP
 - **CORS middleware**
