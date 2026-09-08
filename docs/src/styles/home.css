@@ -6,29 +6,111 @@
   --bq-indigo:    #6366f1;
   --bq-violet:    #8b5cf6;
 
-  /* The hero and the closing call-to-action are one surface, and it follows the
-     theme rather than being dark in both. Everything drawn on it is expressed
-     against these four, so the whole surface inverts by swapping them.
+  /* The page surface follows the theme. Everything drawn on it is expressed
+     against these, so the whole page inverts by swapping them.
 
      --bq-hero-tint is an rgb triplet rather than a colour, so the translucent
-     overlays on it -- the grid, the badge, the card borders -- can keep their
-     own alpha while changing which way they tint. */
-  --bq-hero-bg:   #08080a;
+     overlays on it -- the lines, the badge, the card borders -- can each keep
+     their own alpha while referring to one value. */
+  --bq-hero-bg:   #080b14;
   --bq-hero-fg:   #ffffff;
   --bq-hero-dim:  rgba(var(--bq-hero-tint), 0.62);
   --bq-hero-tint: 255, 255, 255;
 
-  /* Pastels read well on the dark surface; on the light one they wash out, so
-     the light theme takes the same hues at full strength. */
-  --bq-hero-grad: linear-gradient(105deg, #a5b4fc 10%, #c4b5fd 50%, #93c5fd 90%);
+  /* One sharp accent against the dominant blue.
+
+     An evenly spread indigo at 7% everywhere is the timid palette the house
+     style warns about: nothing on the page is allowed to be loud. This is the
+     one colour that gets to be -- electric, still in the blue family, and used
+     only where something needs to cut: the figures, the eyebrow dots, the end
+     of the headline gradient. */
+  --bq-hero-grad: linear-gradient(102deg, #e0e7ff 4%, #818cf8 46%, var(--bq-spark) 96%);
+
+  --bq-hero-code: #c7d2fe;
+
+  /* The hero bloom, as colours rather than baked into the gradient, because its
+     strength has to differ per theme: what reads as a light source on near-black
+     reads as a flat lavender panel on near-white. */
+  --bq-bloom-1: rgba(139, 92, 246, 0.42);
+  --bq-bloom-2: rgba(99, 102, 241, 0.30);
+  --bq-bloom-3: rgba(91, 33, 182, 0.24);
+
+  /* The same argument for the pools that run the length of the page. */
+  --bq-amb-1: rgba(99, 102, 241, 0.075);
+  --bq-amb-2: rgba(139, 92, 246, 0.065);
+  --bq-amb-3: rgba(99, 102, 241, 0.055);
+
+  /* Every surface on the page is a film over the one ground, not its own
+     colour. That is the whole trick: a card is the background plus 3% light,
+     a raised card is 6%, a rule is 9%. Nothing introduces a second base, so
+     the page reads as one continuous sheet however far you scroll -- and it
+     inverts wholesale with --bq-hero-tint. */
+  --bq-rake:      rgba(var(--bq-hero-tint), 0.05);
+  --bq-film:      rgba(var(--bq-hero-tint), 0.03);
+  --bq-film-2:    rgba(var(--bq-hero-tint), 0.06);
+  --bq-line:      rgba(var(--bq-hero-tint), 0.09);
+  --bq-line-soft: rgba(var(--bq-hero-tint), 0.055);
 }
 
+/* Light is paper, not white.
+
+   A violet bloom over #fbfbfd is the exact thing the house style names as the
+   generic tell -- a purple gradient on a white background. Two changes take it
+   off that: the ground goes warm (#faf9f7 is paper, not the blue-white that
+   makes any indigo over it read as lavender), and the bloom nearly disappears,
+   with the atmosphere carried by the raked rules instead. Drawn texture on
+   warm stock, with indigo kept for the accents where it lands at full
+   strength -- a technical manual rather than a SaaS hero. */
 [data-theme='light'] .bq-home {
-  --bq-hero-bg:   #fbfbfd;
-  --bq-hero-fg:   #09090b;
-  --bq-hero-dim:  rgba(9, 9, 11, 0.62);
-  --bq-hero-tint: 9, 9, 11;
-  --bq-hero-grad: linear-gradient(105deg, #4f46e5 10%, #7c3aed 50%, #2563eb 90%);
+  --bq-hero-bg:   #ffffff;
+  --bq-hero-fg:   #2d2d2d;
+  /* 0.7, not 0.64: on the warmer ground the lighter composite lands at 4.46:1,
+     just under the floor for body text. */
+  --bq-hero-dim:  rgba(45, 45, 45, 0.7);
+  --bq-hero-tint: 45, 45, 45;
+  --bq-hero-grad: linear-gradient(102deg, #312e81 4%, #4338ca 46%, #0369a1 96%);
+  --bq-hero-code: #4338ca;
+
+  /* Ink on stock, not a colour wash. */
+  --bq-rake:    rgba(var(--bq-hero-tint), 0.032);
+  --bq-bloom-1: rgba(99, 102, 241, 0.07);
+  --bq-bloom-2: rgba(120, 113, 108, 0.07);
+  --bq-bloom-3: rgba(99, 102, 241, 0.045);
+
+  /* Warm stone rather than indigo. Indigo pools this wide over paper are the
+     lavender cast the ground change was meant to get rid of -- they just moved
+     the tint from the hero to the rest of the page. */
+  --bq-amb-1: rgba(120, 113, 108, 0.055);
+  --bq-amb-2: rgba(168, 162, 158, 0.05);
+  --bq-amb-3: rgba(99, 102, 241, 0.03);
+}
+
+/* The page is one surface, whichever theme it is in. It used to be a dark hero,
+   a light page and a dark closing block -- three grounds, which is what made the
+   middle of the page read as a different site from its ends. */
+.bq-home {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--bq-hero-bg);
+  color: var(--bq-hero-fg);
+}
+
+/* Ambient light for the whole page, not just the hero.
+
+   The hero was lit and everything after it was flat, so the page went dead the
+   moment you scrolled past the fold. Three wide, weak pools placed down its
+   length keep the same light running to the bottom. Fixed rem sizes, not
+   percentages -- on a 10,000px page a percentage-sized pool becomes a wash. */
+.bq-home::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(62rem 38rem at 14% 24%, var(--bq-amb-1), transparent 62%),
+    radial-gradient(52rem 34rem at 88% 50%, var(--bq-amb-2), transparent 60%),
+    radial-gradient(58rem 36rem at 22% 76%, var(--bq-amb-3), transparent 62%);
 }
 
 /* ─── Shared layout ──────────────────────────────────────── */
@@ -40,36 +122,65 @@
 }
 
 .bq-section {
-  padding-block: 6rem;
+  position: relative;
+  padding-block: 5.5rem;
 }
 
-/* Section eyebrow */
+/* Section head.
+
+   The hero is centred and emphatic; every section under it was left-aligned and
+   small, so each one read as a step down from it. Centring them holds one axis
+   down the length of the page. */
+.bq-head {
+  max-width: 46rem;
+  margin: 0 auto 3.25rem;
+  text-align: center;
+}
+
+/* Section eyebrow -- a pill, not a dash followed by a word. A rule sitting to
+   the left of centred text reads as a stray line; a pill centres.
+
+   Set in the mono face. Every label on the page that names a thing rather than
+   saying something -- eyebrows, column heads, the wall's caption -- is machine
+   type, and the prose is not. It is the cheapest way to read as a developer
+   tool instead of as any SaaS landing page with the nouns swapped. */
 .bq-label {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: 0.72rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--sl-color-accent);
-  margin: 0 0 0.9rem;
+  background: color-mix(in srgb, var(--sl-color-accent) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 22%, transparent);
+  border-radius: 999px;
+  padding: 0.32rem 0.8rem 0.32rem 0.62rem;
+  margin: 0 0 1.15rem;
 }
 
+/* The dot is the spark, not the label's own colour -- a single lit point on an
+   otherwise quiet pill. */
 .bq-label::before {
   content: '';
-  width: 1.25rem;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.5;
+  width: 0.34rem;
+  height: 0.34rem;
+  border-radius: 50%;
+  background: var(--bq-spark);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bq-spark) 22%, transparent);
 }
 
 .bq-title {
-  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 1.15;
-  color: var(--sl-color-white);
+  font-family: var(--bq-display);
+  font-size: clamp(1.85rem, 3.5vw, 2.7rem);
+  font-weight: 780;
+  font-stretch: 118%;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
+  text-transform: none;
+  color: var(--bq-hero-fg);
   margin: 0 0 1rem;
   text-wrap: balance;
 }
@@ -77,10 +188,40 @@
 .bq-sub {
   font-size: 1.02rem;
   line-height: 1.7;
-  color: var(--sl-color-gray-3);
+  color: var(--bq-hero-dim);
   max-width: 36rem;
   margin: 0 0 3rem;
   text-wrap: pretty;
+}
+
+.bq-head .bq-sub {
+  max-width: 40rem;
+  margin-inline: auto;
+  margin-bottom: 0;
+}
+
+/* ─── Bands ──────────────────────────────────────────────
+
+   Six sections in a row on one flat background is what made the page below the
+   hero read as a single undifferentiated scroll. A band is full-bleed and
+   faintly tinted, so alternating sections gives the page a beat -- and the
+   hairlines that separate them are the band's own edges rather than an <hr>
+   floating in whitespace. */
+.bq-band {
+  background: rgba(var(--bq-hero-tint), 0.022);
+  border-block: 1px solid var(--bq-line);
+}
+
+/* The AI band is the one place the brand colour is allowed to take over a whole
+   section. The tints are wide and weak; the point is a change of air, not a
+   coloured rectangle. */
+.bq-band--ai {
+  background:
+    radial-gradient(66rem 34rem at 10% -10%,
+      color-mix(in srgb, var(--sl-color-accent) 17%, transparent), transparent 68%),
+    radial-gradient(54rem 30rem at 90% 14%,
+      color-mix(in srgb, #8b5cf6 15%, transparent), transparent 66%),
+    rgba(var(--bq-hero-tint), 0.04);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -92,35 +233,56 @@
   isolation: isolate;
   overflow: hidden;
   background: var(--bq-hero-bg);
-  padding: 7rem 1.5rem 5.5rem;
+  /* More air. The old 7rem/5.5rem put the code window almost against the
+     buttons, which is most of what made the section feel cramped. */
+  padding: 9rem 1.5rem 4.5rem;
   text-align: center;
   color: var(--bq-hero-fg);
 }
 
-/* Radial brand glow */
+/* Light, not decoration.
+
+   Three overlapping tints used to mix into a muddy olive at the top left,
+   because sky blue over indigo over violet is a colour nobody chose. Two pools
+   in the same family, well apart, stay clean -- and being much wider than they
+   are strong is what makes the falloff smooth instead of a visible disc. */
 .bq-hero::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(60rem 34rem at 50% -8%,  rgba(99, 102, 241, 0.30), transparent 62%),
-    radial-gradient(44rem 28rem at 82% 12%,  rgba(139, 92, 246, 0.20), transparent 60%),
-    radial-gradient(38rem 26rem at 12% 22%,  rgba(56, 189, 248, 0.10), transparent 60%);
+    /* A tight bright core right behind the headline, then two wide pools under
+       it. The core is what the eye reads as a light source; without it the
+       hero is evenly tinted, which looks like a coloured rectangle. */
+    radial-gradient(32rem 19rem at 50% 27%, var(--bq-bloom-1), transparent 66%),
+    radial-gradient(64rem 34rem at 50%  6%, var(--bq-bloom-2), transparent 68%),
+    radial-gradient(92rem 30rem at 50% 52%, var(--bq-bloom-3), transparent 72%);
 }
 
-/* Grid pattern */
+/* The lattice.
+
+   Buraq is the steed of the Night Journey, and the ornament that tradition
+   carries is girih -- eight-point stars struck with straightedge and compass.
+   That is the pattern here: two squares per tile, one turned 45 degrees, with
+   the diamond's vertices on the tile's edge midpoints so the motif runs on
+   across tiles into one continuous grid instead of a field of stamps.
+
+   It is drawn as a mask rather than a coloured image so the same tile can be
+   white light on the night ground and ink on the paper one. A generic raked
+   gradient sat here before; this belongs to this project and nothing else. */
 .bq-hero::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-image:
-    linear-gradient(to right,  rgba(var(--bq-hero-tint), 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--bq-hero-tint), 0.045) 1px, transparent 1px);
-  background-size: 3.5rem 3.5rem;
-  mask-image: radial-gradient(ellipse 78% 62% at 50% 32%, #000 35%, transparent 78%);
-  -webkit-mask-image: radial-gradient(ellipse 78% 62% at 50% 32%, #000 35%, transparent 78%);
+  background-color: var(--bq-rake);
+  mask-image: var(--bq-lattice), radial-gradient(ellipse 74% 58% at 50% 32%, #000 2%, transparent 68%);
+  mask-composite: intersect;
+  mask-size: 72px 72px, cover;
+  -webkit-mask-image: var(--bq-lattice), radial-gradient(ellipse 74% 58% at 50% 32%, #000 2%, transparent 68%);
+  -webkit-mask-composite: source-in;
+  -webkit-mask-size: 72px 72px, cover;
 }
 
 /* ─── Hero badge ─────────────────────────────────────────── */
@@ -136,8 +298,8 @@
   background: rgba(var(--bq-hero-tint), 0.05);
   border: 1px solid rgba(var(--bq-hero-tint), 0.12);
   border-radius: 999px;
-  padding: 0.4rem 0.95rem;
-  margin-bottom: 2rem;
+  padding: 0.42rem 0.95rem;
+  margin-bottom: 2.25rem;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -165,12 +327,20 @@
 /* ─── Hero heading ───────────────────────────────────────── */
 
 .bq-hero h1 {
-  font-size: clamp(2.25rem, 6vw, 4.25rem);
-  font-weight: 700;
-  letter-spacing: -0.045em;
-  line-height: 1.04;
+  font-family: var(--bq-display);
+  font-size: clamp(2.15rem, 5.1vw, 4rem);
+  font-weight: 800;
+  /* Broad, not merely large. The wdth axis is the point of choosing this face:
+     a wide heavy grotesk reads as machinery, which is what the framework is
+     selling. Set to normal width during a sleek pass and put back. */
+  font-stretch: 116%;
+  /* Tighter tracking and closer lines. At display sizes the default spacing
+     looks slack, and closing it is most of what separates a modern headline
+     from a merely large one. */
+  letter-spacing: -0.032em;
+  line-height: 0.98;
   color: var(--bq-hero-fg);
-  margin: 0 0 1.35rem;
+  margin: 0 0 1.6rem;
   text-wrap: balance;
 }
 
@@ -185,7 +355,7 @@
 .bq-hero__sub {
   font-size: 1.1rem;
   line-height: 1.65;
-  color: rgba(var(--bq-hero-tint), 0.62);
+  color: var(--bq-hero-dim);
   max-width: 38rem;
   margin: 0 auto 2.5rem;
   text-wrap: pretty;
@@ -206,10 +376,10 @@
   align-items: center;
   gap: 0.45rem;
   font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 550;
+  font-size: 0.95rem;
+  font-weight: 600;
   letter-spacing: -0.01em;
-  padding: 0.68rem 1.4rem;
+  padding: 0.82rem 1.75rem;
   border-radius: 999px;
   border: 1px solid transparent;
   text-decoration: none;
@@ -231,8 +401,16 @@
               0 6px 20px -6px rgba(var(--bq-hero-tint), 0.35);
 }
 
+/* Derived from the surface, not hardcoded.
+
+   This was #f4f4f5 — written when the hero was dark in both themes, so the
+   button was white-on-dark and a near-white hover read as a slight lift. Once
+   the light theme inverted the surface the button became dark with white text,
+   and this rule forced its background to near-white while the text stayed
+   white: the button disappeared on hover. Mixing toward the page colour moves
+   it the same amount in whichever direction the theme is. */
 .bq-btn-primary:hover {
-  background: #f4f4f5;
+  background: color-mix(in srgb, var(--bq-hero-fg) 88%, var(--bq-hero-bg));
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2),
               0 10px 28px -6px rgba(var(--bq-hero-tint), 0.45);
@@ -256,29 +434,17 @@
 /* ─── Hero code window ───────────────────────────────────── */
 
 .bq-hero__code {
-  max-width: 50rem;
-  margin: 0 auto;
+  max-width: 52rem;
+  /* Room to breathe. It used to start right under the buttons. */
+  margin: 4rem auto 0;
   text-align: left;
-  /* Opaque. At 72% over the light hero this composited to #505054 -- a grey
-     panel rather than a terminal, with the code at 6.3:1 instead of 15.2:1.
-     The translucency was only ever readable because the surface behind it
-     happened to be dark too. */
-  background: #0e0e12;
-  /* Fixed white, not the surface tint: this window is dark in both themes, so
-     a border that followed the theme would vanish into it on the light one. */
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 0.875rem;
+  background: var(--bq-window-bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
   overflow: hidden;
-  box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.75),
-              0 0 0 1px rgba(255, 255, 255, 0.03) inset;
   color: #e4e4e7;
 }
 
-/* A <pre> does not wrap, so without this the longest line of the sample sets
-   the width of the element -- and, since nothing above it is constrained
-   either, of the page. On a phone that pushed the whole layout sideways: the
-   headline was cut mid-word, the buttons ran off the edge, and the header's
-   search and menu were carried off-screen with it. */
 .bq-hero__code pre {
   margin: 0;
   overflow-x: auto;
@@ -294,7 +460,7 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   font-family: var(--sl-font-mono);
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .bq-hero__code-bar span {
@@ -310,14 +476,173 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
+   STAT BAND
+   ═══════════════════════════════════════════════════════════ */
+
+/* Kept on the hero's own surface. The dark block used to stop at a line and
+   hand straight over to a white page; the numbers carry it across instead, and
+   they are the one thing a visitor scanning the page will actually stop on. */
+.bq-stats {
+  position: relative;
+  background: var(--bq-hero-bg);
+  border-bottom: 1px solid var(--bq-line);
+  color: var(--bq-hero-fg);
+}
+
+.bq-stats::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(50rem 12rem at 50% 0%,
+              rgba(99, 102, 241, 0.15), transparent 72%);
+}
+
+.bq-stats__inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 74rem;
+  margin: 0 auto;
+  padding: 2.4rem 1.5rem;
+}
+
+.bq-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding-inline: 1rem;
+  text-align: center;
+}
+
+/* Between, not around -- the first column gets no rule to its left. */
+.bq-stat + .bq-stat {
+  border-inline-start: 1px solid rgba(var(--bq-hero-tint), 0.1);
+}
+
+.bq-stat__figure {
+  font-family: var(--bq-display);
+  font-size: clamp(1.7rem, 3.2vw, 2.3rem);
+  font-weight: 800;
+  font-stretch: 120%;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  background: var(--bq-hero-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bq-stat__label {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--bq-hero-dim);
+  text-wrap: balance;
+}
+
+/* One of the four is a claim with a measurement behind it, so it links to it. */
+.bq-stat__label--link {
+  color: rgba(var(--bq-hero-tint), 0.78);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(var(--bq-hero-tint), 0.35);
+  transition: color 0.18s var(--bq-ease), border-color 0.18s var(--bq-ease);
+}
+
+.bq-stat__label--link:hover {
+  color: var(--bq-hero-fg);
+  border-bottom-color: currentColor;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STACK WALL
+   ═══════════════════════════════════════════════════════════ */
+
+.bq-wall {
+  padding-block: 3.5rem 0;
+}
+
+.bq-wall__title {
+  text-align: center;
+  font-family: var(--sl-font-mono);
+  font-size: 0.73rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--bq-hero-dim);
+  margin: 0 0 1.75rem;
+}
+
+/* One shared grid of rules rather than eight bordered boxes.
+
+   Giving each cell its own border doubles every interior line and leaves a
+   1px gap wherever four corners meet. A single outer frame plus one-directional
+   rules inside gives an even hairline everywhere. */
+.bq-wall__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--bq-line);
+  border-radius: 1.1rem;
+  overflow: hidden;
+  background: var(--bq-film);
+}
+
+.bq-wall__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: rgba(var(--bq-hero-tint), 0.82);
+  border-inline-start: 1px solid var(--bq-line-soft);
+  border-block-start: 1px solid var(--bq-line-soft);
+  transition: background 0.2s var(--bq-ease), color 0.2s var(--bq-ease);
+}
+
+/* The frame already draws the outside edges. */
+.bq-wall__cell:nth-child(4n + 1) { border-inline-start: none; }
+.bq-wall__cell:nth-child(-n + 4) { border-block-start: none; }
+
+.bq-wall__cell:hover {
+  background: var(--bq-film-2);
+  color: var(--bq-hero-fg);
+}
+
+.bq-wall__cell svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+  color: var(--sl-color-accent);
+  opacity: 0.85;
+}
+
+@media (max-width: 52rem) {
+  .bq-wall__grid { grid-template-columns: repeat(2, 1fr); }
+  .bq-wall__cell:nth-child(4n + 1) { border-inline-start: 1px solid var(--bq-line-soft); }
+  .bq-wall__cell:nth-child(-n + 4) { border-block-start: 1px solid var(--bq-line-soft); }
+  .bq-wall__cell:nth-child(2n + 1) { border-inline-start: none; }
+  .bq-wall__cell:nth-child(-n + 2) { border-block-start: none; }
+  .bq-wall__cell { padding: 1.25rem 0.75rem; font-size: 0.84rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════
    FEATURE GRID
    ═══════════════════════════════════════════════════════════ */
 
+/* A bento, not a wall of identical tiles.
+
+   Twelve cards at one size is exactly what read as "simple". The three starred
+   features take two columns each, and `dense` back-fills the single column each
+   of them leaves at the end of its row -- so the grid alternates wide and
+   narrow with no holes: 3x2 + 9x1 = 15 units, five full rows of three. */
 .bq-features {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(17.5rem, 100%), 1fr));
   /* 1fr rows => every row is as tall as the tallest card, so all cards match */
   grid-auto-rows: 1fr;
+  grid-auto-flow: dense;
   align-items: stretch;
   gap: 1rem;
 }
@@ -327,17 +652,20 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 1.6rem 1.5rem;
-  background: var(--sl-color-bg);
-  border: 1px solid var(--sl-color-hairline);
-  border-radius: var(--bq-radius, 0.75rem);
+  padding: 1.75rem 1.6rem;
+  /* A film, not a fill. An opaque card would punch its own ground through any
+     band it sits on; a translucent one picks the band up. */
+  background:
+    linear-gradient(180deg, var(--bq-film-2), var(--bq-film));
+  border: 1px solid var(--bq-line);
+  border-radius: 1.1rem;
   transition: border-color 0.22s var(--bq-ease),
               box-shadow 0.22s var(--bq-ease),
               transform 0.22s var(--bq-ease);
 }
 
 .bq-card:hover {
-  border-color: color-mix(in srgb, var(--sl-color-accent) 40%, var(--sl-color-hairline));
+  border-color: color-mix(in srgb, var(--sl-color-accent) 40%, var(--bq-line));
   box-shadow: 0 8px 30px -10px color-mix(in srgb, var(--sl-color-accent) 22%, transparent);
   transform: translateY(-2px);
 }
@@ -348,14 +676,32 @@
   justify-content: center;
   flex: none;
   align-self: flex-start;
-  width: 2.5rem;
-  height: 2.5rem;
-  font-size: 1.2rem;
-  line-height: 1;
-  border-radius: 0.6rem;
-  background: var(--sl-color-gray-7);
-  border: 1px solid var(--sl-color-hairline);
-  margin-bottom: 1.1rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.65rem;
+  /* Tinted with the brand rather than grey, so the icon is part of the page
+     instead of a swatch sitting on it. */
+  background: linear-gradient(140deg,
+              rgba(99, 102, 241, 0.16), rgba(139, 92, 246, 0.09));
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  color: var(--bq-indigo);
+  margin-bottom: 1.15rem;
+  transition: transform 0.22s var(--bq-ease), border-color 0.22s var(--bq-ease);
+}
+
+.bq-card__icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+[data-theme='dark'] .bq-card__icon {
+  color: #a5b4fc;
+}
+
+/* The icon leans in with the card rather than sitting still while it moves. */
+.bq-card:hover .bq-card__icon {
+  transform: scale(1.06);
+  border-color: rgba(99, 102, 241, 0.45);
 }
 
 .bq-card h3 {
@@ -363,30 +709,79 @@
   font-weight: 620;
   letter-spacing: -0.015em;
   line-height: 1.35;
-  color: var(--sl-color-white);
+  color: var(--bq-hero-fg);
   margin: 0 0 0.45rem;
 }
 
 .bq-card p {
   font-size: 0.855rem;
   line-height: 1.62;
-  color: var(--sl-color-gray-3);
+  color: var(--bq-hero-dim);
   margin: 0;
   text-wrap: pretty;
 }
 
-/* Highlighted feature */
+/* Highlighted feature.
+
+   These three were nominally starred and looked exactly like the other nine: a
+   5% tint on a card is not a distinction anyone notices, so the emphasis was
+   invisible. A drawn edge along the top is. */
 .bq-card--star {
-  border-color: color-mix(in srgb, var(--sl-color-accent) 28%, var(--sl-color-hairline));
+  border-color: color-mix(in srgb, var(--sl-color-accent) 30%, var(--bq-line));
   background:
     linear-gradient(165deg,
-      color-mix(in srgb, var(--sl-color-accent) 5%, transparent),
-      transparent 55%),
-    var(--sl-color-bg);
+      color-mix(in srgb, var(--sl-color-accent) 10%, transparent),
+      var(--bq-film) 58%),
+    var(--bq-film);
+}
+
+/* Two columns wide, and the extra room goes into the type rather than into
+   more empty card. */
+.bq-card--star {
+  grid-column: span 2;
+  padding: 2.1rem 2rem;
+}
+
+/* Icon at the top, text at the bottom, air between.
+
+   A wide card holding the same two lines as a narrow one leaves its lower half
+   empty, which reads as an unfinished card rather than a spacious one. Pushing
+   the text down turns that gap into the composition. */
+.bq-card--star h3 {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  font-size: 1.12rem;
+  letter-spacing: -0.022em;
+}
+
+.bq-card--star p {
+  font-size: 0.9rem;
+  max-width: 30rem;
 }
 
 .bq-card--star .bq-card__icon {
-  background: color-mix(in srgb, var(--sl-color-accent) 10%, var(--sl-color-bg));
+  width: 2.9rem;
+  height: 2.9rem;
+}
+
+.bq-card--star .bq-card__icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.bq-card--star::before {
+  content: '';
+  position: absolute;
+  inset-inline: 1.25rem;
+  top: -1px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+              transparent, var(--bq-indigo) 22%, var(--bq-spark) 78%, transparent);
+}
+
+.bq-card--star .bq-card__icon {
+  background: color-mix(in srgb, var(--sl-color-accent) 10%, var(--bq-hero-bg));
   border-color: color-mix(in srgb, var(--sl-color-accent) 25%, transparent);
 }
 
@@ -397,9 +792,9 @@
 .bq-compare-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--sl-color-hairline);
+  border: 1px solid var(--bq-line);
   border-radius: var(--bq-radius, 0.75rem);
-  background: var(--sl-color-bg);
+  background: var(--bq-hero-bg);
 }
 
 .bq-compare {
@@ -413,17 +808,18 @@
 .bq-compare td {
   padding: 0.85rem 1.15rem;
   text-align: left;
-  border-bottom: 1px solid var(--sl-color-hairline-light);
+  border-bottom: 1px solid var(--bq-line-soft);
 }
 
 .bq-compare thead th {
-  background: var(--sl-color-gray-7);
-  font-size: 0.72rem;
+  background: rgba(var(--bq-hero-tint), 0.04);
+  font-family: var(--sl-font-mono);
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--sl-color-gray-3);
-  border-bottom: 1px solid var(--sl-color-hairline);
+  color: var(--bq-hero-dim);
+  border-bottom: 1px solid var(--bq-line);
   white-space: nowrap;
   position: sticky;
   top: 0;
@@ -439,12 +835,12 @@
 }
 
 .bq-compare tbody tr:hover {
-  background: var(--sl-color-gray-7);
+  background: rgba(var(--bq-hero-tint), 0.04);
 }
 
 .bq-compare tbody th {
   font-weight: 500;
-  color: var(--sl-color-gray-1);
+  color: rgba(var(--bq-hero-tint), 0.88);
 }
 
 .bq-compare .bq-c {
@@ -452,14 +848,44 @@
   width: 8.5rem;
 }
 
-/* Buraq column emphasis */
+/* Buraq column emphasis.
+
+   A flat 3.5% wash behind three cells reads as a rendering artefact rather than
+   a decision. Treating the column as one object -- outlined down both sides and
+   capped at the top -- is what actually sends the eye to it. */
 .bq-compare .bq-col-buraq {
+  position: relative;
   color: var(--sl-color-accent);
-  background: color-mix(in srgb, var(--sl-color-accent) 6%, transparent);
+  background: color-mix(in srgb, var(--sl-color-accent) 7%, var(--bq-hero-bg));
+  box-shadow:
+    inset  1px 0 0 color-mix(in srgb, var(--sl-color-accent) 20%, transparent),
+    inset -1px 0 0 color-mix(in srgb, var(--sl-color-accent) 20%, transparent);
 }
 
-.bq-compare tbody .bq-col-buraq {
-  background: color-mix(in srgb, var(--sl-color-accent) 3.5%, transparent);
+.bq-compare thead .bq-col-buraq {
+  background: color-mix(in srgb, var(--sl-color-accent) 14%, var(--bq-hero-bg));
+  box-shadow:
+    inset  1px 0 0 color-mix(in srgb, var(--sl-color-accent) 20%, transparent),
+    inset -1px 0 0 color-mix(in srgb, var(--sl-color-accent) 20%, transparent),
+    inset  0 2px 0 var(--bq-spark);
+}
+
+.bq-col-buraq__tag {
+  display: inline-block;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sl-color-accent) 18%, transparent);
+  /* Not --sl-color-accent: the accent on its own 18% tint is 3.95:1 light and
+     4.19:1 dark. accent-high exists for exactly this case. */
+  color: var(--sl-color-accent-high);
+}
+
+/* The last row closes the column off, so it does not run into the card edge. */
+.bq-compare tbody tr:last-child .bq-col-buraq {
+  box-shadow:
+    inset  1px  0 0 color-mix(in srgb, var(--sl-color-accent) 20%, transparent),
+    inset -1px  0 0 color-mix(in srgb, var(--sl-color-accent) 20%, transparent),
+    inset  0 -1px 0 color-mix(in srgb, var(--sl-color-accent) 20%, transparent);
 }
 
 /* Cell markers */
@@ -477,7 +903,7 @@
   height: 1.35rem;
   border-radius: 50%;
   font-size: 0.8rem;
-  color: #16a34a;
+  color: #166534;
   background: rgba(22, 163, 74, 0.1);
 }
 
@@ -486,50 +912,38 @@
   height: 1.35rem;
   border-radius: 50%;
   font-size: 0.8rem;
-  color: #a1a1aa;
-  background: var(--sl-color-gray-6);
+  color: #6b655f;
+  background: rgba(var(--bq-hero-tint), 0.07);
 }
 
 .bq-partial {
   font-size: 0.72rem;
   font-weight: 550;
   letter-spacing: 0.01em;
-  color: #b45309;
+  color: #92400e;
   background: rgba(245, 158, 11, 0.12);
   border-radius: 999px;
   padding: 0.16rem 0.55rem;
 }
 
 [data-theme='dark'] .bq-yes     { color: #4ade80; background: rgba(74, 222, 128, 0.13); }
-[data-theme='dark'] .bq-no      { color: #52525b; background: rgba(255, 255, 255, 0.05); }
+[data-theme='dark'] .bq-no      { color: #a1a1aa; background: rgba(255, 255, 255, 0.05); }
 [data-theme='dark'] .bq-partial { color: #fbbf24; background: rgba(251, 191, 36, 0.13); }
 
 /* ═══════════════════════════════════════════════════════════
    AI SECTION
    ═══════════════════════════════════════════════════════════ */
 
-.bq-ai {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  padding: 3.5rem 3rem;
-  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 20%, var(--sl-color-hairline));
-  border-radius: 1.25rem;
-  background:
-    radial-gradient(48rem 24rem at 15% -10%,
-      color-mix(in srgb, var(--sl-color-accent) 9%, transparent), transparent 65%),
-    radial-gradient(38rem 22rem at 90% 8%,
-      color-mix(in srgb, #8b5cf6 8%, transparent), transparent 62%),
-    var(--sl-color-bg);
-}
+/* The tinted box this section used to sit in is now `.bq-band--ai`, running the
+   full width of the page. A box inside a page inside a band was two frames too
+   many, and it capped the section at the width of a card. */
 
-.bq-ai .bq-sub {
-  margin-bottom: 2.25rem;
-}
-
+/* 20rem, not 16.5rem. Freed from its box the section got wide enough to fit
+   four columns, and six cards in four columns is a full row followed by two
+   strays. A wider minimum settles it at three, which divides. */
 .bq-ai-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(16.5rem, 100%), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
   grid-auto-rows: 1fr;
   align-items: stretch;
   gap: 0.875rem;
@@ -541,8 +955,8 @@
   flex-direction: column;
   height: 100%;
   padding: 1.35rem 1.3rem;
-  background: color-mix(in srgb, var(--sl-color-bg) 70%, transparent);
-  border: 1px solid var(--sl-color-hairline);
+  background: color-mix(in srgb, var(--bq-hero-bg) 70%, transparent);
+  border: 1px solid var(--bq-line);
   border-radius: 0.75rem;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -551,31 +965,51 @@
 }
 
 .bq-ai-card:hover {
-  border-color: color-mix(in srgb, var(--sl-color-accent) 38%, var(--sl-color-hairline));
+  border-color: color-mix(in srgb, var(--sl-color-accent) 38%, var(--bq-line));
   transform: translateY(-2px);
 }
 
+/* Sized as a tile, not as a glyph. This was `font-size: 1.15rem` from when the
+   icon was an emoji, and an inline SVG has no font size to inherit -- so it
+   collapsed and the cards rendered with nothing above the title. */
 .bq-ai-card__icon {
-  font-size: 1.15rem;
-  line-height: 1;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
   align-self: flex-start;
-  margin-bottom: 0.7rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.6rem;
+  background: linear-gradient(140deg,
+              rgba(99, 102, 241, 0.16), rgba(139, 92, 246, 0.09));
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  /* Indigo, not the pastel: #a5b4fc falls under 3:1 against a light card. */
+  color: var(--bq-indigo);
+  margin-bottom: 0.9rem;
+}
+
+[data-theme='dark'] .bq-ai-card__icon {
+  color: #a5b4fc;
+}
+
+.bq-ai-card__icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 .bq-ai-card h3 {
   font-size: 0.9rem;
   font-weight: 620;
   letter-spacing: -0.014em;
-  color: var(--sl-color-white);
+  color: var(--bq-hero-fg);
   margin: 0 0 0.4rem;
 }
 
 .bq-ai-card p {
   font-size: 0.83rem;
   line-height: 1.6;
-  color: var(--sl-color-gray-3);
+  color: var(--bq-hero-dim);
   margin: 0;
   text-wrap: pretty;
 }
@@ -583,12 +1017,11 @@
 /* AI code window */
 .bq-ai-code {
   margin-top: 2rem;
-  background: #0c0c10;
+  background: var(--bq-window-bg);
   /* Dark in both themes, as above. */
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.875rem;
   overflow: hidden;
-  box-shadow: 0 16px 44px -18px rgba(0, 0, 0, 0.6);
   color: #e4e4e7;
 }
 
@@ -607,51 +1040,80 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   font-family: var(--sl-font-mono);
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.55);
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CTA
+   CLOSING BAND
    ═══════════════════════════════════════════════════════════ */
 
-.bq-cta {
+/* Full-bleed, on the hero's surface. As a rounded box floating on the page this
+   read as one more card in a page already made of cards; as a band it closes
+   the page the way the hero opens it. */
+.bq-closing {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   text-align: center;
-  padding: 4.5rem 2rem;
-  border-radius: 1.25rem;
+  padding: 6.5rem 1.5rem;
   background: var(--bq-hero-bg);
+  border-top: 1px solid var(--bq-line);
   color: var(--bq-hero-fg);
-  margin-bottom: 6rem;
 }
 
-.bq-cta::before {
+.bq-closing::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(40rem 22rem at 50% 0%,  rgba(99, 102, 241, 0.32), transparent 65%),
-    radial-gradient(32rem 20rem at 85% 100%, rgba(139, 92, 246, 0.22), transparent 62%);
+    radial-gradient(56rem 26rem at 50% 0%,    rgba(99, 102, 241, 0.28), transparent 68%),
+    radial-gradient(40rem 22rem at 82% 100%,  rgba(139, 92, 246, 0.18), transparent 64%),
+    /* Reaches the bottom edge. Without it the two pools had both faded by the
+       time the band's padding ran out, and it ended in a slab of flat black. */
+    radial-gradient(46rem 18rem at 22% 108%,  rgba(99, 102, 241, 0.16), transparent 66%);
 }
 
-.bq-cta h2 {
-  font-size: clamp(1.6rem, 3.2vw, 2.25rem);
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 1.15;
+/* The hero's raked lines again, so both ends of the page are the same surface
+   rather than two dark blocks that merely share a colour. */
+.bq-closing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--bq-rake);
+  mask-image: var(--bq-lattice), radial-gradient(ellipse 68% 62% at 50% 50%, #000 2%, transparent 68%);
+  mask-composite: intersect;
+  mask-size: 72px 72px, cover;
+  -webkit-mask-image: var(--bq-lattice), radial-gradient(ellipse 68% 62% at 50% 50%, #000 2%, transparent 68%);
+  -webkit-mask-composite: source-in;
+  -webkit-mask-size: 72px 72px, cover;
+}
+
+.bq-closing__inner {
+  position: relative;
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+.bq-closing h2 {
+  font-family: var(--bq-display);
+  font-size: clamp(1.85rem, 3.5vw, 2.6rem);
+  font-weight: 780;
+  font-stretch: 118%;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
   color: var(--bq-hero-fg);
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.9rem;
   text-wrap: balance;
 }
 
-.bq-cta p {
-  font-size: 1rem;
+.bq-closing p {
+  font-size: 1.02rem;
   line-height: 1.65;
-  color: rgba(var(--bq-hero-tint), 0.6);
+  color: var(--bq-hero-dim);
   max-width: 34rem;
-  margin: 0 auto 2rem;
+  margin: 0 auto 2.25rem;
   text-wrap: pretty;
 }
 
@@ -669,7 +1131,7 @@
   border-radius: 0.6rem;
   font-family: var(--sl-font-mono);
   font-size: 0.855rem;
-  color: #c7d2fe;
+  color: var(--bq-hero-code);
   white-space: nowrap;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -677,7 +1139,7 @@
 
 .bq-cta__install::before {
   content: '$';
-  color: rgba(var(--bq-hero-tint), 0.32);
+  color: rgba(var(--bq-hero-tint), 0.45);
   user-select: none;
 }
 
@@ -689,13 +1151,90 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
-   DIVIDER
+   MOTION
    ═══════════════════════════════════════════════════════════ */
 
-.bq-divider {
-  border: none;
-  border-top: 1px solid var(--sl-color-hairline);
-  margin: 0;
+/* One orchestrated arrival, then reveals on scroll.
+
+   `translate`, not `transform`. They are separate properties, and that matters
+   here: a reveal that ends in a filled `transform` keeps that property under
+   animation control forever, which would silently kill the hover lift on every
+   card it touched. Animating `translate` leaves `transform` free. */
+@keyframes bq-rise {
+  from {
+    opacity: 0;
+    translate: 0 1.4rem;
+  }
+}
+
+@keyframes bq-bloom-in {
+  from {
+    opacity: 0;
+    scale: 1.12;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The hero, in the order it is read. `backwards` is what makes the delay
+     hold the start state instead of flashing the finished one first. */
+  .bq-hero__badge,
+  .bq-hero h1,
+  .bq-hero__sub,
+  .bq-hero__actions,
+  .bq-hero__code {
+    animation: bq-rise 0.85s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  .bq-hero__badge   { animation-delay: 0.06s; }
+  .bq-hero h1       { animation-delay: 0.16s; }
+  .bq-hero__sub     { animation-delay: 0.3s; }
+  .bq-hero__actions { animation-delay: 0.4s; }
+
+  /* The screenshot is the biggest object on the page, so it takes longer and
+     comes from further down -- a big thing that moved as fast as the badge
+     would read as weightless. */
+  .bq-hero__code {
+    animation-duration: 1.15s;
+    animation-delay: 0.5s;
+  }
+
+  /* The light comes up under all of it rather than arriving with it. */
+  .bq-hero::before {
+    animation: bq-bloom-in 1.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  /* Scroll reveals are gated twice: on support, because a browser without
+     view() timelines would run this once on load and leave everything below
+     the fold at opacity 0 forever, and on motion preference. */
+  @supports (animation-timeline: view()) {
+    .bq-stat,
+    .bq-wall__cell,
+    .bq-head,
+    .bq-card,
+    .bq-ai-card,
+    .bq-async-card,
+    .bq-async-bench,
+    .bq-compare-wrap,
+    .bq-ai-code,
+    .bq-closing__inner {
+      animation: bq-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 42%;
+    }
+
+    /* Across a row, not down the document: a single shared range would move a
+       whole grid as one slab. A few staggered steps make it read as a row of
+       separate things arriving. */
+    .bq-card:nth-child(3n + 2),
+    .bq-ai-card:nth-child(3n + 2),
+    .bq-wall__cell:nth-child(4n + 2) { animation-range: entry 0% entry 50%; }
+
+    .bq-card:nth-child(3n + 3),
+    .bq-ai-card:nth-child(3n + 3),
+    .bq-wall__cell:nth-child(4n + 3) { animation-range: entry 0% entry 58%; }
+
+    .bq-wall__cell:nth-child(4n + 4) { animation-range: entry 0% entry 66%; }
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -704,19 +1243,30 @@
 
 @media (max-width: 60rem) {
   .bq-section { padding-block: 4.5rem; }
-  .bq-ai      { padding: 2.75rem 2rem; }
-  .bq-cta     { padding: 3.5rem 1.75rem; }
+  .bq-closing { padding-block: 5rem; }
+  .bq-head    { margin-bottom: 2.75rem; }
 }
 
 @media (max-width: 45rem) {
   .bq-hero        { padding: 4.5rem 1.25rem 4rem; }
   .bq-hero__code  { border-radius: 0.75rem; }
   .bq-section     { padding-block: 3.5rem; }
+  .bq-closing     { padding: 4rem 1.25rem; }
+  .bq-head        { margin-bottom: 2.25rem; }
   .bq-sub         { margin-bottom: 2rem; }
-  .bq-ai          { padding: 2rem 1.35rem; border-radius: 1rem; }
-  .bq-cta         { padding: 3rem 1.35rem; border-radius: 1rem; margin-bottom: 4rem; }
   .bq-page        { padding-inline: 1.15rem; }
   .bq-card        { padding: 1.35rem 1.25rem; }
+  .bq-card--star  { grid-column: auto; padding: 1.5rem 1.35rem; }
+  .bq-card--star h3 { font-size: 1rem; }
+
+  /* Four columns at this width leaves each figure with a two-word label on
+     three lines. Two by two, with the rules following the new grid. */
+  .bq-stats__inner {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.6rem 0;
+    padding: 2rem 1.25rem;
+  }
+  .bq-stat:nth-child(2n + 1) { border-inline-start: none; }
 }
 
 @media (max-width: 26rem) {
@@ -726,7 +1276,21 @@
     align-items: stretch;
   }
   .bq-btn { justify-content: center; }
-  .bq-cta__install { font-size: 0.76rem; }
+
+  /* The pill is `white-space: nowrap` with its own horizontal scroll, so at
+     390px the command ran off mid-word -- readable only by dragging a scrollbar
+     most people will not notice is there. The one command this section exists
+     to show should be legible without that, so it wraps here instead. */
+  .bq-cta__install {
+    display: flex;
+    align-items: flex-start;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    overflow-x: visible;
+    text-align: start;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -743,19 +1307,19 @@
 .bq-async-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--sl-color-hairline);
+  border: 1px solid var(--bq-line);
   border-radius: var(--bq-radius, 0.75rem);
-  background: var(--sl-color-bg);
+  background: var(--bq-hero-bg);
   overflow: hidden;
 }
 
 .bq-async-card--ours {
-  border-color: color-mix(in srgb, var(--sl-color-accent) 35%, var(--sl-color-hairline));
+  border-color: color-mix(in srgb, var(--sl-color-accent) 35%, var(--bq-line));
   background:
     linear-gradient(165deg,
       color-mix(in srgb, var(--sl-color-accent) 5%, transparent),
       transparent 55%),
-    var(--sl-color-bg);
+    var(--bq-hero-bg);
 }
 
 .bq-async-card__head {
@@ -764,7 +1328,7 @@
   gap: 0.6rem;
   flex-wrap: wrap;
   padding: 0.85rem 1.15rem;
-  border-bottom: 1px solid var(--sl-color-hairline);
+  border-bottom: 1px solid var(--bq-line);
 }
 
 .bq-async-tag {
@@ -778,13 +1342,13 @@
 }
 
 .bq-async-tag--muted {
-  color: var(--sl-color-gray-3);
-  background: var(--sl-color-gray-6);
+  color: var(--bq-hero-dim);
+  background: rgba(var(--bq-hero-tint), 0.07);
 }
 
 .bq-async-note {
   font-size: 0.78rem;
-  color: var(--sl-color-gray-3);
+  color: var(--bq-hero-dim);
 }
 
 .bq-async-card pre {
@@ -803,26 +1367,26 @@
 .bq-async-card__foot {
   margin: 0;
   padding: 0.85rem 1.15rem;
-  border-top: 1px solid var(--sl-color-hairline);
+  border-top: 1px solid var(--bq-line);
   font-size: 0.82rem;
   line-height: 1.6;
-  color: var(--sl-color-gray-3);
+  color: var(--bq-hero-dim);
   text-wrap: pretty;
 }
 
 .bq-async-card__foot code {
   font-family: var(--sl-font-mono);
   font-size: 0.92em;
-  color: var(--sl-color-gray-2);
+  color: rgba(var(--bq-hero-tint), 0.72);
 }
 
 /* ─── Benchmark bars ─────────────────────────────────────── */
 
 .bq-async-bench {
-  border: 1px solid var(--sl-color-hairline);
+  border: 1px solid var(--bq-line);
   border-radius: var(--bq-radius, 0.75rem);
   padding: 1.5rem 1.6rem;
-  background: var(--sl-color-bg);
+  background: var(--bq-hero-bg);
 }
 
 .bq-async-bench__title {
@@ -831,7 +1395,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--sl-color-gray-3);
+  color: var(--bq-hero-dim);
 }
 
 .bq-async-bench__rows {
@@ -849,7 +1413,7 @@
 
 .bq-async-bench__label {
   font-size: 0.85rem;
-  color: var(--sl-color-gray-2);
+  color: rgba(var(--bq-hero-tint), 0.72);
 }
 
 .bq-async-bench__label code {
@@ -861,7 +1425,7 @@
   height: 0.6rem;
   width: var(--w);
   border-radius: 999px;
-  background: var(--sl-color-gray-4);
+  background: rgba(var(--bq-hero-tint), 0.3);
   min-width: 0.6rem;
 }
 
@@ -878,14 +1442,14 @@
 }
 
 .bq-async-bench__val--slow {
-  color: var(--sl-color-gray-3);
+  color: var(--bq-hero-dim);
 }
 
 .bq-async-bench__foot {
   margin: 1.2rem 0 0;
   font-size: 0.78rem;
   line-height: 1.6;
-  color: var(--sl-color-gray-3);
+  color: var(--bq-hero-dim);
   text-wrap: pretty;
 }
 
@@ -908,7 +1472,7 @@
 .bq-compare__link {
   color: inherit;
   text-decoration: none;
-  border-bottom: 1px dotted var(--sl-color-gray-4);
+  border-bottom: 1px dotted rgba(var(--bq-hero-tint), 0.3);
   transition: color 0.15s var(--bq-ease), border-color 0.15s var(--bq-ease);
 }
 
@@ -927,7 +1491,7 @@
   margin: 0.9rem 0 0;
   font-size: 0.8rem;
   line-height: 1.6;
-  color: var(--sl-color-gray-3);
+  color: var(--bq-hero-dim);
   text-wrap: pretty;
 }
 

@@ -102,6 +102,14 @@ if (process.env.SCHEME) {
 await call('Page.navigate', { url });
 await new Promise((r) => setTimeout(r, 2500));
 
+// SCROLL=1200 to look at what is below the fold.
+if (process.env.SCROLL) {
+  await call('Runtime.evaluate', {
+    expression: `window.scrollTo(0, ${Number(process.env.SCROLL)})`,
+  });
+  await new Promise((r) => setTimeout(r, 600));
+}
+
 const { result } = await call('Runtime.evaluate', {
   returnByValue: true,
   expression: `(() => {

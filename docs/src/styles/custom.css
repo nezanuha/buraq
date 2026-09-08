@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Onest:wght@300..800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=Onest:wght@300..800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 @plugin "frutjam";
 
@@ -11,33 +11,108 @@
   --sl-font:      'Onest', system-ui, -apple-system, sans-serif;
   --sl-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
+  /* Display face, used at expanded width and heavy weight for headlines only.
+     Archivo has a real `wdth` axis, so the display type can be genuinely broad
+     rather than a normal-width grotesk set large -- which is what every other
+     framework's landing page looks like. Wide and heavy reads as machinery;
+     a high-contrast serif would have read as a magazine. */
+  --bq-display:   'Archivo', 'Onest', system-ui, sans-serif;
+
+  /* The girih tile, defined once for the whole site.
+
+     Eight-point stars: two squares per tile, one turned 45 degrees, with the
+     diamond's vertices on the tile's edge midpoints so the motif continues
+     across tiles into one grid instead of a field of stamps. Always painted
+     through a mask, never as a coloured image, so one tile serves both themes. */
+  --bq-lattice: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2772%27%20height%3D%2772%27%20viewBox%3D%270%200%2072%2072%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23000%27%20stroke-width%3D%271.15%27%3E%3Cpath%20d%3D%27M36%200%2072%2036%2036%2072%200%2036Z%27%2F%3E%3Cpath%20d%3D%27M10.5%2010.5H61.5V61.5H10.5Z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+
+  /* Indigo is the brand and marks links; the spark is state and emphasis --
+     where you are, what is current, what is being pointed at. Two tiers, so
+     neither has to do both jobs badly. Sky-700 in light: the brighter #0284c7
+     lands at 4.49:1 on white, which is under the floor for 0.8rem sidebar text. */
+  --bq-spark:    #0369a1;
+  --bq-doc-rake: rgba(45, 45, 45, 0.042);
+
+  /* Paper grain. One tile of grey fractal noise, blended into the ground rather
+     than laid over the content, so it textures the page without touching the
+     legibility of anything on it. */
+  --bq-grain: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27170%27%20height%3D%27170%27%3E%3Cfilter%20id%3D%27g%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.9%27%20numOctaves%3D%274%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27saturate%27%20values%3D%270%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27170%27%20height%3D%27170%27%20filter%3D%27url%28%23g%29%27%20opacity%3D%270.34%27%2F%3E%3C%2Fsvg%3E");
+  --bq-grain-blend: multiply;
+
   /* Brand accent — indigo */
   --sl-color-accent-low:  #e0e7ff;
   --sl-color-accent:      #4f46e5;
   --sl-color-accent-high: #3730a3;
 
-  /* Neutral scale — warm-neutral zinc */
-  --sl-color-white:   #09090b;
-  --sl-color-gray-1:  #18181b;
-  --sl-color-gray-2:  #3f3f46;
-  --sl-color-gray-3:  #71717a;
-  --sl-color-gray-4:  #a1a1aa;
-  --sl-color-gray-5:  #e4e4e7;
-  --sl-color-gray-6:  #f4f4f5;
-  --sl-color-gray-7:  #fafafa;
+  /* Neutral scale — warm stone.
+
+     Paper and pencil.
+
+     The ground, the muted tone and the foreground are CLAUDE.md's paper values:
+     #fdfbf7 warm paper, #e5e0d8 old paper, and #2d2d2d soft pencil rather than
+     a pure black -- the site borrows that system's paper qualities without its
+     wobbly borders, handwritten faces or red accent, which is a deliberate
+     divergence, not an oversight.
+
+     The dark theme went to night blue; leaving light on a cool zinc-on-white
+     kept the two halves of the site reading as different products. Warming the
+     whole scale puts the docs on the same paper the home page uses. Surfaces
+     stay darker than the page, which is the right direction in light -- gray-7
+     lighter than the background would have inverted every card and code block.
+
+     Checked: gray-3 on the page ground is 4.75:1, so body-adjacent text still
+     clears the floor. */
+  --sl-color-white:   #2d2d2d;
+  --sl-color-gray-1:  #3a3a38;
+  --sl-color-gray-2:  #3a3733;
+  --sl-color-gray-3:  #6b645e;
+  --sl-color-gray-4:  #a8a29e;
+  --sl-color-gray-5:  #eae6df;
+  --sl-color-gray-6:  #f5f2ec;
+  --sl-color-gray-7:  #faf8f4;
   --sl-color-black:   #ffffff;
 
   --sl-color-text:        var(--sl-color-gray-2);
   --sl-color-text-accent: var(--sl-color-accent);
 
+  /* The ground is plain white now; the paper lives in what sits on it -- the
+     panels, the hairlines and the grain are still warm. Asked for three times,
+     each time lighter, so the tint has moved off the background entirely and
+     into the surfaces, where it still reads without being the first thing seen. */
   --sl-color-bg:             #ffffff;
   --sl-color-bg-nav:         rgba(255, 255, 255, 0.82);
   --sl-color-bg-sidebar:     #ffffff;
-  --sl-color-bg-inline-code: #f4f4f5;
+  --sl-color-bg-inline-code: #f5f2ec;
 
-  --sl-color-hairline:       #e8e8ec;
-  --sl-color-hairline-light: #f1f1f4;
-  --sl-color-hairline-shade: #e4e4e7;
+  --sl-color-hairline:       #eae6df;
+  --sl-color-hairline-light: #f2efe9;
+  --sl-color-hairline-shade: #eae6df;
+
+  /* Doc code blocks, referenced from astro.config.mjs. These follow the theme:
+     light block on the light page, dark block on the dark one.
+
+     The earlier attempt at a light block gave it only 1.06:1 against the page,
+     which is why it read as absent. Fill alone cannot carry a light panel --
+     the border is what defines it, so this pairs a real tint with a real edge
+     rather than relying on either by itself. */
+  /* Neutral, not beige.
+
+     The block was #f7f4ee to match the site's warm surfaces, and every syntax
+     palette put on it came out either clashing or muted -- a cream ground
+     desaturates whatever sits on it, so the light theme kept reading as dull
+     however the theme itself was chosen. Syntax colours are drawn for a neutral
+     ground; this gives them one, and the border still ties the block to the
+     page. */
+  --bq-code-bg:     #f6f7f9;
+  --bq-code-chrome: #eceff3;
+  --bq-code-border: #e0e4ea;
+  --bq-code-fg:     #2f3236;
+  --bq-code-fg-dim: #62676e;
+
+  /* The home page's hero and AI windows, which are dark in both themes by
+     design and are a different thing from a doc code block. One value, no
+     theme variant -- that is the point of it. */
+  --bq-window-bg:   #0e1320;
 
   /* Layout */
   --sl-nav-height:    4rem;
@@ -70,14 +145,25 @@
   --sl-color-gray-7:  #131316;
   --sl-color-black:   #09090b;
 
-  --sl-color-bg:             #09090b;
-  --sl-color-bg-nav:         rgba(9, 9, 11, 0.78);
-  --sl-color-bg-sidebar:     #09090b;
+  --sl-color-bg:             #080b14;
+  --sl-color-bg-nav:         rgba(8, 11, 20, 0.78);
+  --sl-color-bg-sidebar:     #080b14;
   --sl-color-bg-inline-code: #1c1c20;
+
+  --bq-spark:    #38bdf8;
+  --bq-doc-rake: rgba(255, 255, 255, 0.055);
+  --bq-grain-blend: soft-light;
 
   --sl-color-hairline:       #232327;
   --sl-color-hairline-light: #1c1c20;
   --sl-color-hairline-shade: #232327;
+
+  --bq-code-bg:     #0e1320;
+  --bq-code-chrome: #161d2e;
+  /* On a dark page a fill difference cannot delineate; a light hairline can. */
+  --bq-code-border: rgba(255, 255, 255, 0.09);
+  --bq-code-fg:     #c0caf5;
+  --bq-code-fg-dim: #7f8ab0;
 
   --bq-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --bq-shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
@@ -90,6 +176,37 @@ body {
   font-feature-settings: 'cv01', 'cv03', 'ss01';
   letter-spacing: -0.005em;
 }
+
+/* Starlight's in-page footer carries the edit link, the last-updated line and
+   prev/next. A splash page has none of them, so on the home page it renders as
+   72px of empty flex plus a 24px margin between the closing band and the site
+   footer. Nothing to show, so nothing to reserve. */
+:root:has(.bq-hero) .bq-inpage-footer {
+  display: none;
+}
+
+/* Frutjam paints <html>, <main> and the sidebar from Tailwind's own base
+   colour, which does not consult the --sl-* palette at all. So warming the
+   tokens moved <body> to paper and left the content column and the sidebar
+   pure white -- the ground was only visible in the margins. Clearing those
+   three lets the one real background through.
+
+   Same failure as the footer: whenever a surface here looks like it ignored the
+   palette, it is because the plugin painted the element itself. */
+html {
+  background-color: var(--sl-color-bg);
+}
+
+body main,
+body .sidebar-pane,
+body footer {
+  background-color: transparent;
+}
+
+/* No grain. Texture and sleekness pull in opposite directions: a fibre
+   overlay is what makes a surface read as material, and material is the
+   opposite of the flat, exact ground a modern interface wants. The warmth
+   stays in the panel and hairline tokens, which do not add noise. */
 
 /* ═══════════════════════════════════════════════════════════
    HEADER
@@ -209,18 +326,16 @@ details[open] > summary .caret {
   color: var(--sl-color-white);
 }
 
-/* Active page */
+/* Active page.
+
+   A filled indigo pill said "this is a link, emphatically" rather than "this is
+   where you are". A lit rail down the edge is a position marker, and it leaves
+   the label itself at full text contrast instead of tinting it. */
 .sidebar-content a[aria-current='page'],
 .sidebar-content a[aria-current='page']:hover {
-  background: var(--sl-color-accent-low);
-  color: var(--sl-color-accent-high);
+  background: color-mix(in srgb, var(--bq-spark) 13%, transparent);
+  color: var(--sl-color-white);
   font-weight: 600;
-}
-
-[data-theme='dark'] .sidebar-content a[aria-current='page'],
-[data-theme='dark'] .sidebar-content a[aria-current='page']:hover {
-  background: color-mix(in srgb, var(--sl-color-accent) 15%, transparent);
-  color: var(--sl-color-accent-high);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -261,6 +376,14 @@ main:has(.bq-hero) .bq-site-footer__inner {
   }
 }
 
+/* The home page now closes on a full-bleed dark band, and the footer sits on
+   the same colour -- so the footer's usual 4.5rem top margin reads as a slab of
+   dead space between two things that are already touching, not as separation.
+   The band's own bottom padding is the separation. Doc pages keep the margin. */
+main:has(.bq-hero) .bq-site-footer {
+  margin-top: 0;
+}
+
 /* Hero code blocks — strip Starlight pre styling */
 /* NOTE: the home page carries `not-content`, so Starlight supplies no
    font-family here — set the mono stack explicitly. */
@@ -299,16 +422,86 @@ main:has(.bq-hero) .bq-site-footer__inner {
    The hero is dark in both themes, while --sl-color-white is near-black in the
    light one, so the heading came out black on black. */
 .bq-page-head h1#_top {
-  font-size: clamp(1.9rem, 4vw, 2.6rem);
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 1.12;
+  font-family: var(--bq-display);
+  font-size: clamp(1.85rem, 3.9vw, 2.55rem);
+  font-weight: 780;
+  /* 110%, against the home page's 116%. A landing page headline can be as broad
+     as it likes; a page title sits above text someone has to read, so it takes
+     the same axis a step less far. */
+  font-stretch: 110%;
+  letter-spacing: -0.026em;
+  line-height: 1.08;
   color: var(--sl-color-white);
+}
+
+/* Every page carries the mark, once, behind its title -- and nowhere near the
+   body text, where a pattern would fight the thing it is decorating. */
+.bq-page-head {
+  position: relative;
+  isolation: isolate;
+}
+
+.bq-page-head::before {
+  content: '';
+  position: absolute;
+  /* No horizontal bleed by default.
+
+     An absolutely positioned pseudo reaching past its container widens the
+     document, and at 390px the content column has no 3rem of margin to bleed
+     into -- so this scrolled the whole page sideways. The bleed is worth having
+     where there is room for it, and only there. */
+  inset: -1.5rem 0 -2rem;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--bq-doc-rake);
+  /* A radial fade, not a linear one to the element's edges.
+
+     The content panel clips this, so a mask that is still opaque where it meets
+     that boundary leaves a row of half-drawn stars along the top -- which reads
+     as a rendering fault, not as ornament. Fading out in every direction before
+     the edge means the clip never lands on anything solid. */
+  mask-image: var(--bq-lattice),
+              radial-gradient(125% 135% at 16% 52%, #000 0%, transparent 68%);
+  mask-composite: intersect;
+  mask-size: 72px 72px, cover;
+  -webkit-mask-image: var(--bq-lattice),
+                      radial-gradient(125% 135% at 16% 52%, #000 0%, transparent 68%);
+  -webkit-mask-composite: source-in;
+  -webkit-mask-size: 72px 72px, cover;
+}
+
+@media (min-width: 50rem) {
+  .bq-page-head::before { inset-inline: -3rem; }
 }
 
 .sl-markdown-content {
   font-size: 0.945rem;
   line-height: 1.75;
+}
+
+/* Body copy takes its colour from the palette.
+
+   Frutjam paints paragraphs from Tailwind's base-content at 80% alpha, which
+   composites to 3.26:1 on white -- under the floor, on all 90 doc pages. Same
+   failure as the backgrounds: the plugin styles the element itself and never
+   consults --sl-*. Anything carrying its own colour (links, inline code,
+   asides, headings) is more specific and is unaffected. */
+.sl-markdown-content,
+.sl-markdown-content p,
+.sl-markdown-content li,
+.sl-markdown-content dd,
+.sl-markdown-content td,
+.sl-markdown-content time {
+  color: var(--sl-color-text);
+}
+
+/* The edit link and "Last updated" line sit in Starlight's in-page footer,
+   outside .sl-markdown-content, so the rule above never reached them -- and
+   Frutjam had them at 3.81:1. Muted is right for them; failing is not. */
+.bq-inpage-footer,
+.bq-inpage-footer p,
+.bq-inpage-footer time {
+  color: var(--sl-color-gray-3);
 }
 
 /* Starlight reserves room for the anchor icon as padding on the heading, sized
@@ -319,11 +512,16 @@ main:has(.bq-hero) .bq-site-footer__inner {
   --sl-anchor-icon-gap: 0.45em;
 }
 
+/* h2 only. It is the one heading a reader scans for, so it gets the display
+   face; h3 and h4 sit inside the reading and stay in the text face, or the page
+   turns into a run of competing signs. */
 .sl-markdown-content h2 {
-  font-size: 1.45rem;
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  line-height: 1.25;
+  font-family: var(--bq-display);
+  font-size: 1.42rem;
+  font-weight: 720;
+  font-stretch: 106%;
+  letter-spacing: -0.02em;
+  line-height: 1.22;
   color: var(--sl-color-white);
 }
 
@@ -358,21 +556,36 @@ main:has(.bq-hero) .bq-site-footer__inner {
 /* Inline code */
 .sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
   background: var(--sl-color-bg-inline-code);
-  border: 1px solid var(--sl-color-hairline);
   border-radius: var(--bq-radius-sm);
-  padding: 0.13em 0.4em;
-  font-size: 0.845em;
+  padding: 0.12em 0.36em;
+  font-size: 0.855em;
   font-weight: 500;
   color: var(--sl-color-gray-1);
+  /* No border, and each wrapped fragment gets its own.
+
+     A long command -- `powershell -c "irm https://astral.sh/uv/install.ps1"` --
+     wraps mid-token in a normal measure. The default `slice` draws one border
+     around the whole run, so the fragments come out with open cut edges: half a
+     box at the end of one line and half at the start of the next. That is what
+     makes these paragraphs read as messy. `clone` gives every fragment complete
+     corners, and dropping the border stops a wrapped chip announcing the break
+     at all -- a tinted ground reads as emphasis, an outlined box reads as an
+     object that has been broken. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
-/* Code blocks */
+/* Code blocks.
+
+   No shadow. The border already separates the block from the page, so a drop
+   shadow on top of it is a second answer to a question that was already
+   answered -- and on a panel this wide it reads as a smudge under the edge
+   rather than as depth. */
 .sl-markdown-content pre:not(:where(.not-content *)) {
-  border: 1px solid var(--sl-color-hairline);
+  border: 1px solid var(--bq-code-border);
   border-radius: var(--bq-radius);
   font-size: 0.845rem;
   line-height: 1.75;
-  box-shadow: var(--bq-shadow-sm);
 }
 
 /* Blockquote */
@@ -384,7 +597,7 @@ main:has(.bq-hero) .bq-site-footer__inner {
 }
 
 /* Tables — markdown only, never Frutjam .table components */
-.sl-markdown-content table:not(.table) {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) {
   display: block;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -399,54 +612,55 @@ main:has(.bq-hero) .bq-site-footer__inner {
    `:is(th:first-child, td:first-child)`, so in a bordered card the first and
    last columns end up flush against the frame. Nothing sets the inner padding
    at all, so cells only had whatever line-height gave them. */
-.sl-markdown-content table:not(.table) th,
-.sl-markdown-content table:not(.table) td {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) th,
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) td {
   padding: 0.6rem 0.9rem;
   vertical-align: baseline;
 }
 
-.sl-markdown-content table:not(.table) th:first-child,
-.sl-markdown-content table:not(.table) td:first-child {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) th:first-child,
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) td:first-child {
   padding-inline-start: 1rem;
 }
 
-.sl-markdown-content table:not(.table) th:last-child,
-.sl-markdown-content table:not(.table) td:last-child {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) th:last-child,
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) td:last-child {
   padding-inline-end: 1rem;
 }
 
 /* Inline code carries its own padding, which made rows containing it taller
    than rows without. */
-.sl-markdown-content table:not(.table) :not(pre) > code {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) :not(pre) > code {
   padding-block: 0.05rem;
   line-height: 1.4;
 }
 
-.sl-markdown-content table:not(.table) th {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) th {
   padding-block: 0.55rem;
   background: var(--sl-color-gray-7);
-  font-size: 0.76rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--sl-color-gray-3);
+  letter-spacing: 0.07em;
+  color: var(--sl-color-gray-2);
   border-bottom: 1px solid var(--sl-color-hairline);
   white-space: nowrap;
 }
 
-.sl-markdown-content table:not(.table) td {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) td {
   border-bottom: 1px solid var(--sl-color-hairline-light);
 }
 
-.sl-markdown-content table:not(.table) tr:last-child td {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) tr:last-child td {
   border-bottom: none;
 }
 
-.sl-markdown-content table:not(.table) tbody tr {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) tbody tr {
   transition: background 0.13s var(--bq-ease);
 }
 
-.sl-markdown-content table:not(.table) tbody tr:hover {
+.sl-markdown-content table:not(.table):not(:where(.not-content *)) tbody tr:hover {
   background: var(--sl-color-gray-7);
 }
 
@@ -459,6 +673,23 @@ main:has(.bq-hero) .bq-site-footer__inner {
 .sl-markdown-content .starlight-aside__title {
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+/* A link inside a callout takes the callout's own colour, not the accent.
+
+   The accent is picked against the page, never against an aside's tint, and the
+   asides come in several: a note is blue, a caution is amber. Indigo on the
+   amber ground measured 3.38:1 dark and 4.33:1 on the blue one light -- both
+   under the floor. currentColor is already the colour Starlight chose to be
+   legible on that specific tint, so the link borrows it and marks itself with
+   an underline rather than a hue, which is the accessible way to distinguish a
+   link anyway. */
+.sl-markdown-content .starlight-aside a:not(:where(.not-content *)),
+.sl-markdown-content .starlight-aside a:not(:where(.not-content *)):hover {
+  color: inherit;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
 }
 
 /* Horizontal rule */
@@ -481,9 +712,14 @@ starlight-toc a:hover {
   color: var(--sl-color-white);
 }
 
+/* Colour and weight, no rail.
+
+   An inset box-shadow follows the element's border-radius, so the 2px marker
+   came out bowed at both ends -- it read as a rendering artefact rather than a
+   marker. In a list with no other backgrounds, the colour alone is the marker. */
 starlight-toc a[aria-current='true'] {
-  color: var(--sl-color-accent);
-  font-weight: 550;
+  color: var(--bq-spark);
+  font-weight: 600;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -542,19 +778,22 @@ starlight-tabs .tablist-wrapper::-webkit-scrollbar {
   display: none;
 }
 
-/* The strip is the top of the card: same border and background as the code
-   beneath it, square where the two meet. */
+/* The strip is the top of the card: same border and chrome as the window
+   beneath it, square only on the edge where the two meet.
+
+   It used to be square all round and painted from the light palette, on the
+   assumption that Expressive Code frames are square and follow the theme.
+   Neither holds now -- the frames carry --bq-radius and the window is dark in
+   both themes -- so a light, square strip sat on a dark, rounded block. */
 starlight-tabs ul[role='tablist'] {
   display: flex;
   gap: 0;
   margin: 0;
   padding: 0 0.375rem;
-  border: 1px solid var(--sl-color-hairline);
+  border: 1px solid var(--bq-code-border);
   border-bottom: 0;
-  /* Square, because Expressive Code renders every block on the site with
-     --ec-brdRad: 0px — a rounded strip would sit on a square block. */
-  border-radius: 0;
-  background: var(--sl-color-gray-6);
+  border-radius: var(--bq-radius) var(--bq-radius) 0 0;
+  background: var(--bq-code-chrome);
   list-style: none;
 }
 
@@ -587,18 +826,15 @@ starlight-tabs li.tab > a[role='tab'] {
   font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--sl-color-gray-3);
+  color: var(--bq-code-fg-dim);
   text-decoration: none;
   white-space: nowrap;
   transition: color 0.15s var(--bq-ease);
 }
 
-starlight-tabs li.tab > a[role='tab']:hover {
-  color: var(--sl-color-gray-1);
-}
-
+starlight-tabs li.tab > a[role='tab']:hover,
 starlight-tabs li.tab > a[role='tab'][aria-selected='true'] {
-  color: var(--sl-color-white);
+  color: var(--bq-code-fg);
 }
 
 /* The mark sits on the seam between strip and code, so the selected tab reads
@@ -635,14 +871,12 @@ starlight-tabs [role='tabpanel'] .frame.is-terminal .header {
   display: none;
 }
 
-/* The strip already draws that edge. Radius needs no touching: Expressive Code
-   frames are square, which is why the strip is too. */
+/* The strip draws the top edge, so the panel drops its own and squares off the
+   corners it meets -- otherwise the frame's radius cuts a notch into the seam. */
 starlight-tabs [role='tabpanel'] .expressive-code pre {
   border-top: 0;
-}
-
-[data-theme='dark'] starlight-tabs ul[role='tablist'] {
-  background: var(--sl-color-gray-6);
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
 }
 
 /* ── Page actions ─────────────────────────────────────────────────────────── */
@@ -659,9 +893,11 @@ starlight-tabs [role='tabpanel'] .expressive-code pre {
 
 .bq-page-head h1 {
   margin: 0;
+  font-family: var(--bq-display);
   font-size: var(--sl-text-h1);
   line-height: var(--sl-line-height-headings);
-  font-weight: 600;
+  font-weight: 780;
+  font-stretch: 110%;
   color: var(--sl-color-white);
 }
 
@@ -897,6 +1133,6 @@ mobile-starlight-toc {
   }
 
   :root[data-theme='dark'] {
-    --sl-color-bg-nav: #09090b;
+    --sl-color-bg-nav: #080b14;
   }
 }
