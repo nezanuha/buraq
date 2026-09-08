@@ -17,6 +17,88 @@ from buraq.conf import discover_settings_module as _discover_settings_module
 from buraq.management import console
 
 
+def _version_parts(text: str) -> tuple[int, ...]:
+    """The leading numeric release of a version string, for ordering.
+
+    Deliberately not `packaging.version`: this runs on every command, and the
+    comparison only has to order two ordinary releases well enough to spot one
+    being older. Anything it cannot read becomes an empty tuple, which compares
+    lower than everything and so never triggers a warning on its own.
+    """
+    parts: list[int] = []
+    for chunk in text.strip().split(".")[:3]:
+        digits = ""
+        for char in chunk:
+            if not char.isdigit():
+                break
+            digits += char
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts)
+
+
+def _warn_if_older_than_the_project_needs() -> None:
+    """
+    Say so when the Buraq running is older than the one that made the project.
+
+    `startproject` writes its own version into the project's pyproject.toml as
+    a floor, so the project records which Buraq it was built by. The
+    environment is filled separately -- `uv sync` resolves that floor from the
+    index -- and the index can be behind whatever scaffolded, which is the
+    ordinary state of affairs while a release is pending.
+
+    Nothing checked that the two agreed, and the resulting failures pointed
+    everywhere but at the cause: a project scaffolded by a build that no longer
+    writes `alembic.ini` fails, under a Buraq old enough to still want one,
+    with "No alembic.ini found in this directory" and an instruction to run a
+    command that would not help. One line naming the mismatch is worth more
+    than the whole diagnosis it replaces.
+
+    A warning rather than an error: a newer project on an older Buraq usually
+    works, and being wrong about that must not stop anybody working.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    pyproject = Path.cwd() / "pyproject.toml"
+    if not pyproject.is_file():
+        return
+
+    try:
+        import tomllib
+
+        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        required = [
+            dep
+            for dep in data.get("project", {}).get("dependencies", [])
+            if isinstance(dep, str) and dep.replace('"', "").strip().startswith("buraq")
+        ]
+    except Exception:
+        # A pyproject that cannot be read is not this command's problem.
+        return
+
+    if not required:
+        return
+
+    match = re.search(r">=\s*([0-9][0-9A-Za-z.\-]*)", required[0])
+    if not match:
+        return
+
+    try:
+        running = version("buraq")
+    except PackageNotFoundError:
+        return
+
+    floor = _version_parts(match.group(1))
+    if floor and _version_parts(running) < floor:
+        console.warn(
+            f"This project was made by Buraq {match.group(1)} or newer; "
+            f"you are running {running}. Install the version the project asks "
+            f"for -- commands may fail in ways that look like faults in the "
+            f"project."
+        )
+
+
 def _load_apps() -> None:
     """
     Load INSTALLED_APPS from sync CLI code.
@@ -82,6 +164,7 @@ def _fire_signal(name: str, **kwargs) -> None:
             "Error sending %r (the migration itself was applied)", name
         )
 
+
 app = typer.Typer(
     name="buraq",
     help="Buraq management CLI — run servers, migrations, and project commands.",
@@ -99,6 +182,7 @@ def _version_callback(value: bool) -> None:
 
 
 # ─── Global options ───────────────────────────────────────────────────────────
+
 
 @app.callback(invoke_without_command=True)
 def _cli(
@@ -126,6 +210,10 @@ def _cli(
     if not settings_module:
         settings_module = _discover_settings_module()
 
+    # Before anything is imported: a mismatch here is what makes the failures
+    # further down unreadable, so it has to be named before they happen.
+    _warn_if_older_than_the_project_needs()
+
     if settings_module:
         import sys
 
@@ -134,6 +222,7 @@ def _cli(
             sys.path.insert(0, cwd)
 
         import importlib
+
         try:
             module = importlib.import_module(settings_module)
         except ImportError as exc:
@@ -144,6 +233,7 @@ def _cli(
             raise typer.Exit(1) from exc
 
         from buraq.conf import settings as _settings
+
         for key, val in vars(module).items():
             if key.isupper() and not key.startswith("_") and hasattr(_settings, key):
                 setattr(_settings, key, val)
@@ -153,6 +243,7 @@ def _cli(
 
 
 # ─── Dev Server ──────────────────────────────────────────────────────────────
+
 
 @app.command()
 def runserver(
@@ -257,9 +348,11 @@ def runserver(
                 # granian keeps retrying a dead worker for a while before giving
                 # up, so say something now rather than leaving the user watching
                 # a server that is never going to accept a request.
-                console.warn(f"\ngranian is not accepting connections on "
+                console.warn(
+                    f"\ngranian is not accepting connections on "
                     f"{probe_host}:{port} — its worker failed to start.\n"
-                    f"Restart with:  buraq runserver --server uvicorn\n")
+                    f"Restart with:  buraq runserver --server uvicorn\n"
+                )
 
         threading.Thread(target=_probe, daemon=True).start()
 
@@ -296,12 +389,13 @@ def runserver(
     # fall back rather than exiting silently and leaving the user with no server.
     if not served:
         if server == "granian":
-            console.error("granian exited immediately — its worker failed to start. "
-                "Retry with --server uvicorn to confirm your app is fine.")
+            console.error(
+                "granian exited immediately — its worker failed to start. "
+                "Retry with --server uvicorn to confirm your app is fine."
+            )
             raise typer.Exit(1)
         console.warn(
-            "granian exited immediately (its worker failed to start); "
-            "falling back to uvicorn."
+            "granian exited immediately (its worker failed to start); falling back to uvicorn."
         )
         _serve_uvicorn("granian worker failed")
 
@@ -618,10 +712,7 @@ def _app_revision_kwargs(app: str, versions: Path) -> dict:
         return args
 
     resolved = versions.resolve()
-    own = [
-        rev for rev in script.walk_revisions()
-        if Path(rev.path).parent.resolve() == resolved
-    ]
+    own = [rev for rev in script.walk_revisions() if Path(rev.path).parent.resolve() == resolved]
     if not own:
         # First migration for this app: start its branch rather than extending
         # somebody else's.
@@ -634,9 +725,7 @@ def _app_revision_kwargs(app: str, versions: Path) -> dict:
 def _next_number(versions: Path) -> int:
     """The next migration number for one app, from the files already there."""
     used = [
-        int(m.group(1))
-        for path in versions.glob("*.py")
-        if (m := re.match(r"(\d{4})_", path.name))
+        int(m.group(1)) for path in versions.glob("*.py") if (m := re.match(r"(\d{4})_", path.name))
     ]
     return max(used, default=0) + 1
 
@@ -654,7 +743,7 @@ def _sequential_name(path: Path, rev_id: str, number: int) -> Path:
     # "<app>_<number>" -- so the whole id has to come off, not the first
     # underscore-separated piece of it.
     stem = path.stem
-    slug = stem[len(rev_id) + 1:] if stem.startswith(f"{rev_id}_") else stem
+    slug = stem[len(rev_id) + 1 :] if stem.startswith(f"{rev_id}_") else stem
     renamed = path.with_name(f"{number:04d}_{slug or 'auto'}.py")
     if renamed.exists():
         return path
@@ -683,9 +772,7 @@ def _autogenerate(app: str, versions: Path, message: str) -> list[Path]:
     os.environ[_APP_ENV_VAR] = app
     try:
         with _alembic_output(prefix=app) as buffer:
-            command.revision(
-                _alembic_config(buffer), message=message, autogenerate=True, **kwargs
-            )
+            command.revision(_alembic_config(buffer), message=message, autogenerate=True, **kwargs)
     except CommandError as exc:
         if "not up to date" in str(exc):
             # Alembic will not diff against a database that is behind its own
@@ -784,9 +871,7 @@ def makemigrations(
 
 @app.command()
 def migrate(
-    revision: str = typer.Argument(
-        "heads", help="Target revision ('heads' applies every branch)"
-    ),
+    revision: str = typer.Argument("heads", help="Target revision ('heads' applies every branch)"),
 ):
     """
     Apply database migrations.
@@ -833,6 +918,7 @@ def showmigrations():
 
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
+
 
 @app.command()
 def createsuperuser(
@@ -899,6 +985,7 @@ def createsuperuser(
 
 # ─── App Scaffolding ─────────────────────────────────────────────────────────
 
+
 def _singularize(word: str) -> str:
     """The singular of an app name, for the model the app holds.
 
@@ -909,7 +996,7 @@ def _singularize(word: str) -> str:
     if word.endswith("ies") and len(word) > 3:
         return word[:-3] + "y"
     if word.endswith(("sses", "shes", "ches", "xes", "zes")):
-        return word[:-2]        # these took "es", so "es" comes off
+        return word[:-2]  # these took "es", so "es" comes off
     if word.endswith("s") and not word.endswith("ss"):
         return word[:-1]
     return word
@@ -1093,8 +1180,8 @@ def startapp(name: str = typer.Argument(..., help="App name")):
     console.hint(f"Add {name!r} to INSTALLED_APPS in config/settings.py")
 
 
-
 # ─── Static Files ────────────────────────────────────────────────────────────
+
 
 @app.command()
 def collectstatic(
@@ -1104,6 +1191,7 @@ def collectstatic(
     """Collect all static files into STATIC_ROOT using configured finders and storage."""
     from buraq.contrib.staticfiles import collect_static
     from buraq.contrib.staticfiles.storage import get_storage
+
     storage = get_storage()
     location = dest or storage.location
     console.step(f"Collecting static files into {location}")
@@ -1116,6 +1204,7 @@ def collectstatic(
 
 
 # ─── Cache ───────────────────────────────────────────────────────────────────
+
 
 @app.command()
 def clearcache():
@@ -1132,6 +1221,7 @@ def clearcache():
 
 
 # ─── Internationalization ─────────────────────────────────────────────────────
+
 
 @app.command()
 def makemessages(
@@ -1165,10 +1255,14 @@ def makemessages(
         console.step(f"Extracting messages for locale {lang!r}")
 
         extract_args = [
-            "pybabel", "extract",
-            "--input-dirs", str(cwd),
-            "--output", str(pot_path),
-            "--project", "buraq",
+            "pybabel",
+            "extract",
+            "--input-dirs",
+            str(cwd),
+            "--output",
+            str(pot_path),
+            "--project",
+            "buraq",
         ]
         for ign in ignore_list:
             extract_args += ["--ignore-dirs", ign]
@@ -1180,14 +1274,26 @@ def makemessages(
 
         if po_path.exists():
             update_args = [
-                "pybabel", "update", "-i", str(pot_path),
-                "-d", str(cwd / "locale"), "-l", lang,
+                "pybabel",
+                "update",
+                "-i",
+                str(pot_path),
+                "-d",
+                str(cwd / "locale"),
+                "-l",
+                lang,
             ]
             result = subprocess.run(update_args, capture_output=True, text=True)
         else:
             init_args = [
-                "pybabel", "init", "-i", str(pot_path),
-                "-d", str(cwd / "locale"), "-l", lang,
+                "pybabel",
+                "init",
+                "-i",
+                str(pot_path),
+                "-d",
+                str(cwd / "locale"),
+                "-l",
+                lang,
             ]
             result = subprocess.run(init_args, capture_output=True, text=True)
 
@@ -1212,6 +1318,7 @@ def compilemessages(
     """
     try:
         import subprocess as _sp
+
         _sp.run(["pybabel", "--version"], capture_output=True, check=True)
     except (FileNotFoundError, Exception):  # noqa: BLE001
         console.error("Error: Babel is required. Run: buraq install babel")
@@ -1234,17 +1341,33 @@ def compilemessages(
     console.success(result.stdout.strip() or "Translations compiled")
 
     from buraq.utils.translation import invalidate_cache
+
     invalidate_cache()
 
 
 # ─── Project Scaffolding (startproject) ──────────────────────────────────────
 
+#: Everything startproject writes at the top level of the project. Checked
+#: before the first of them is written: a collision found halfway through would
+#: leave a directory that is neither the old thing nor a working project.
+_SCAFFOLD_ENTRIES = (
+    ".env",
+    ".env.example",
+    ".gitignore",
+    "config",
+    "main.py",
+    "manage.py",
+    "pyproject.toml",
+    "static",
+    "templates",
+    "tests",
+)
+
+
 @app.command()
 def startproject(
     name: str = typer.Argument(..., help="Project name"),
-    directory: str | None = typer.Argument(
-        None, help="Where to put it (defaults to ./<name>)"
-    ),
+    directory: str | None = typer.Argument(None, help="Where to put it (defaults to ./<name>)"),
     dest: str | None = typer.Option(
         None, help="Same as the directory argument, kept for existing scripts"
     ),
@@ -1265,16 +1388,42 @@ def startproject(
         buraq startproject myblog blog_folder
 
     Files land directly in that directory -- no extra folder is nested inside it.
+
+    The directory may already exist, so long as it holds none of the files this
+    writes. That is what allows the environment to be made first and the project
+    scaffolded into it, leaving .venv beside the code rather than above it:
+
+        mkdir myblog && cd myblog
+        uv venv && . .venv/bin/activate
+        uv pip install buraq
+        buraq startproject myblog .
     """
     if directory and dest and directory != dest:
-        console.error(f"Two different directories given: {directory!r} and --dest {dest!r}. "
-            "Pass one.")
+        console.error(
+            f"Two different directories given: {directory!r} and --dest {dest!r}. Pass one."
+        )
         raise typer.Exit(2)
 
     project_dir = Path(directory or dest or name)
     if project_dir.exists():
-        console.error(f"Directory '{project_dir}' already exists.")
-        raise typer.Exit(1)
+        # Refusing every existing directory made the ordinary layout
+        # unreachable: you cannot put .venv inside a project you are not
+        # allowed to scaffold into, and the environment has to exist before
+        # `buraq` does. What actually matters is not overwriting anything, so
+        # that is what is checked -- an empty directory, or one holding only a
+        # .venv and a .git, is a fine place to land.
+        if not project_dir.is_dir():
+            console.error(f"'{project_dir}' exists and is not a directory.")
+            raise typer.Exit(1)
+
+        clashes = sorted(e for e in _SCAFFOLD_ENTRIES if (project_dir / e).exists())
+        if clashes:
+            console.error(
+                f"'{project_dir}' already contains {', '.join(clashes)}. "
+                "Scaffolding here would overwrite it -- name an empty directory, "
+                "or move these aside."
+            )
+            raise typer.Exit(1)
 
     console.step(f"Creating project {name!r} in {project_dir.resolve()}")
 
@@ -1301,57 +1450,59 @@ def startproject(
 
     # pyproject.toml — uv-native format
     (project_dir / "pyproject.toml").write_text(
-        f'[project]\n'
+        f"[project]\n"
         f'name = "{name}"\n'
         f'version = "0.1.0"\n'
         f'requires-python = ">=3.11"\n'
-        f'dependencies = [\n'
+        f"dependencies = [\n"
         f'    "buraq>={_buraq_floor()}",\n'
-        f'    {db_dep},\n'
-        f']\n\n'
-        f'# PEP 735 dependency groups, which uv, pip 25.1+ and PDM all read:\n'
-        f'#   uv sync --group dev   |   pip install --group dev\n'
-        f'[dependency-groups]\n'
-        f'dev = [\n'
+        f"    {db_dep},\n"
+        f"]\n\n"
+        f"# PEP 735 dependency groups, which uv, pip 25.1+ and PDM all read:\n"
+        f"#   uv sync --group dev   |   pip install --group dev\n"
+        f"[dependency-groups]\n"
+        f"dev = [\n"
         f'    "pytest>=8.0.0",\n'
         f'    "pytest-asyncio>=0.23.0",\n'
         f'    "httpx>=0.27.0",\n'
         f'    "ruff>=0.4.0",\n'
-        f']\n\n'
-        f'[tool.ruff]\n'
-        f'line-length = 100\n'
+        f"]\n\n"
+        f"[tool.ruff]\n"
+        f"line-length = 100\n"
         f'target-version = "py311"\n\n'
-        f'[tool.pytest.ini_options]\n'
+        f"[tool.pytest.ini_options]\n"
         f'asyncio_mode = "auto"\n'
-        f'testpaths = ["tests"]\n'
-    , encoding="utf-8")
+        f'testpaths = ["tests"]\n',
+        encoding="utf-8",
+    )
 
     # Generate a random secret key for this project
     import secrets as _secrets
+
     _secret_key = _secrets.token_hex(50)
 
     # .env
     (project_dir / ".env").write_text(
-        f"SECRET_KEY={_secret_key}\n"
-        f"DEBUG=True\n"
-        f'DATABASE_URL={db_url}\n'
-    , encoding="utf-8")
+        f"SECRET_KEY={_secret_key}\nDEBUG=True\nDATABASE_URL={db_url}\n", encoding="utf-8"
+    )
 
     # .env.example — use a placeholder so the real key is never committed
     (project_dir / ".env.example").write_text(
-        f"SECRET_KEY=<generate-with: python -c \"import secrets; print(secrets.token_hex(50))\">\n"
+        f'SECRET_KEY=<generate-with: python -c "import secrets; print(secrets.token_hex(50))">\n'
         f"DEBUG=False\n"
-        f'DATABASE_URL={db_url}\n'
-        f"# ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com\n"
-    , encoding="utf-8")
+        f"DATABASE_URL={db_url}\n"
+        f"# ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com\n",
+        encoding="utf-8",
+    )
 
     # .gitignore — uv.lock must NOT be ignored, it should be committed
     (project_dir / ".gitignore").write_text(
         "__pycache__/\n*.py[cod]\n.venv/\n.env\n*.sqlite3\n*.db\n"
         ".ruff_cache/\n.mypy_cache/\n.pytest_cache/\n"
         "staticfiles/\nsent_emails/\n.cache/\nmedia/\n"
-        "# uv.lock is intentionally NOT listed here — commit it to version control\n"
-    , encoding="utf-8")
+        "# uv.lock is intentionally NOT listed here — commit it to version control\n",
+        encoding="utf-8",
+    )
 
     # config/__init__.py
     (project_dir / "config" / "__init__.py").write_text("", encoding="utf-8")
@@ -1427,8 +1578,9 @@ def startproject(
         "# EMAIL_PORT = 587\n\n"
         "# Cache\n"
         "# CACHE_BACKEND = 'buraq.contrib.cache.backends.redis.RedisCacheBackend'\n"
-        "# CACHE_REDIS_URL = 'redis://localhost:6379/0'\n"
-    , encoding="utf-8")
+        "# CACHE_REDIS_URL = 'redis://localhost:6379/0'\n",
+        encoding="utf-8",
+    )
 
     # config/urls.py
     (project_dir / "config" / "urls.py").write_text(
@@ -1458,14 +1610,15 @@ def startproject(
         "    path('/admin', admin.site.urls),\n"
         "    path('/auth', include('buraq.contrib.auth.urls')),\n"
         "    # path('/posts', include('posts.urls')),\n"
-        "]\n"
-    , encoding="utf-8")
+        "]\n",
+        encoding="utf-8",
+    )
 
     # main.py — builds the application; `buraq runserver` looks for `main:app`
     (project_dir / "main.py").write_text(
-        "from buraq import Buraq\n\n"
-        "app = Buraq(settings_module='config.settings')\n"
-    , encoding="utf-8")
+        "from buraq import Buraq\n\napp = Buraq(settings_module='config.settings')\n",
+        encoding="utf-8",
+    )
 
     # tests/test_smoke.py -- one passing test, so `buraq test` reports a result
     # rather than "collected 0 items", and the shape of a test is on disk to
@@ -1494,33 +1647,66 @@ def startproject(
         'os.environ.setdefault("BURAQ_SETTINGS_MODULE", "config.settings")\n'
         "from buraq.management.cli import main\n\n"
         'if __name__ == "__main__":\n'
-        "    main()\n"
-        , encoding="utf-8")
+        "    main()\n",
+        encoding="utf-8",
+    )
 
     # templates/base.html
     (project_dir / "templates" / "base.html").write_text(
-        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"
-        "  <meta charset=\"UTF-8\">\n"
+        '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+        '  <meta charset="UTF-8">\n'
         "  <title>{% block title %}" + name.title() + "{% endblock %}</title>\n"
         "</head>\n<body>\n"
         "{% block content %}{% endblock %}\n"
-        "</body>\n</html>\n"
-    , encoding="utf-8")
+        "</body>\n</html>\n",
+        encoding="utf-8",
+    )
 
     typer.echo("")
     if install and not _install_dependencies(project_dir):
         # The files are correct either way; only the install is outstanding, and
         # it was asked for explicitly so the failure is worth naming.
-        console.warn("Dependencies were not installed. Run the install again, or "
-                     "use the environment you already have.")
+        console.warn(
+            "Dependencies were not installed. Run the install again, or "
+            "use the environment you already have."
+        )
 
     typer.echo("")
     console.success("Project created. Now run:")
-    typer.echo(f"\n  cd {project_dir}")
-    # Nothing about an environment: reaching this command at all means Buraq is
-    # installed and importable, so migrate and runserver work from here as they
-    # stand. Printing a setup step would be telling somebody to do what they
-    # have visibly just done.
+    # `cd .` is not a step. Scaffolding into the directory you are already
+    # standing in is allowed now, and printing a change into it reads as
+    # something the reader has missed.
+    if project_dir.resolve() == Path.cwd().resolve():
+        typer.echo("")
+    else:
+        typer.echo(f"\n  cd {project_dir}")
+    # The environment the project runs in, when it does not yet have one.
+    #
+    # This step used to be left out, on the grounds that reaching this command
+    # at all means Buraq is importable. True -- but importable from wherever
+    # `buraq` itself was installed, and once that is the `uv tool install` the
+    # documentation now leads with, that is an environment holding Buraq and
+    # nothing of yours. Following the old output landed you in a project with
+    # no environment of its own, which is the state the first `pip install`
+    # of your own then went missing from.
+    #
+    # Keyed on the project having no .venv, not on anything about the caller:
+    # there is no reliable way to tell a tool install from an activated one,
+    # and a project that already has an environment needs no advice.
+    uv = _find_uv()
+    if not (project_dir / ".venv").exists():
+        typer.echo(
+            "  uv sync                        # .venv, with Buraq in it"
+            if uv
+            else "  python -m venv .venv           # .venv, with Buraq in it"
+        )
+        typer.echo(
+            r"  .venv\Scripts\activate" if os.name == "nt" else "  source .venv/bin/activate"
+        )
+        if not uv:
+            typer.echo("  python -m pip install buraq")
+        typer.echo("")
+
     typer.echo("  buraq migrate                  # create tables")
     typer.echo("  buraq runserver                # start server")
     typer.echo("\nAPI docs will be at: http://127.0.0.1:8000/api/docs\n")
@@ -1532,6 +1718,7 @@ def startproject(
 
 
 # ─── URL Listing ─────────────────────────────────────────────────────────────
+
 
 @app.command()
 def listurls(
@@ -1564,6 +1751,7 @@ def listurls(
     # Build a reverse map: path → name for named routes
     try:
         from buraq.urls import _route_registry
+
         path_to_name: dict[str, str] = {v: k for k, v in _route_registry.items()}
     except ImportError:
         path_to_name = {}
@@ -1610,6 +1798,7 @@ def listurls(
 
 # ─── Custom Management Commands ──────────────────────────────────────────────
 
+
 @app.command("manage")
 def run_command(
     command: str = typer.Argument(..., help="Custom management command name"),
@@ -1650,6 +1839,7 @@ def run_command(
 
 # ─── Shell ───────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def shell(
     command: str | None = typer.Option(None, "--command", "-c", help="Python code to execute"),
@@ -1686,6 +1876,7 @@ def shell(
     # Import buraq built-ins
     try:
         from buraq.core.db import SessionLocal
+
         local_ns["SessionLocal"] = SessionLocal
     except ImportError:
         pass
@@ -1698,17 +1889,14 @@ def shell(
         # Every ORM call is awaitable, so a one-liner worth running almost always
         # contains `await`. Compiling without this flag rejected them outright
         # with "'await' outside function".
-        code = compile(
-            command, "<string>", "exec", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT
-        )
+        code = compile(command, "<string>", "exec", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
         result = eval(code, local_ns)  # noqa: S307
         if _inspect.iscoroutine(result):
             asyncio.run(result)
         return
 
     _model_names = ", ".join(
-        k for k, v in local_ns.items()
-        if isinstance(v, type) and hasattr(v, "__tablename__")
+        k for k, v in local_ns.items() if isinstance(v, type) and hasattr(v, "__tablename__")
     )
     banner = (
         f"Buraq interactive shell\n"
@@ -1719,6 +1907,7 @@ def shell(
 
 
 # ─── System Check ─────────────────────────────────────────────────────────────
+
 
 @app.command("check")
 def run_checks(
@@ -1770,6 +1959,7 @@ def run_checks(
 
 # ─── DB Shell ─────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def dbshell():
     """
@@ -1812,6 +2002,7 @@ def dbshell():
 
 # ─── Data Import/Export ───────────────────────────────────────────────────────
 
+
 @app.command()
 def dumpdata(
     output: str | None = typer.Option(
@@ -1840,13 +2031,12 @@ def dumpdata(
 
     async def _dump():
         tables = {
-            name: table
-            for name, table in Base.metadata.tables.items()
-            if name not in exclude_set
+            name: table for name, table in Base.metadata.tables.items() if name not in exclude_set
         }
         result = {}
         async with SessionLocal() as db:
             import sqlalchemy as sa
+
             for name, table in tables.items():
                 rows = (await db.execute(sa.select(table))).mappings().all()
                 result[name] = [dict(row) for row in rows]
@@ -1904,6 +2094,7 @@ def loaddata(
 
 # ─── Flush ────────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def flush(
     no_input: bool = typer.Option(False, "--no-input", help="Do not prompt for confirmation"),
@@ -1931,6 +2122,7 @@ def flush(
     async def _flush():
         async with SessionLocal() as db:
             import sqlalchemy as sa
+
             for table in reversed(Base.metadata.sorted_tables):
                 await db.execute(sa.delete(table))
             await db.commit()
@@ -1940,6 +2132,7 @@ def flush(
 
 
 # ─── Change Password ──────────────────────────────────────────────────────────
+
 
 @app.command()
 def changepassword(
@@ -1979,6 +2172,7 @@ def changepassword(
 
 
 # ─── Inspect DB ───────────────────────────────────────────────────────────────
+
 
 @app.command()
 def inspectdb(
@@ -2041,6 +2235,7 @@ def inspectdb(
 
     async def _inspect():
         from sqlalchemy.ext.asyncio import create_async_engine
+
         engine = create_async_engine(settings.DATABASE_URL)
         try:
             async with engine.connect() as conn:
@@ -2069,6 +2264,7 @@ def inspectdb(
 
 
 # ─── Diff Settings ────────────────────────────────────────────────────────────
+
 
 @app.command()
 def diffsettings(
@@ -2099,6 +2295,7 @@ def diffsettings(
 
 
 # ─── Send Test Email ──────────────────────────────────────────────────────────
+
 
 @app.command()
 def sendtestemail(
@@ -2248,9 +2445,7 @@ def clearsessions():
         async with SessionLocal() as db:
             try:
                 result = await db.execute(
-                    sa.text(
-                        "DELETE FROM buraq_sessions WHERE expire_date < :now"
-                    ),
+                    sa.text("DELETE FROM buraq_sessions WHERE expire_date < :now"),
                     {"now": time.time()},
                 )
                 await db.commit()
@@ -2323,14 +2518,17 @@ def run_tests(
 
 # ─── Version ──────────────────────────────────────────────────────────────────
 
+
 @app.command()
 def version():
     """Print the installed Buraq version."""
     from buraq import __version__
+
     typer.echo(f"Buraq {__version__}")
 
 
 # ─── Find Static ──────────────────────────────────────────────────────────────
+
 
 @app.command()
 def findstatic(
@@ -2363,6 +2561,7 @@ def findstatic(
 
 
 # ─── Test Server ──────────────────────────────────────────────────────────────
+
 
 @app.command()
 def testserver(
@@ -2421,6 +2620,7 @@ def testserver(
 
     try:
         from granian import Granian
+
         Granian(
             bind,
             address=host,
@@ -2431,10 +2631,12 @@ def testserver(
         ).serve()
     except ImportError:
         import uvicorn
+
         uvicorn.run(bind, host=host, port=port, reload=False, log_level="debug")
 
 
 # ─── SQL Flush ────────────────────────────────────────────────────────────────
+
 
 @app.command()
 def sqlflush():
@@ -2462,6 +2664,7 @@ def sqlflush():
 
 # ─── SQL Sequence Reset ───────────────────────────────────────────────────────
 
+
 @app.command()
 def sqlsequencereset(
     apps: list[str] | None = typer.Argument(
@@ -2484,6 +2687,7 @@ def sqlsequencereset(
 
     try:
         from sqlalchemy.engine import make_url as _make_url
+
         dialect = _make_url(settings.DATABASE_URL).get_dialect().name
     except Exception:
         dialect = "unknown"
@@ -2515,6 +2719,7 @@ def sqlsequencereset(
 
 
 # ─── Optimize Migration ───────────────────────────────────────────────────────
+
 
 @app.command()
 def optimizemigration(
@@ -2551,11 +2756,13 @@ def optimizemigration(
 
 # ─── Remove Stale Content Types ───────────────────────────────────────────────
 
+
 @app.command()
 def remove_stale_contenttypes(
     no_input: bool = typer.Option(False, "--no-input", help="Do not prompt — delete automatically"),
     include_stale_apps: bool = typer.Option(
-        False, "--include-stale-apps",
+        False,
+        "--include-stale-apps",
         help="Remove content types even for apps still in INSTALLED_APPS",
     ),
 ):
@@ -2641,8 +2848,10 @@ def remove_stale_contenttypes(
     except OperationalError:
         # contenttypes is optional: without it in INSTALLED_APPS the table was
         # never created, which is a setup answer rather than a stack trace.
-        console.warn("No contenttypes table found. Add 'buraq.contrib.contenttypes' to "
-            "INSTALLED_APPS and run `buraq migrate` before using this command.")
+        console.warn(
+            "No contenttypes table found. Add 'buraq.contrib.contenttypes' to "
+            "INSTALLED_APPS and run `buraq migrate` before using this command."
+        )
         raise typer.Exit(1) from None
 
 
@@ -2729,6 +2938,7 @@ def worker(
             async with semaphore:
                 import inspect
                 import json
+
                 func = _import_func(row.func_path)
                 args = json.loads(row.args_json or "[]")
                 kwargs = json.loads(row.kwargs_json or "{}")
@@ -2737,8 +2947,11 @@ def worker(
                     await db.execute(
                         buraq_task_table.update()
                         .where(buraq_task_table.c.id == row.id)
-                        .values(status=TaskStatus.RUNNING.value, started_at=datetime.now(UTC),
-                                attempts=row.attempts + 1)
+                        .values(
+                            status=TaskStatus.RUNNING.value,
+                            started_at=datetime.now(UTC),
+                            attempts=row.attempts + 1,
+                        )
                     )
                     await db.commit()
 
@@ -2759,8 +2972,12 @@ def worker(
                     await db.execute(
                         buraq_task_table.update()
                         .where(buraq_task_table.c.id == row.id)
-                        .values(status=status, return_json=return_json, error=error,
-                                finished_at=datetime.now(UTC))
+                        .values(
+                            status=status,
+                            return_json=return_json,
+                            error=error,
+                            finished_at=datetime.now(UTC),
+                        )
                     )
                     await db.commit()
 
@@ -2840,9 +3057,10 @@ def _register_app_command(name: str, module_path: str) -> None:
         _load_apps()
         command.execute(**options)
 
-    _run.__doc__ = getattr(
-        importlib.import_module(module_path).Command, "help", ""
-    ) or f"Run the {name} command."
+    _run.__doc__ = (
+        getattr(importlib.import_module(module_path).Command, "help", "")
+        or f"Run the {name} command."
+    )
 
 
 def _register_app_commands() -> None:
@@ -2866,24 +3084,23 @@ def _register_app_commands() -> None:
     # both have to be consulted -- checking only `.name` found 4 of 42 and let a
     # project command called "migrate" silently replace the real one.
     taken = {
-        info.name or getattr(info.callback, "__name__", "")
-        for info in app.registered_commands
+        info.name or getattr(info.callback, "__name__", "") for info in app.registered_commands
     }
     for name, module_path in _iter_app_command_modules():
         if name in taken:
             # A project command must not quietly replace one of Buraq's own.
-            console.warn(
-                f"Ignoring {module_path}: {name!r} is already a Buraq command."
-            )
+            console.warn(f"Ignoring {module_path}: {name!r} is already a Buraq command.")
             continue
         try:
             _register_app_command(name, module_path)
         except Exception as exc:
             console.warn(f"Could not load command {module_path}: {exc}")
 
+
 def execute_from_command_line(argv=None):
     """Entry point for manage.py."""
     import sys
+
     _register_app_commands()
     app(args=(argv or sys.argv)[1:], standalone_mode=True)
 

@@ -178,3 +178,196 @@ def test_the_uv_extra_is_declared():
 
     assert "uv" in extras
     assert any(spec.startswith("uv") for spec in extras["uv"])
+
+
+# ─── Scaffolding into a directory that already exists ─────────────────────────
+#
+# Every existing directory used to be refused, which made the ordinary layout
+# unreachable: .venv cannot live inside a project you are not allowed to
+# scaffold into, and the environment has to exist before `buraq` does. So the
+# venv landed beside the project instead of in it. What actually matters is not
+# overwriting anything, and that is what is checked now.
+
+def test_an_existing_empty_directory_is_accepted(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "myblog").mkdir()
+
+    startproject(
+        name="myblog", directory="myblog", dest=None, use_postgres=False, install=False
+    )
+
+    assert (tmp_path / "myblog" / "pyproject.toml").is_file()
+
+
+def test_a_directory_holding_only_an_environment_is_accepted(tmp_path, monkeypatch):
+    """The layout this exists for: venv first, project scaffolded around it."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".venv").mkdir()
+    (tmp_path / ".git").mkdir()
+
+    startproject(
+        name="myblog", directory=".", dest=None, use_postgres=False, install=False
+    )
+
+    assert (tmp_path / "pyproject.toml").is_file()
+    assert (tmp_path / ".venv").is_dir(), "the environment must survive"
+
+
+@pytest.mark.parametrize("existing", ["pyproject.toml", "main.py", "config", "tests"])
+def test_a_file_that_would_be_overwritten_stops_the_command(
+    existing, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "myblog"
+    target.mkdir()
+    if "." in existing:
+        (target / existing).write_text("mine", encoding="utf-8")
+    else:
+        (target / existing).mkdir()
+
+    with pytest.raises(typer.Exit) as excinfo:
+        startproject(
+            name="myblog", directory="myblog", dest=None, use_postgres=False,
+            install=False,
+        )
+
+    assert excinfo.value.exit_code == 1
+    assert not (target / "manage.py").exists(), "nothing may be written on refusal"
+
+
+def test_the_refusal_names_what_is_in_the_way(tmp_path, monkeypatch, capsys):
+    """"Directory already exists" did not say which file to move."""
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "myblog"
+    target.mkdir()
+    (target / "main.py").write_text("mine", encoding="utf-8")
+
+    with pytest.raises(typer.Exit):
+        startproject(
+            name="myblog", directory="myblog", dest=None, use_postgres=False,
+            install=False,
+        )
+
+    assert "main.py" in capsys.readouterr().err
+
+
+def test_a_path_that_is_a_file_is_refused(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "myblog").write_text("not a directory", encoding="utf-8")
+
+    with pytest.raises(typer.Exit) as excinfo:
+        startproject(
+            name="myblog", directory="myblog", dest=None, use_postgres=False,
+            install=False,
+        )
+
+    assert excinfo.value.exit_code == 1
+
+
+def test_scaffolding_in_place_does_not_print_cd(tmp_path, monkeypatch, capsys):
+    """`cd .` reads as a step the reader has missed."""
+    monkeypatch.chdir(tmp_path)
+
+    startproject(
+        name="myblog", directory=".", dest=None, use_postgres=False, install=False
+    )
+
+    assert "cd ." not in capsys.readouterr().out
+
+
+def test_every_written_top_level_entry_is_declared(tmp_path, monkeypatch):
+    """
+    The collision check is a hand-written list beside the code that writes the
+    files. A new file added to the scaffold without a line here would silently
+    become one this command overwrites without warning.
+    """
+    from buraq.management.cli import _SCAFFOLD_ENTRIES
+
+    monkeypatch.chdir(tmp_path)
+    startproject(
+        name="myblog", directory="out", dest=None, use_postgres=False, install=False
+    )
+
+    written = {p.name for p in (tmp_path / "out").iterdir()}
+
+    assert written <= set(_SCAFFOLD_ENTRIES), (
+        f"not declared in _SCAFFOLD_ENTRIES: {sorted(written - set(_SCAFFOLD_ENTRIES))}"
+    )
+
+
+# ─── The environment step in the closing output ───────────────────────────────
+#
+# It used to be left out on the grounds that whoever ran the command already had
+# Buraq importable. True, but importable from wherever `buraq` was installed --
+# and once that is a tool install, following the output left you in a project
+# with no environment of its own.
+
+def test_the_closing_output_names_the_environment_step(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+
+    startproject(
+        name="myblog", directory="myblog", dest=None, use_postgres=False, install=False
+    )
+
+    out = capsys.readouterr().out
+    assert "activate" in out
+    assert out.index("activate") < out.index("buraq migrate"), (
+        "the environment has to be built before the commands that use it"
+    )
+
+
+def test_a_project_that_already_has_an_environment_is_not_told_to_make_one(
+    tmp_path, monkeypatch, capsys
+):
+    """A container, a conda env, or --install having just built one."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".venv").mkdir()
+
+    startproject(
+        name="myblog", directory=".", dest=None, use_postgres=False, install=False
+    )
+
+    out = capsys.readouterr().out
+    assert "activate" not in out
+    assert "buraq migrate" in out
+
+
+def test_the_environment_step_matches_the_installer_available(
+    tmp_path, monkeypatch, capsys
+):
+    """uv sync where uv is, venv + pip where it is not — never an instruction
+    to use a tool the machine does not have."""
+    import buraq.management.cli as cli
+
+    monkeypatch.chdir(tmp_path)
+
+    monkeypatch.setattr(cli.shutil, "which", lambda _: "/usr/bin/uv")
+    startproject(
+        name="a", directory="a", dest=None, use_postgres=False, install=False
+    )
+    with_uv = capsys.readouterr().out
+
+    monkeypatch.setattr(cli.shutil, "which", lambda _: None)
+    monkeypatch.setattr(cli.sys, "executable", str(tmp_path / "python"))
+    startproject(
+        name="b", directory="b", dest=None, use_postgres=False, install=False
+    )
+    without_uv = capsys.readouterr().out
+
+    assert "uv sync" in with_uv
+    assert "pip install" not in with_uv
+
+    assert "uv sync" not in without_uv
+    assert "-m venv .venv" in without_uv
+    assert "pip install buraq" in without_uv
+
+
+def test_the_activate_line_is_a_path_not_an_escape(tmp_path, monkeypatch, capsys):
+    r"""`"\Scripts\activate"` in a plain string makes \a a BEL character."""
+    monkeypatch.chdir(tmp_path)
+
+    startproject(
+        name="myblog", directory="myblog", dest=None, use_postgres=False, install=False
+    )
+
+    assert "\a" not in capsys.readouterr().out

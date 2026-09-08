@@ -131,21 +131,39 @@ def test_startproject_does_not_read_from_stdin():
     assert "typer.prompt" not in body
 
 
-def test_startproject_next_steps_do_not_set_up_an_environment():
-    """Reaching startproject means an environment already works.
+def test_startproject_next_steps_activate_the_platform_way():
+    r"""
+    The closing output names the environment step now, because the documented
+    install puts `buraq` on the PATH with a tool install and leaves the project
+    to build its own. The activate line in it has to be the one for the machine
+    running the command -- `.venv\Scripts\activate` on Windows, and
+    `source .venv/bin/activate` elsewhere. One form printed on both is a line
+    half the readers cannot paste.
 
-    The command printed a setup step -- uv sync, or venv and pip -- which told
-    the reader to do what running the command had just proved they had done.
-    What it prints now is only what is actually outstanding.
+    The Windows form has to be a raw string in the source as well: in a plain
+    one `\a` is BEL and `\S` is not an escape at all, so the terminal
+    beeps and the path printed is wrong.
     """
     source = (PACKAGE / "management" / "cli.py").read_text(encoding="utf-8")
     start = source.index("def startproject(")
     end = source.index(chr(10) + "@app.command()", start)
-    printed = chr(10).join(
-        line for line in source[start:end].splitlines() if "typer.echo(" in line
-    )
+    body = source[start:end]
 
-    for absent in ("uv sync", "python -m venv", "pip install buraq"):
-        assert absent not in printed, f"next steps should not print {absent!r}"
-    assert "buraq migrate" in printed
-    assert "buraq runserver" in printed
+    assert r'r"  .venv\Scripts\activate"' in body, (
+        "the Windows activate line must be a raw string"
+    )
+    assert '"  source .venv/bin/activate"' in body
+    assert "buraq migrate" in body
+    assert "buraq runserver" in body
+
+
+def test_startproject_offers_only_an_installer_that_is_present():
+    """`uv sync` printed on a machine without uv is a step that cannot be run."""
+    source = (PACKAGE / "management" / "cli.py").read_text(encoding="utf-8")
+    start = source.index("def startproject(")
+    end = source.index(chr(10) + "@app.command()", start)
+    body = source[start:end]
+
+    assert "_find_uv()" in body, "the choice has to be made from what is there"
+    assert "uv sync" in body
+    assert "-m venv .venv" in body
