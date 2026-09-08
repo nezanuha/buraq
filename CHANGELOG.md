@@ -7,167 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — the admin can be scoped to a tenant
-
-`ModelAdmin.get_queryset(request)` narrows the rows a request may reach, and
-every read goes through it: the list, the filter sidebar, the bulk actions, and
-each of the fetches behind the change and delete pages.
-
-That last part is the whole of it. Narrowing only the list would hide rows on
-one page while leaving `/admin/app/model/41/change` open to anyone who typed it,
-and the bulk-delete endpoint took ids straight from the request body and deleted
-them unfiltered — so a scoped admin could still be asked to delete rows it was
-never allowed to see. The filter sidebar built its choices from every row in the
-table, which named other tenants' values in a dropdown.
-
-`get_object(request, pk)` fetches through the same queryset and returns `None`
-for a row outside it, so not-found and not-permitted look the same to the
-visitor. Only one of them can leak that the row exists.
-
-`has_module_permission`, `has_view_permission`, `has_add_permission`,
-`has_change_permission` and `has_delete_permission` decide what may be done.
-They take the row where Django's do, so a permission can say "yours, but not
-theirs" — `can_edit` is a class-wide flag and cannot. They are async, unlike
-Django's: deciding whether someone may edit a row usually means asking the
-database something, and there is no way to do that from a synchronous method
-here. Each falls back to the matching `can_*` flag, so an existing admin behaves
-as it did.
-
-### Added — admin actions and fieldsets
-
-- **`actions`** — bulk operations on the selected rows, named as methods on the
-  admin class or given as callables. `delete_selected` is built in and offered
-  only when deletion is permitted, so a read-only admin does not show a button
-  that answers 403. An action the request may not run is not registered at all,
-  so it cannot be reached by posting its name.
-- **`fieldsets`** — fields grouped into titled sections. The form is built from
-  them and so is the set of fields that may be written, so a field left out of
-  every section is neither shown nor saved. Reading one from `fields` and the
-  other from `fieldsets` would let a value be posted for a field that was never
-  on the page.
-
-### Added — the rest of Django's cache API
-
-- **`touch(key, timeout)`** — a new lifetime without rewriting the value, for
-  something expensive to build that is still current. `False` when the key had
-  already gone, so a caller can tell that from "kept alive".
-- **`incr_version(key)`** / **`decr_version(key)`** — move one entry to another
-  version, the per-key counterpart to raising `CACHE_VERSION`.
-- **`close()`** on every backend, rather than only the two that hold a
-  connection.
-- **`dummy://`** — a backend that accepts every write and misses every read, so
-  the code around it runs as it will in production while nothing is remembered.
-  For development, where a stale entry hides the change you just made, and for
-  tests, where a path that passes only because an earlier test warmed the cache
-  fails when run alone.
-
-
-### Fixed — `{{ cycle("a", "b") }}` rendered an object into the page
-
-`cycle` is built to be held in a variable and called — `{% set c = cycle("odd",
-"even") %}` then `{{ c() }}`. Rendered directly, which is the obvious
-translation of Django's `{% cycle %}`, it put `<_Cycle object at 0x...>` into
-the HTML: no error, no warning, just that on the page. It now yields its next
-value when rendered.
-
-Inside a loop, Jinja's own `loop.cycle("odd", "even")` is the better answer and
-needs nothing from Buraq — calling `cycle()` fresh on each iteration builds a
-new one every time and always returns the first value. The documentation says
-so.
-
-### Documentation — where Jinja's own features are
-
-Nothing in the documentation linked to Jinja's, so a reader wanting `groupby`,
-`selectattr`, `{% macro %}` or whitespace control had nowhere to go and would
-reasonably conclude Buraq had only what was listed. There is now a link to the
-Template Designer Documentation, a list of Jinja's filters by name so the shape
-of what exists is visible without leaving, and a Django-to-Jinja translation
-table for the differences that actually bite — filter arguments in parentheses
-rather than after a colon, `{% else %}` where Django writes `{% empty %}`,
-`loop.index` for `forloop.counter`, and the rest. Each row of that table is
-covered by a test, since a translation table is only worth having if every row
-is true.
-
-Both template pages claimed Buraq ships 21 filters. It ships 37, plus 10
-globals, alongside Jinja's own 54 — and the globals had no reference at all, so
-`url`, `static`, `csrf_token` and `regroup` were undocumented.
-
-### Added — every Django built-in filter now has an answer
-
-Buraq renders with Jinja2, so most of Django's *tags* are Jinja's own syntax and
-its *filters* are what Buraq supplies. Fifty-one of Django's fifty-seven were
-already covered; these are the rest.
-
-- **`get_digit` was registered as `getdigit`**, so the name a Django template
-  actually writes raised an error. Both spellings work now.
-- **`add`** — numbers when both look like numbers, concatenation otherwise, so
-  it joins lists and strings too.
-- **`divisibleby`** — Jinja has this as a test (`n is divisibleby(3)`) but not as
-  a filter, and a ported template writes the filter.
-- **`stringformat`** — Python's `%` formatting without the leading `%`, which
-  would otherwise end the tag.
-- **`escapeseq`** and **`safeseq`** — applied to each item rather than to the
-  sequence, which is what a join actually escapes. `escapeseq` marks its results
-  safe, as Django's `escape` does; returning plain strings would have them
-  escaped a second time on the way out.
-
-Three of Django's tags have no Jinja equivalent and are now globals:
-
-- **`firstof`** — the first truthy value. Jinja's `|default` only catches an
-  undefined name, not the empty string a blank form field or missing column is.
-- **`widthratio`** — a bar's width. Zero when the maximum is zero rather than
-  raising: an empty dataset is a normal thing to hand a template.
-- **`querystring`** — the current query string with changes applied, so paging
-  keeps the filters a visitor already chose. `None` drops a parameter, a list
-  repeats one.
-
-`{% load %}` and `{% templatetag %}` are deliberately absent: Jinja has no tag
-libraries to load and no `{%` to escape, so neither has anything to do.
-
-The template documentation said Buraq registered 21 filters. It registers 37,
-plus 10 globals, and Jinja's own 54 alongside them.
-
-
-### Fixed — the whole CI matrix, which had never been green
-
-Six of the eight jobs were failing on every run. The two that passed were
-Windows, which is the platform the project is developed on, so it went unseen:
-PostgreSQL, MySQL, both Ubuntu jobs and both macOS jobs were red throughout.
-Four separate causes, three of them faults in the framework rather than the
-tests.
-
-- **Many-to-many writes were broken on MySQL entirely.** Adding to a relation,
-  `.set()`, and `bulk_create(ignore_conflicts=True)` all built their statement
-  with `on_conflict_do_nothing()`, which is PostgreSQL's and SQLite's spelling.
-  MySQL has never had it, so every one of them raised `AttributeError: 'Insert'
-  object has no attribute 'on_conflict_do_nothing'`. It is written per dialect
-  now — `ON DUPLICATE KEY UPDATE` on MySQL and MariaDB — from one helper rather
-  than the same ladder repeated at three call sites.
-
-- **Engines were abandoned rather than disposed.** Resetting a connection set
-  the engine aside and left its connections open until something finalised them,
-  which for an async driver happens after the event loop has gone: "Event loop
-  is closed", raised from a finaliser and blamed on whichever test was running.
-  It leaks connections outside the test suite too, wherever a project resets.
-
-- **`pool_size` and `max_overflow` were passed to every pool**, and SQLAlchemy
-  refuses them rather than ignoring them. So `DATABASE_OPTIONS = {"poolclass":
-  NullPool}` — what a project sets to hand pooling to PgBouncer — could not
-  start at all. Whether a pool takes them is now asked of the class.
-
-- **A test hashed a file whose bytes depended on the platform.** The fixture
-  wrote its CSS with `write_text`, so Windows stored `
-` where every other
-  platform stored `
-`; the content hash differed, and the assertion named one.
-  It passed only on the machine the hash came from.
-
-Alongside those, the suite now keeps a database connection inside the event loop
-that opened it — pytest-asyncio gives each test its own, and a pooled connection
-belongs to the loop that opened it — and CI reports which tests failed as
-annotations, since downloading a job log needs admin rights on the repository
-and a failure was otherwise just "exit code 1" to everyone else.
-
+## [1.7.0] - 2026-09-08
 
 ### Added
 
@@ -378,14 +218,250 @@ and a failure was otherwise just "exit code 1" to everyone else.
 
 - **`@register.global(takes_context=True)` / `@register.filter(takes_context=True)`** — the current render context (`request`, `SITE_FULL_URL`, and anything else a context processor added) can now be received as a global's or filter's first argument, wrapping `jinja2.pass_context`. There was previously no way for a templatetags.py helper to reach the request at all.
 
+#### The admin can be scoped to a tenant
+
+`ModelAdmin.get_queryset(request)` narrows the rows a request may reach, and
+every read goes through it: the list, the filter sidebar, the bulk actions, and
+each of the fetches behind the change and delete pages.
+
+That last part is the whole of it. Narrowing only the list would hide rows on
+one page while leaving `/admin/app/model/41/change` open to anyone who typed it,
+and the bulk-delete endpoint took ids straight from the request body and deleted
+them unfiltered — so a scoped admin could still be asked to delete rows it was
+never allowed to see. The filter sidebar built its choices from every row in the
+table, which named other tenants' values in a dropdown.
+
+`get_object(request, pk)` fetches through the same queryset and returns `None`
+for a row outside it, so not-found and not-permitted look the same to the
+visitor. Only one of them can leak that the row exists.
+
+`has_module_permission`, `has_view_permission`, `has_add_permission`,
+`has_change_permission` and `has_delete_permission` decide what may be done.
+They take the row where Django's do, so a permission can say "yours, but not
+theirs" — `can_edit` is a class-wide flag and cannot. They are async, unlike
+Django's: deciding whether someone may edit a row usually means asking the
+database something, and there is no way to do that from a synchronous method
+here. Each falls back to the matching `can_*` flag, so an existing admin behaves
+as it did.
+
+#### Admin actions and fieldsets
+
+- **`actions`** — bulk operations on the selected rows, named as methods on the
+  admin class or given as callables. `delete_selected` is built in and offered
+  only when deletion is permitted, so a read-only admin does not show a button
+  that answers 403. An action the request may not run is not registered at all,
+  so it cannot be reached by posting its name.
+- **`fieldsets`** — fields grouped into titled sections. The form is built from
+  them and so is the set of fields that may be written, so a field left out of
+  every section is neither shown nor saved. Reading one from `fields` and the
+  other from `fieldsets` would let a value be posted for a field that was never
+  on the page.
+
+#### The rest of Django's cache API
+
+- **`touch(key, timeout)`** — a new lifetime without rewriting the value, for
+  something expensive to build that is still current. `False` when the key had
+  already gone, so a caller can tell that from "kept alive".
+- **`incr_version(key)`** / **`decr_version(key)`** — move one entry to another
+  version, the per-key counterpart to raising `CACHE_VERSION`.
+- **`close()`** on every backend, rather than only the two that hold a
+  connection.
+- **`dummy://`** — a backend that accepts every write and misses every read, so
+  the code around it runs as it will in production while nothing is remembered.
+  For development, where a stale entry hides the change you just made, and for
+  tests, where a path that passes only because an earlier test warmed the cache
+  fails when run alone.
+
+#### Every Django built-in filter now has an answer
+
+Buraq renders with Jinja2, so most of Django's *tags* are Jinja's own syntax and
+its *filters* are what Buraq supplies. Fifty-one of Django's fifty-seven were
+already covered; these are the rest.
+
+- **`get_digit` was registered as `getdigit`**, so the name a Django template
+  actually writes raised an error. Both spellings work now.
+- **`add`** — numbers when both look like numbers, concatenation otherwise, so
+  it joins lists and strings too.
+- **`divisibleby`** — Jinja has this as a test (`n is divisibleby(3)`) but not as
+  a filter, and a ported template writes the filter.
+- **`stringformat`** — Python's `%` formatting without the leading `%`, which
+  would otherwise end the tag.
+- **`escapeseq`** and **`safeseq`** — applied to each item rather than to the
+  sequence, which is what a join actually escapes. `escapeseq` marks its results
+  safe, as Django's `escape` does; returning plain strings would have them
+  escaped a second time on the way out.
+
+Three of Django's tags have no Jinja equivalent and are now globals:
+
+- **`firstof`** — the first truthy value. Jinja's `|default` only catches an
+  undefined name, not the empty string a blank form field or missing column is.
+- **`widthratio`** — a bar's width. Zero when the maximum is zero rather than
+  raising: an empty dataset is a normal thing to hand a template.
+- **`querystring`** — the current query string with changes applied, so paging
+  keeps the filters a visitor already chose. `None` drops a parameter, a list
+  repeats one.
+
+`{% load %}` and `{% templatetag %}` are deliberately absent: Jinja has no tag
+libraries to load and no `{%` to escape, so neither has anything to do.
+
+The template documentation said Buraq registered 21 filters. It registers 37,
+plus 10 globals, and Jinja's own 54 alongside them.
+
+
 ### Changed
 
-- **The installation page leads with a project environment**, not
-  `uv tool install`. A global tool install puts `buraq` on the PATH and holds
-  Buraq and its own dependencies — and nothing of yours, so the first package
-  your code imports is not there. That was hidden while `startproject` built a
-  `.venv` and installed into it; now that it does not, the page has to say where
-  packages go, and it does, with a section on adding your own.
+- **CONTRIBUTING.md lists the checks that actually exist.** Four gates, named:
+  pytest, ruff over `buraq/` *and* `tests/`, and `scripts/audit.py`, which is
+  not in CI and so catches nothing on its own. Plus the docs build, whose six
+  content checks gate the docs deploy and were documented nowhere; the
+  supported Python range; and the changelog entry the release workflow needs.
+
+  Mypy is named as explicitly *not* a gate. It is configured `strict = true`
+  and the codebase reports 2361 errors against it, so a contributor running it
+  on the strength of that configuration would drown in output that has nothing
+  to do with their change.
+
+  The activation line in the local-build recipe was also wrong — `.venv/bin/activate`
+  without `source`, which does nothing on macOS or Linux.
+
+- **The test suite runs clean.** Three warnings on every run, none of them ours
+  to begin with, and all three now silent for the right reason rather than a
+  blanket filter.
+
+  `starlette.testclient` deprecated `httpx` and names `httpx2` as the
+  replacement, so the dev dependency moved. The API surface is the same —
+  `ASGITransport`, `AsyncClient`, `Client`, `Request`, `Response` — so the only
+  code change was the one direct import in `tests/test_auth.py`.
+
+  The other two cannot be fixed here, and are filtered by message rather than by
+  category: Starlette annotates a type with `anyio.abc.BlockingPortal`, which
+  anyio has renamed, and it fires on import; and `limits`' `MongoDBStorage.__del__`
+  reads a `storage` attribute its `__init__` never sets when the driver is
+  missing, which is exactly the case one test covers, so the `AttributeError`
+  escapes during garbage collection where nothing can catch it. That one is
+  scoped to the single test that trips it, so a genuine unraisable exception
+  anywhere else still surfaces — checked with a throwaway test that raises one.
+
+- **Docs deploy after the release, not against it.** `deploy-docs.yml` runs on
+  any push touching `docs/**`, deliberately decoupled from releases so a wording
+  fix need not wait for one. The cost of that decoupling stayed invisible until
+  it bit: the installation page described this version, `pip install buraq` gave
+  the last one, and the page told readers to run `buraq startproject myproject .`
+  — which the released version refuses outright, because accepting an existing
+  directory had not shipped. Someone following the page word for word could not
+  get past its last line.
+
+  A gate job now checks `pyproject.toml`'s version against PyPI and the deploy
+  runs only when it is published. It **skips** rather than fails, because both
+  workflows start on the same push and this one would otherwise put a red cross
+  on every release for a version that is seconds from existing. A `workflow_run`
+  trigger brings the deploy back once Release finishes, so the ordering is
+  stated rather than raced, and a release that fails deploys nothing. The
+  `workflow_dispatch` override remains for changes that are only wording.
+- **Python 3.13 and 3.14 are supported, and now tested.** The full suite passes
+  on both. The classifiers claimed 3.13 without CI ever running it, and said
+  nothing about 3.14 — which is what `uv venv` picks by default on a current
+  machine, so the version most new projects start on was the one version nobody
+  had checked. The CI matrix runs 3.11 through 3.14 on Linux, Windows and macOS.
+
+  One test failed on every interpreter that was not the repo's own `.venv`,
+  which is how a check against another Python version is run. Its premise —
+  that `sys.executable` already is the project interpreter — simply does not
+  hold there, and the bootstrap was correctly switching interpreters; the test
+  reported that correct behaviour as a fault. It now states its premise and
+  skips when it is not met.
+
+  `tests/test_static_url_separators.py` held `"css\site.css"`, where `\s` is
+  not an escape sequence. It means what it looks like today and Python warns;
+  in a future version it stops compiling. Written as a raw string now.
+
+- **The docs build fails on a stray control character.** A Windows path written
+  through a tool that eats backslashes turns `.venv\Scripts\activate` into
+  `.venv\Scripts` + BEL + `ctivate`, which renders as "Scriptsctivate", beeps
+  if pasted, and is invisible in every editor. Four pages had one. The build
+  now refuses any C0 control character other than tab, newline and return.
+
+- **Version `1.7.0`, because `1.6.0` is published and this is not it.** The
+  working tree carried every change in this section while still calling itself
+  `1.6.0`, a version already on PyPI as a different program. `startproject`
+  writes its own version into the new project's `pyproject.toml` as a floor, so
+  it wrote `buraq>=1.6.0` — which `uv sync` then satisfied from the index with
+  the *released* 1.6.0.
+
+  The result was a project scaffolded by one Buraq and run by another, and the
+  failure named none of that. This release stopped scaffolding `alembic.ini`;
+  1.6.0 still looks for one. So `buraq migrate` in a brand-new project reported
+  `No alembic.ini found in this directory` and advised running `alembic init`,
+  which would not have helped, in a project that was not at fault.
+
+  With the floor at `1.7.0` the mismatch cannot form: `uv sync` fails to
+  resolve rather than silently installing the wrong Buraq. Testing a project
+  against an unreleased build now means installing that build into it —
+  CONTRIBUTING.md has the loop.
+
+- **A project says which Buraq it needs, and the CLI checks.** Every command
+  compares the version running against the floor in the project's
+  `pyproject.toml` and warns when it is older, naming both. It is a warning,
+  not an error — a newer project on an older Buraq usually works, and being
+  wrong about that must not stop anyone working. It cannot help against a
+  version released before the check existed, which is the case it was written
+  for; the floor above is what covers that one.
+
+- **The documented install puts `.venv` inside the project.** Install the
+  command once with `uv tool install buraq`, the way `django-admin` is
+  installed, then `buraq startproject myproject`, `cd myproject`, `uv sync`. The
+  generated `pyproject.toml` already lists Buraq, so `uv sync` builds the
+  project's environment from it — `.venv` beside `config/` and `manage.py`,
+  one directory to move, archive or delete.
+
+  The page previously had you make the environment first, in whatever directory
+  you happened to be standing in, and `startproject` then nested the project
+  inside it. The environment ended up a level above the code, a sibling of the
+  project rather than part of it.
+
+- **`startproject` now prints the environment step**, and prints the one that
+  fits the machine: `uv sync` where uv is, `python -m venv .venv` and pip where
+  it is not, each followed by the activate line for the platform. It printed
+  neither, on the grounds that reaching the command at all means Buraq is
+  importable — true, but importable from wherever `buraq` was installed. Once
+  that is a tool install, following the output landed you in a project with no
+  environment of its own, and the first package you added went missing. A
+  project that already has a `.venv` is not told to make one.
+
+- **`startproject` accepts a directory that already exists**, so long as it
+  holds none of the files it writes, which makes `buraq startproject myblog .`
+  work for anyone who prefers to build the environment first. A collision is
+  still refused, and the message now names the file in the way rather than
+  saying only that the directory exists. The check runs before the first file is
+  written, so a refusal cannot leave half a project behind. A `.venv` and a
+  `.git` are not collisions. Scaffolding in place also stops printing `cd .`,
+  which read as a step the reader had missed.
+
+- **The installation page is two complete recipes rather than tabs across two
+  sections.** One uses uv, one uses nothing but the standard library, and both
+  end in the same place: a project directory with `.venv` inside it and Buraq
+  installed in that.
+
+  They are separate because their shapes genuinely differ. `uvx` runs the
+  scaffolder without installing it, so with uv the project comes first and its
+  environment second. Without uv the scaffolder has to exist before the project
+  does, so the environment comes first and the project is scaffolded around it
+  with a trailing `.`. Interleaving those two orders through synchronised tabs
+  produced a page that had to tell half its readers to skip the next section.
+
+  `pipx run` had been the headline of the non-uv path, and pipx ships with
+  nothing — not Python, not Windows, not macOS, not any mainstream Linux — so
+  that path opened with a command most readers do not have, and `pip install
+  pipx` is itself refused on Debian and Ubuntu. It is now one line for people
+  who already have it: it replaces two commands and costs an install, which is
+  not a saving. Neither recipe touches the system Python.
+
+- **The installation page says where packages go.** While `startproject` built
+  a `.venv` and installed into it, the page never had to. Now that it does not,
+  there is a section on building the project's environment and another on adding
+  your own packages to it — and the warning that matters: the command that makes
+  projects holds Buraq and nothing of yours, so the environment to be standing in
+  is always the project's.
 
   Three claims on that page had also stopped being true: that `startproject`
   installs dependencies, that a project contains an `alembic/` directory, and
@@ -480,6 +556,24 @@ and a failure was otherwise just "exit code 1" to everyone else.
 
 - **The `versions/` directory level is gone** — Alembic's default layout puts migrations in a subdirectory because `script_location` also holds `env.py` and `script.py.mako`. An app directory holds neither, so the level separated nothing: framework migrations move from `buraq/contrib/<app>/migrations/versions/0001_initial.py` to `buraq/contrib/<app>/migrations/0001_initial.py`, and a project's are `blog/migrations/0001_initial.py` — the same shape the framework this borrows from uses.
 
+#### Where Jinja's own features are
+
+Nothing in the documentation linked to Jinja's, so a reader wanting `groupby`,
+`selectattr`, `{% macro %}` or whitespace control had nowhere to go and would
+reasonably conclude Buraq had only what was listed. There is now a link to the
+Template Designer Documentation, a list of Jinja's filters by name so the shape
+of what exists is visible without leaving, and a Django-to-Jinja translation
+table for the differences that actually bite — filter arguments in parentheses
+rather than after a colon, `{% else %}` where Django writes `{% empty %}`,
+`loop.index` for `forloop.counter`, and the rest. Each row of that table is
+covered by a test, since a translation table is only worth having if every row
+is true.
+
+Both template pages claimed Buraq ships 21 filters. It ships 37, plus 10
+globals, alongside Jinja's own 54 — and the globals had no reference at all, so
+`url`, `static`, `csrf_token` and `regroup` were undocumented.
+
+
 ### Removed
 
 - **BREAKING — the uv wrapper commands.** `buraq install`, `buraq uninstall`,
@@ -503,7 +597,32 @@ and a failure was otherwise just "exit code 1" to everyone else.
   headers itself, correctly; remove the middleware from `MIDDLEWARE` if you
   listed it.
 
+
 ### Fixed
+
+- **The social card showed a logo the site had stopped using.** Every share on
+  X, Slack, Discord and LinkedIn rendered an indigo rounded square with a "B"
+  in it, because `make-og-image.mjs` drew its own mark instead of reading one.
+  It now inlines `logo-dark.svg` — the dark variant, matching the card's ground
+  — and scales it into place. That file carries no `<text>`, so nothing depends
+  on a font reaching the SVG renderer, which is the constraint the rest of that
+  script is built around. Ids are namespaced on the way in, so a future gradient
+  in the logo cannot silently collide with the card's own.
+
+- **The README advertised WhiteNoise, which Buraq does not use and cannot.**
+  It was never a dependency and is never imported; `staticfiles/handlers.py`
+  says why in a comment — WhiteNoise is WSGI, and mounting it in an ASGI
+  application raised `TypeError` on the first request. Nobody hit it only
+  because the `ImportError` fallback ran instead. Static files are served by
+  `_CachedStaticFiles` with cache headers, over `.gz` files written once at
+  collect time rather than compressed per request, and the README now says so.
+
+  Three overclaims went with it: "Rust-powered performance at every layer",
+  contradicted by the table directly beneath it listing FastAPI and SQLAlchemy;
+  `uv` as a row in that same performance table, though a package manager cannot
+  affect request throughput and it is an optional extra rather than a
+  dependency; and Argon2id described as "fast to verify", which inverts the
+  property that makes it worth using.
 
 - **`RATE_LIMIT` limited nothing.** Buraq built slowapi's `Limiter` but never
   installed its middleware, and `default_limits` are applied by that middleware
@@ -1071,6 +1190,60 @@ and a failure was otherwise just "exit code 1" to everyone else.
   Fixed by batch-fetching instead of joining, after the main query runs: `select_related("category")` collects the raw ids and issues one follow-up query per named relation, then replaces the attribute on each instance with the resolved object — the *same* attribute name, so `doc.category` is the raw id normally and the `Category` instance once eager-loaded, never both at once and never a query on plain attribute access. `prefetch_related("docs")` / `prefetch_related(Prefetch("docs", queryset=...))` now does the equivalent for the reverse-FK and many-to-many direction, and the relation's own accessor picks it up: `category.docs.all()` and `post.tags.all()` return the cached list with no query once prefetched (previously always an unresolved `QuerySet`/coroutine, cached or not). Both are O(1) additional queries regardless of row count — no join, and no per-row queries either.
 
   Two more bugs surfaced by actually exercising this code path for the first time: `_ReverseFKDescriptor` resolved its child model with `getter() if callable(getter) else getter` — a class is itself callable, so this built a blank instance instead of using the class; and `QuerySet` had no `get()`/`get_or_none()` of its own (only `Manager` did), so any chain ending in one — `Post.objects.select_related("author").get(id=1)` — raised `AttributeError` regardless of relation loading. Both fixed; `Manager.get()`/`.get_or_none()` now delegate to `QuerySet`, matching `.exists()`/`.first()`/`.last()`.
+
+#### `{{ cycle("a", "b") }}` rendered an object into the page
+
+`cycle` is built to be held in a variable and called — `{% set c = cycle("odd",
+"even") %}` then `{{ c() }}`. Rendered directly, which is the obvious
+translation of Django's `{% cycle %}`, it put `<_Cycle object at 0x...>` into
+the HTML: no error, no warning, just that on the page. It now yields its next
+value when rendered.
+
+Inside a loop, Jinja's own `loop.cycle("odd", "even")` is the better answer and
+needs nothing from Buraq — calling `cycle()` fresh on each iteration builds a
+new one every time and always returns the first value. The documentation says
+so.
+
+#### The whole CI matrix, which had never been green
+
+Six of the eight jobs were failing on every run. The two that passed were
+Windows, which is the platform the project is developed on, so it went unseen:
+PostgreSQL, MySQL, both Ubuntu jobs and both macOS jobs were red throughout.
+Four separate causes, three of them faults in the framework rather than the
+tests.
+
+- **Many-to-many writes were broken on MySQL entirely.** Adding to a relation,
+  `.set()`, and `bulk_create(ignore_conflicts=True)` all built their statement
+  with `on_conflict_do_nothing()`, which is PostgreSQL's and SQLite's spelling.
+  MySQL has never had it, so every one of them raised `AttributeError: 'Insert'
+  object has no attribute 'on_conflict_do_nothing'`. It is written per dialect
+  now — `ON DUPLICATE KEY UPDATE` on MySQL and MariaDB — from one helper rather
+  than the same ladder repeated at three call sites.
+
+- **Engines were abandoned rather than disposed.** Resetting a connection set
+  the engine aside and left its connections open until something finalised them,
+  which for an async driver happens after the event loop has gone: "Event loop
+  is closed", raised from a finaliser and blamed on whichever test was running.
+  It leaks connections outside the test suite too, wherever a project resets.
+
+- **`pool_size` and `max_overflow` were passed to every pool**, and SQLAlchemy
+  refuses them rather than ignoring them. So `DATABASE_OPTIONS = {"poolclass":
+  NullPool}` — what a project sets to hand pooling to PgBouncer — could not
+  start at all. Whether a pool takes them is now asked of the class.
+
+- **A test hashed a file whose bytes depended on the platform.** The fixture
+  wrote its CSS with `write_text`, so Windows stored `
+` where every other
+  platform stored `
+`; the content hash differed, and the assertion named one.
+  It passed only on the machine the hash came from.
+
+Alongside those, the suite now keeps a database connection inside the event loop
+that opened it — pytest-asyncio gives each test its own, and a pooled connection
+belongs to the loop that opened it — and CI reports which tests failed as
+annotations, since downloading a job log needs admin rights on the repository
+and a failure was otherwise just "exit code 1" to everyone else.
+
 
 ## [1.6.0] - 2026-08-21
 
@@ -1899,7 +2072,8 @@ and a failure was otherwise just "exit code 1" to everyone else.
 - Argon2 password hashing via argon2-cffi
 - orjson for high-performance JSON serialization
 
-[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/nezanuha/buraq/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/nezanuha/buraq/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/nezanuha/buraq/compare/v1.5.2...v1.6.0
 [1.5.2]: https://github.com/nezanuha/buraq/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/nezanuha/buraq/compare/v1.5.0...v1.5.1
