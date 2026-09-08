@@ -9,6 +9,7 @@ Settings::
     SESSION_ENGINE = "buraq.contrib.sessions.backends.cache"
     SESSION_CACHE_ALIAS = "default"   # optional — which CACHES entry to use
 """
+
 from __future__ import annotations
 
 from buraq.contrib.sessions.backends.base import SessionBase
@@ -19,10 +20,12 @@ _KEY_PREFIX = "buraq_session:"
 def _get_cache():
     try:
         from buraq.conf import settings
+
         alias = getattr(settings, "SESSION_CACHE_ALIAS", "default")
     except Exception:
         alias = "default"
     from buraq.contrib.cache.core import caches
+
     return caches[alias]
 
 

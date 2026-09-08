@@ -18,6 +18,7 @@ Usage:
     paginator = Paginator(Post.objects.filter(published=True), per_page=10)
     page = await paginator.page(1)
 """
+
 from math import ceil
 
 
@@ -140,6 +141,7 @@ class Paginator:
         if self._count is None:
             if hasattr(self.object_list, "count") and callable(self.object_list.count):
                 import asyncio
+
                 count = self.object_list.count()
                 if asyncio.iscoroutine(count):
                     count = await count
@@ -163,6 +165,7 @@ class Paginator:
 
 
 # ── Async paginator ────────────────────────────────────────────────────────────
+
 
 class AsyncPage(Page):
     """
@@ -189,6 +192,7 @@ class AsyncPaginator(Paginator):
         if self._count is None:
             if hasattr(self.object_list, "count") and callable(self.object_list.count):
                 import asyncio
+
                 count = self.object_list.count()
                 if asyncio.iscoroutine(count):
                     count = await count

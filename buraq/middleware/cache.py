@@ -24,6 +24,7 @@ Usage::
     async def my_view(request):
         ...
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -65,6 +66,7 @@ class FetchFromCacheMiddleware(BaseHTTPMiddleware):
 
     def _get_cache(self):
         from buraq.contrib.cache.core import caches
+
         return caches[self._cache_alias]
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -101,6 +103,7 @@ class UpdateCacheMiddleware(BaseHTTPMiddleware):
 
     def _get_cache(self):
         from buraq.contrib.cache.core import caches
+
         return caches[self._cache_alias]
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -156,6 +159,7 @@ class CacheMiddleware(BaseHTTPMiddleware):
 
     def _get_cache(self):
         from buraq.contrib.cache.core import caches
+
         return caches[self._cache_alias]
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:

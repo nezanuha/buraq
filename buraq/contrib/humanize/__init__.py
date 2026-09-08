@@ -8,6 +8,7 @@ Usage:
     ordinal(3)           # → "3rd"
     naturaltime(dt)      # → "2 hours ago"
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -38,8 +39,7 @@ def apnumber(value: int | str) -> str:
 
     Numbers 10 and above are returned as digits.
     """
-    _AP = ["zero", "one", "two", "three", "four", "five",
-           "six", "seven", "eight", "nine"]
+    _AP = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
     try:
         n = int(value)
     except (ValueError, TypeError):
@@ -172,6 +172,12 @@ def intword(value: int | float | str) -> str:
 
 
 __all__ = [
-    "intcomma", "ordinal", "apnumber", "pluralize",
-    "naturalday", "naturaltime", "naturalduration", "intword",
+    "intcomma",
+    "ordinal",
+    "apnumber",
+    "pluralize",
+    "naturalday",
+    "naturaltime",
+    "naturalduration",
+    "intword",
 ]

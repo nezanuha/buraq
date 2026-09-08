@@ -13,6 +13,7 @@ Each processor receives the current request and returns a dict merged into
 the template context before rendering. Use run_context_processors() in views
 or TemplateResponse to apply them automatically.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -40,12 +41,14 @@ def auth(req) -> dict:
 def debug(req) -> dict:
     """Adds DEBUG flag — only when DEBUG=True, so it's never exposed in production."""
     from buraq.conf import settings
+
     return {"DEBUG": settings.DEBUG} if settings.DEBUG else {}
 
 
 def i18n(req) -> dict:
     """Adds current language code to the template context."""
     from buraq.conf import settings
+
     lang = getattr(getattr(req, "state", None), "language", None) or settings.LANGUAGE_CODE
     return {"LANGUAGE_CODE": lang}
 

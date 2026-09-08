@@ -26,9 +26,7 @@ def upgrade() -> None:
     )
     # Expired rows are cleared by scanning this column, and a session store is
     # read on every request that carries a cookie.
-    op.create_index(
-        "ix_buraq_sessions_expire_date", "buraq_sessions", ["expire_date"]
-    )
+    op.create_index("ix_buraq_sessions_expire_date", "buraq_sessions", ["expire_date"])
 
 
 def downgrade() -> None:

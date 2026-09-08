@@ -20,6 +20,7 @@ Usage:
     )
     xml_string = feed.writeString("utf-8")
 """
+
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
@@ -40,29 +41,68 @@ def _iso8601(dt: datetime) -> str:
 
 
 class SyndicationFeed:
-    def __init__(self, title, link, description, *, language=None, author_name=None,
-                 author_email=None, subtitle=None, categories=(),
-                 feed_url=None, feed_copyright=None, ttl=None):
+    def __init__(
+        self,
+        title,
+        link,
+        description,
+        *,
+        language=None,
+        author_name=None,
+        author_email=None,
+        subtitle=None,
+        categories=(),
+        feed_url=None,
+        feed_copyright=None,
+        ttl=None,
+    ):
         self.feed = {
-            "title": title, "link": link, "description": description,
-            "language": language, "author_name": author_name,
-            "author_email": author_email, "subtitle": subtitle,
-            "categories": list(categories), "feed_url": feed_url,
-            "feed_copyright": feed_copyright, "ttl": ttl,
+            "title": title,
+            "link": link,
+            "description": description,
+            "language": language,
+            "author_name": author_name,
+            "author_email": author_email,
+            "subtitle": subtitle,
+            "categories": list(categories),
+            "feed_url": feed_url,
+            "feed_copyright": feed_copyright,
+            "ttl": ttl,
         }
         self.items: list[dict] = []
 
-    def add_item(self, title, link, description, *, author_name=None, author_email=None,
-                 pubdate=None, unique_id=None, unique_id_is_permalink=False,
-                 categories=(), item_copyright=None, ttl=None, **kwargs):
-        self.items.append({
-            "title": title, "link": link, "description": description,
-            "author_name": author_name, "author_email": author_email,
-            "pubdate": pubdate, "unique_id": unique_id,
-            "unique_id_is_permalink": unique_id_is_permalink,
-            "categories": list(categories), "item_copyright": item_copyright,
-            "ttl": ttl, **kwargs,
-        })
+    def add_item(
+        self,
+        title,
+        link,
+        description,
+        *,
+        author_name=None,
+        author_email=None,
+        pubdate=None,
+        unique_id=None,
+        unique_id_is_permalink=False,
+        categories=(),
+        item_copyright=None,
+        ttl=None,
+        **kwargs,
+    ):
+        self.items.append(
+            {
+                "title": title,
+                "link": link,
+                "description": description,
+                "author_name": author_name,
+                "author_email": author_email,
+                "pubdate": pubdate,
+                "unique_id": unique_id,
+                "unique_id_is_permalink": unique_id_is_permalink,
+                "categories": list(categories),
+                "item_copyright": item_copyright,
+                "ttl": ttl,
+                **kwargs,
+            }
+        )
 
     def latest_post_date(self) -> datetime | None:
         dates = [i["pubdate"] for i in self.items if i.get("pubdate")]
@@ -84,8 +124,13 @@ class Rss201rev2Feed(SyndicationFeed):
         if self.feed.get("language"):
             ET.SubElement(channel, "language").text = self.feed["language"]
         if self.feed.get("feed_url"):
-            ET.SubElement(channel, "atom:link", href=self.feed["feed_url"],
-                          rel="self", type="application/rss+xml")
+            ET.SubElement(
+                channel,
+                "atom:link",
+                href=self.feed["feed_url"],
+                rel="self",
+                type="application/rss+xml",
+            )
         if self.feed.get("feed_copyright"):
             ET.SubElement(channel, "copyright").text = self.feed["feed_copyright"]
         latest = self.latest_post_date()
@@ -99,13 +144,13 @@ class Rss201rev2Feed(SyndicationFeed):
             ET.SubElement(el, "link").text = item["link"]
             ET.SubElement(el, "description").text = item["description"]
             if item.get("author_email") and item.get("author_name"):
-                ET.SubElement(el, "author").text = f'{item["author_email"]} ({item["author_name"]})'
+                ET.SubElement(el, "author").text = f"{item['author_email']} ({item['author_name']})"
             if item.get("pubdate"):
                 ET.SubElement(el, "pubDate").text = _rfc2822(item["pubdate"])
             if item.get("unique_id"):
-                ET.SubElement(el, "guid",
-                              isPermaLink=str(item["unique_id_is_permalink"]).lower()
-                              ).text = item["unique_id"]
+                ET.SubElement(
+                    el, "guid", isPermaLink=str(item["unique_id_is_permalink"]).lower()
+                ).text = item["unique_id"]
             for cat in item.get("categories", []):
                 ET.SubElement(el, "category").text = cat
             if item.get("item_copyright"):

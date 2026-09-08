@@ -1,6 +1,7 @@
 """
 Shortcuts for Buraq views — render, redirect, get_object_or_404, get_list_or_404, render_to_string.
 """
+
 import logging
 from typing import Any
 
@@ -11,9 +12,7 @@ from starlette.responses import HTMLResponse, RedirectResponse
 _log = logging.getLogger(__name__)
 
 
-async def render(
-    request: Request, template_name: str, context: dict | None = None
-) -> HTMLResponse:
+async def render(request: Request, template_name: str, context: dict | None = None) -> HTMLResponse:
     """
     Render a Jinja2 template and return an HTMLResponse.
 
@@ -49,10 +48,7 @@ async def render(
 
         from buraq.contrib.csrf import get_token
 
-        return Markup(
-            '<input type="hidden" name="csrfmiddlewaretoken" value="'
-            f'{get_token(req)}">'
-        )
+        return Markup(f'<input type="hidden" name="csrfmiddlewaretoken" value="{get_token(req)}">')
 
     def _token(req):
         from buraq.contrib.csrf import get_token
@@ -94,6 +90,7 @@ def render_to_string(
         html = render_to_string(["partials/card.html", "partials/default.html"], context)
     """
     from buraq.template.loader import render_to_string as _render
+
     return _render(template_name, context, request)
 
 

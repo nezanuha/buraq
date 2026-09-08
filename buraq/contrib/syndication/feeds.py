@@ -27,6 +27,7 @@ Usage::
     get("/feed/rss/", LatestPostsFeed.as_feed(feed_type="rss"))
     get("/feed/atom/", LatestPostsFeed.as_feed(feed_type="atom"))
 """
+
 from __future__ import annotations
 
 import datetime
@@ -34,6 +35,7 @@ import xml.etree.ElementTree as ET
 from typing import Any
 
 # ── Low-level feed renderers ──────────────────────────────────────────────────
+
 
 class _SyndicationFeed:
     """Base feed renderer — produces a serialized feed string."""
@@ -78,18 +80,20 @@ class _SyndicationFeed:
         enclosure: dict | None = None,
         **kwargs,
     ) -> None:
-        self._items.append({
-            "title": title,
-            "link": link,
-            "description": description,
-            "author": author,
-            "categories": categories or [],
-            "unique_id": unique_id or link,
-            "pubdate": pubdate,
-            "updateddate": updateddate,
-            "enclosure": enclosure,
-            **kwargs,
-        })
+        self._items.append(
+            {
+                "title": title,
+                "link": link,
+                "description": description,
+                "author": author,
+                "categories": categories or [],
+                "unique_id": unique_id or link,
+                "pubdate": pubdate,
+                "updateddate": updateddate,
+                "enclosure": enclosure,
+                **kwargs,
+            }
+        )
 
     def write(self, encoding: str = "utf-8") -> str:
         raise NotImplementedError
@@ -110,9 +114,13 @@ class RssFeed(_SyndicationFeed):
     format = "rss"
 
     def write(self, encoding: str = "utf-8") -> str:
-        rss = ET.Element("rss", version="2.0", attrib={
-            "xmlns:atom": "http://www.w3.org/2005/Atom",
-        })
+        rss = ET.Element(
+            "rss",
+            version="2.0",
+            attrib={
+                "xmlns:atom": "http://www.w3.org/2005/Atom",
+            },
+        )
         channel = ET.SubElement(rss, "channel")
 
         ET.SubElement(channel, "title").text = self.title
@@ -128,11 +136,15 @@ class RssFeed(_SyndicationFeed):
         for cat in self.categories:
             ET.SubElement(channel, "category").text = cat
 
-        ET.SubElement(channel, "atom:link", attrib={
-            "href": self.link,
-            "rel": "self",
-            "type": "application/rss+xml",
-        })
+        ET.SubElement(
+            channel,
+            "atom:link",
+            attrib={
+                "href": self.link,
+                "rel": "self",
+                "type": "application/rss+xml",
+            },
+        )
 
         for item in self._items:
             entry = ET.SubElement(channel, "item")
@@ -148,11 +160,15 @@ class RssFeed(_SyndicationFeed):
                 ET.SubElement(entry, "category").text = cat
             if item.get("enclosure"):
                 enc = item["enclosure"]
-                ET.SubElement(entry, "enclosure", attrib={
-                    "url": enc["url"],
-                    "length": str(enc.get("length", 0)),
-                    "type": enc.get("mime_type", "audio/mpeg"),
-                })
+                ET.SubElement(
+                    entry,
+                    "enclosure",
+                    attrib={
+                        "url": enc["url"],
+                        "length": str(enc.get("length", 0)),
+                        "type": enc.get("mime_type", "audio/mpeg"),
+                    },
+                )
 
         ET.indent(rss)
         return ET.tostring(rss, encoding="unicode", xml_declaration=False)
@@ -207,6 +223,7 @@ class Atom1Feed(_SyndicationFeed):
 
 
 # ── High-level Feed class ─────────────────────────────────────────────────────
+
 
 class Feed:
     """
@@ -278,6 +295,7 @@ class Feed:
 
     async def __call__(self, request, **kwargs):
         from starlette.responses import Response
+
         feed = self.get_feed(self.feed_type)
         for item in await self.items():
             feed.add_item(

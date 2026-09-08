@@ -7,6 +7,7 @@ Usage:
     class MyForm(Form):
         username = CharField(validators=[MinLengthValidator(3)])
 """
+
 import re as _re
 
 from buraq.exceptions import ValidationError
@@ -68,8 +69,11 @@ class MinValueValidator:
 
 class RegexValidator:
     def __init__(
-        self, regex: str, message: str = "Enter a valid value.",
-        code: str = "invalid", inverse_match: bool = False
+        self,
+        regex: str,
+        message: str = "Enter a valid value.",
+        code: str = "invalid",
+        inverse_match: bool = False,
     ):
         self.regex = _re.compile(regex)
         self.message = message
@@ -85,9 +89,11 @@ class RegexValidator:
 class EmailValidator:
     message = "Enter a valid email address."
     code = "invalid"
-    user_regex = _re.compile(r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*$"
-                              r"|^\"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-\011\013\014\016-\177])*\"$)",
-                              _re.IGNORECASE)
+    user_regex = _re.compile(
+        r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*$"
+        r"|^\"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-\011\013\014\016-\177])*\"$)",
+        _re.IGNORECASE,
+    )
     domain_regex = _re.compile(
         r"(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)$",
         _re.IGNORECASE,
@@ -138,6 +144,7 @@ class DecimalValidator:
 
     def __call__(self, value):
         import decimal
+
         try:
             d = decimal.Decimal(value)
         except Exception:
@@ -223,6 +230,7 @@ def validate_integer(value) -> None:
 def validate_ipv4_address(value: str) -> None:
     """Raise ValidationError if value is not a valid IPv4 address."""
     import ipaddress
+
     try:
         ipaddress.IPv4Address(value)
     except (ValueError, ipaddress.AddressValueError):
@@ -232,6 +240,7 @@ def validate_ipv4_address(value: str) -> None:
 def validate_ipv6_address(value: str) -> None:
     """Raise ValidationError if value is not a valid IPv6 address."""
     import ipaddress
+
     try:
         ipaddress.IPv6Address(value)
     except (ValueError, ipaddress.AddressValueError):
@@ -241,6 +250,7 @@ def validate_ipv6_address(value: str) -> None:
 def validate_ipv46_address(value: str) -> None:
     """Raise ValidationError if value is not a valid IPv4 or IPv6 address."""
     import ipaddress
+
     try:
         ipaddress.ip_address(value)
     except (ValueError, ipaddress.AddressValueError):
@@ -248,14 +258,25 @@ def validate_ipv46_address(value: str) -> None:
 
 
 _IMAGE_EXTENSIONS = {
-    ".apng", ".avif", ".bmp", ".gif", ".ico", ".jpeg",
-    ".jpg", ".png", ".svg", ".tif", ".tiff", ".webp",
+    ".apng",
+    ".avif",
+    ".bmp",
+    ".gif",
+    ".ico",
+    ".jpeg",
+    ".jpg",
+    ".png",
+    ".svg",
+    ".tif",
+    ".tiff",
+    ".webp",
 }
 
 
 def validate_image_file_extension(value) -> None:
     """Raise ValidationError if the file is not a recognised image format."""
     import os
+
     name = getattr(value, "filename", None) or getattr(value, "name", str(value))
     ext = os.path.splitext(str(name))[1].lower()
     if ext not in _IMAGE_EXTENSIONS:
@@ -274,6 +295,7 @@ class FileExtensionValidator:
 
     def __call__(self, value) -> None:
         import os
+
         name = getattr(value, "filename", None) or getattr(value, "name", str(value))
         ext = os.path.splitext(str(name))[1].lower().lstrip(".")
         if ext not in self.allowed_extensions:

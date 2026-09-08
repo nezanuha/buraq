@@ -21,6 +21,7 @@ Usage::
 
 The timeout is in seconds. A timeout of 0 skips both the cache read and write.
 """
+
 from jinja2 import nodes
 from jinja2.ext import Extension
 
@@ -35,13 +36,16 @@ class CacheExtension(Extension):
         body = parser.parse_statements(["name:endcache"], drop_needle=True)
         return nodes.CallBlock(
             self.call_method("_cache_support", [timeout, cache_key]),
-            [], [], body,
+            [],
+            [],
+            body,
         ).set_lineno(lineno)
 
     def _cache_support(self, timeout, cache_key, caller):
         if not timeout:
             return caller()
         from buraq.contrib.cache.core import _get_backend
+
         backend = _get_backend()
         cached = backend.get_sync(cache_key)
         if cached is not None:

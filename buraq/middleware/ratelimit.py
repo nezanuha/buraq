@@ -19,6 +19,7 @@ matched the request against every route on every request to find the handler
 20us); its default strategy was a fixed window, which admits twice the limit
 across a boundary; and it could not use an async store at all.
 """
+
 from __future__ import annotations
 
 import time
@@ -262,8 +263,7 @@ def _open(factory, uri: str):
         package = str(exc).split("'")[1].split(".")[0] if "'" in str(exc) else ""
         install = f" Install it with `pip install {package}`." if package else ""
         raise ImproperlyConfigured(
-            f"RATE_LIMIT_STORAGE = {uri!r} needs a driver that is not "
-            f"installed.{install}"
+            f"RATE_LIMIT_STORAGE = {uri!r} needs a driver that is not installed.{install}"
         ) from exc
 
 
@@ -298,16 +298,18 @@ def client_ip(scope) -> str:
 
 async def _too_many_requests(send, verdict: Verdict) -> None:
     body = b'{"detail":"Rate limit exceeded"}'
-    await send({
-        "type": "http.response.start",
-        "status": 429,
-        "headers": [
-            (b"content-type", b"application/json"),
-            (b"content-length", str(len(body)).encode()),
-            # How long to wait, so a client can back off sensibly rather than
-            # retrying immediately into the same wall.
-            (b"retry-after", str(verdict.reset_after).encode()),
-            *rate_headers(verdict),
-        ],
-    })
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 429,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(body)).encode()),
+                # How long to wait, so a client can back off sensibly rather than
+                # retrying immediately into the same wall.
+                (b"retry-after", str(verdict.reset_after).encode()),
+                *rate_headers(verdict),
+            ],
+        }
+    )
     await send({"type": "http.response.body", "body": body})

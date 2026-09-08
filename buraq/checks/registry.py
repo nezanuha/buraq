@@ -45,35 +45,42 @@ class CheckRegistry:
 
     def register(self, fn: Callable | None = None, *tags):
         if fn is None:
+
             def decorator(f):
                 self._checks.append(f)
                 return f
+
             return decorator
         self._checks.append(fn)
         return fn
 
     def run_checks(self, tags=None) -> list[CheckMessage]:
         from buraq.conf import settings
+
         messages = []
         for check in self._checks:
             try:
                 result = check(settings) or []
                 messages.extend(result)
             except Exception as e:
-                messages.append(Error(
-                    f"Check {check.__name__!r} raised {type(e).__name__}: {e}",
-                    id="checks.E001",
-                ))
+                messages.append(
+                    Error(
+                        f"Check {check.__name__!r} raised {type(e).__name__}: {e}",
+                        id="checks.E001",
+                    )
+                )
         return messages
 
     def run_checks_or_raise(self) -> None:
         """Run all checks; raise ImproperlyConfigured if any Error-level messages exist."""
         from buraq.conf import settings
+
         messages = self.run_checks()
         errors = [m for m in messages if m.level >= Error.level]
         if errors:
             if settings.DEBUG:
                 import sys
+
                 summary = "; ".join(f"[{e.id}] {e.msg}" for e in errors)
                 print(
                     f"SystemCheck: {len(errors)} error(s) found"
@@ -82,10 +89,9 @@ class CheckRegistry:
                 )
             else:
                 from buraq.exceptions import ImproperlyConfigured
+
                 summary = "; ".join(f"[{e.id}] {e.msg}" for e in errors)
-                raise ImproperlyConfigured(
-                    f"System checks found {len(errors)} error(s): {summary}"
-                )
+                raise ImproperlyConfigured(f"System checks found {len(errors)} error(s): {summary}")
 
 
 registry = CheckRegistry()

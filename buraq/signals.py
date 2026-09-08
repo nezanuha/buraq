@@ -21,6 +21,7 @@ Usage:
     my_signal = Signal()
     await my_signal.send(sender=MyClass, instance=obj)
 """
+
 import asyncio
 import contextlib
 import inspect
@@ -59,9 +60,11 @@ class Signal:
             signal.connect(handler, sender=MyModel)
         """
         if receiver is None:
+
             def decorator(func):
                 self._do_connect(func, sender=sender, weak=weak, dispatch_uid=dispatch_uid)
                 return func
+
             return decorator
 
         if callable(receiver):
@@ -73,17 +76,17 @@ class Signal:
     def _do_connect(self, func, sender, weak, dispatch_uid):
         if dispatch_uid is not None:
             # Deduplicate — remove existing entry with same uid before adding.
-            self._receivers = [
-                entry for entry in self._receivers if entry[2] != dispatch_uid
-            ]
+            self._receivers = [entry for entry in self._receivers if entry[2] != dispatch_uid]
         ref = self._make_ref(func, weak)
         self._receivers.append((sender, ref, dispatch_uid))
 
     def connect_via(self, sender, weak=True, dispatch_uid=None):
         """Shortcut decorator: @signal.connect_via(MyModel)"""
+
         def decorator(func):
             self._do_connect(func, sender=sender, weak=weak, dispatch_uid=dispatch_uid)
             return func
+
         return decorator
 
     def disconnect(self, receiver, sender=None):
@@ -91,6 +94,7 @@ class Signal:
             _, ref, _ = entry
             live = self._resolve_ref(ref)
             return live is receiver and (sender is None or entry[0] is sender)
+
         self._receivers = [e for e in self._receivers if not _matches(e)]
 
     def _live_receivers(self, sender):
@@ -123,6 +127,7 @@ class Signal:
     def send_sync(self, sender, **kwargs) -> list:
         """Fire all sync receivers synchronously (used from __init__ where no event loop runs)."""
         import logging
+
         _log = logging.getLogger("buraq.signals")
         responses = []
         for handler in self._live_receivers(sender):
@@ -133,7 +138,8 @@ class Signal:
                 except Exception:
                     _log.exception(
                         "Error in signal handler %r for signal sent by %r",
-                        handler, sender,
+                        handler,
+                        sender,
                     )
         return responses
 
@@ -154,16 +160,16 @@ class Signal:
 
 # ── Built-in model signals ──────────────────────────────────────────────────
 
-pre_save    = Signal(providing_args=["instance", "created"])
-post_save   = Signal(providing_args=["instance", "created"])
-pre_delete  = Signal(providing_args=["instance"])
+pre_save = Signal(providing_args=["instance", "created"])
+post_save = Signal(providing_args=["instance", "created"])
+pre_delete = Signal(providing_args=["instance"])
 post_delete = Signal(providing_args=["instance"])
-pre_init    = Signal(providing_args=["args", "kwargs"])
-post_init   = Signal(providing_args=["instance"])
+pre_init = Signal(providing_args=["args", "kwargs"])
+post_init = Signal(providing_args=["instance"])
 
 # ── Request lifecycle signals ───────────────────────────────────────────────
 
-request_started  = Signal(providing_args=["environ"])
+request_started = Signal(providing_args=["environ"])
 request_finished = Signal()
 got_request_exception = Signal(providing_args=["request"])
 
@@ -185,7 +191,7 @@ Kwargs sent:
 
 # ── Migration signals ────────────────────────────────────────────────────────
 
-pre_migrate  = Signal(providing_args=["app_config", "verbosity", "interactive", "using"])
+pre_migrate = Signal(providing_args=["app_config", "verbosity", "interactive", "using"])
 post_migrate = Signal(providing_args=["app_config", "verbosity", "interactive", "using"])
 
 # ── Model class lifecycle ────────────────────────────────────────────────────

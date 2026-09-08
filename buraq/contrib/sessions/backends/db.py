@@ -12,6 +12,7 @@ Settings::
     INSTALLED_APPS = [..., "buraq.contrib.sessions"]
     SESSION_ENGINE = "buraq.contrib.sessions.backends.db"
 """
+
 from __future__ import annotations
 
 import time
@@ -47,6 +48,7 @@ class DatabaseSessionBackend(SessionBase):
         import sqlalchemy as sa
 
         from buraq.core.db import SessionLocal
+
         async with SessionLocal() as db:
             try:
                 result = await db.execute(sa.text(sql), params)
@@ -60,6 +62,7 @@ class DatabaseSessionBackend(SessionBase):
         import sqlalchemy as sa
 
         from buraq.core.db import SessionLocal
+
         async with SessionLocal() as db:
             try:
                 result = await db.execute(sa.text(sql), params)

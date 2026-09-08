@@ -1,4 +1,3 @@
-
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -34,6 +33,7 @@ class BuraqSettings(BaseSettings):
         if isinstance(value, str) and not value.strip().startswith("["):
             return [host.strip() for host in value.split(",") if host.strip()]
         return value
+
     INSTALLED_APPS: list[str] = []
 
     # Database
@@ -123,8 +123,8 @@ class BuraqSettings(BaseSettings):
     # minute when they are not, since the same URL then serves new bytes.
     STATIC_MAX_AGE: int | None = None
     STATIC_URL: str = "/static/"
-    STATIC_DIR: str | None = None          # single source dir (legacy; prefer STATICFILES_DIRS)
-    STATICFILES_DIRS: list[str] = []       # additional static source directories
+    STATIC_DIR: str | None = None  # single source dir (legacy; prefer STATICFILES_DIRS)
+    STATICFILES_DIRS: list[str] = []  # additional static source directories
     STATICFILES_FINDERS: list[str] = [
         "buraq.contrib.staticfiles.finders.FileSystemFinder",
         "buraq.contrib.staticfiles.finders.AppDirectoriesFinder",

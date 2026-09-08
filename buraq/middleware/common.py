@@ -13,6 +13,7 @@ Usage::
         "buraq.middleware.common.ConditionalGetMiddleware",
     ]
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -37,6 +38,7 @@ class CommonMiddleware:
 
         try:
             from buraq.conf import settings
+
             append_slash = getattr(settings, "APPEND_SLASH", True)
             prepend_www = getattr(settings, "PREPEND_WWW", False)
         except Exception:
@@ -59,6 +61,7 @@ class CommonMiddleware:
         if append_slash and not path.endswith("/") and "." not in path.rsplit("/", 1)[-1]:
             new_path = path + "/"
             from buraq.urls import _route_registry
+
             # Only when a route genuinely exists at the slashed path. The old
             # test also matched routes registered *without* the slash, which is
             # every route Buraq has -- so it redirected to an address Starlette's
@@ -116,11 +119,13 @@ class ConditionalGetMiddleware:
 
         headers = [h for h in initial.get("headers", []) if h[0].lower() != b"etag"]
         headers.append((b"etag", etag.encode()))
-        await send({
-            "type": "http.response.start",
-            "status": initial.get("status", 200),
-            "headers": headers,
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": initial.get("status", 200),
+                "headers": headers,
+            }
+        )
         await send({"type": "http.response.body", "body": body})
 
 
@@ -171,18 +176,17 @@ class BrokenLinkEmailsMiddleware:
     def _maybe_email(self, scope, referer: str) -> None:
         try:
             from buraq.conf import settings
+
             managers = getattr(settings, "MANAGERS", [])
             if not managers:
                 return
             from buraq.contrib.email.send import send_mail
+
             path = scope.get("path", "")
             subject = f"Broken link on {path}"
-            body = (
-                f"A broken link was detected.\n\n"
-                f"Referrer: {referer}\n"
-                f"Requested URL: {path}\n"
-            )
+            body = f"A broken link was detected.\n\nReferrer: {referer}\nRequested URL: {path}\n"
             import asyncio
+
             for _name, addr in managers:
                 asyncio.ensure_future(send_mail(subject, body, recipient_list=[addr]))
         except Exception:
@@ -190,10 +194,11 @@ class BrokenLinkEmailsMiddleware:
 
 
 async def _redirect(send, location: str, status: int = 302) -> None:
-    await send({
-        "type": "http.response.start",
-        "status": status,
-        "headers": [(b"location", location.encode())],
-    })
+    await send(
+        {
+            "type": "http.response.start",
+            "status": status,
+            "headers": [(b"location", location.encode())],
+        }
+    )
     await send({"type": "http.response.body", "body": b""})
-

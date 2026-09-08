@@ -1,6 +1,7 @@
 """
 HTTP utilities — URL safety helpers and encoding utilities.
 """
+
 from __future__ import annotations
 
 from urllib.parse import urlparse

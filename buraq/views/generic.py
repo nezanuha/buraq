@@ -1,6 +1,7 @@
 """
 Generic class-based views — ListView, DetailView, CreateView, UpdateView, DeleteView.
 """
+
 from buraq.shortcuts import redirect, render
 from buraq.views.base import View
 
@@ -80,12 +81,14 @@ class RedirectView(View):
         self.request = request
         url = self.get_redirect_url(**kwargs)
         from starlette.responses import RedirectResponse
+
         return RedirectResponse(url=url, status_code=self._status_code(request.method))
 
     async def post(self, request, **kwargs):
         self.request = request
         url = self.get_redirect_url(**kwargs)
         from starlette.responses import RedirectResponse
+
         return RedirectResponse(url=url, status_code=self._status_code(request.method))
 
     async def put(self, request, **kwargs):
@@ -108,6 +111,7 @@ class SingleObjectMixin:
 
     async def get_object(self):
         from buraq.shortcuts import get_object_or_404
+
         pk = self.kwargs.get(self.pk_url_kwarg)
         slug = self.kwargs.get(self.slug_url_kwarg)
         if pk is not None:
@@ -149,6 +153,7 @@ class MultipleObjectMixin:
 
     async def paginate_queryset(self, queryset, page_size: int):
         from buraq.paginator import EmptyPage, PageNotAnInteger, Paginator
+
         paginator = (self.paginator_class or Paginator)(queryset, page_size)
         page_num = self.request.query_params.get(self.page_kwarg, 1)
         try:
@@ -161,6 +166,7 @@ class MultipleObjectMixin:
 
 
 # ── Concrete generic views ───────────────────────────────────────────────────
+
 
 class DetailView(SingleObjectMixin, ContextMixin, TemplateMixin, View):
     """
@@ -207,9 +213,8 @@ class ListView(MultipleObjectMixin, ContextMixin, TemplateMixin, View):
 
         if not self.allow_empty and not object_list:
             from buraq.exceptions import Http404
-            raise Http404(
-                f"Empty list and '{type(self).__name__}.allow_empty' is False."
-            )
+
+            raise Http404(f"Empty list and '{type(self).__name__}.allow_empty' is False.")
 
         context_name = self.get_context_object_name()
         ctx = {"object_list": object_list, context_name: object_list}
@@ -218,13 +223,15 @@ class ListView(MultipleObjectMixin, ContextMixin, TemplateMixin, View):
             paginator, page, object_list, is_paginated = await self.paginate_queryset(
                 object_list, self.paginate_by
             )
-            ctx.update({
-                "paginator": paginator,
-                "page_obj": page,
-                "is_paginated": is_paginated,
-                "object_list": object_list,
-                context_name: object_list,
-            })
+            ctx.update(
+                {
+                    "paginator": paginator,
+                    "page_obj": page,
+                    "is_paginated": is_paginated,
+                    "object_list": object_list,
+                    context_name: object_list,
+                }
+            )
 
         ctx.update(await self.get_context_data(**kwargs))
         return await render(request, self.get_template_name(), ctx)
@@ -416,6 +423,7 @@ class FormView(ContextMixin, TemplateMixin, View):
 
 class ArchiveView(ListView):
     """ListView that filters by date field."""
+
     date_field: str = "created_at"
     allow_future: bool = False
 
@@ -423,19 +431,21 @@ class ArchiveView(ListView):
 class YearArchiveView(ArchiveView):
     async def get_queryset(self):
         import datetime
+
         year = int(self.kwargs.get("year", datetime.date.today().year))
-        qs = (self.model.objects.all()
-              .filter(**{f"{self.date_field}__year": year}))
+        qs = self.model.objects.all().filter(**{f"{self.date_field}__year": year})
         return await qs
 
 
 class MonthArchiveView(ArchiveView):
     async def get_queryset(self):
         import datetime
+
         year = int(self.kwargs.get("year", datetime.date.today().year))
         month = int(self.kwargs.get("month", datetime.date.today().month))
-        qs = (self.model.objects.all()
-              .filter(**{f"{self.date_field}__year": year, f"{self.date_field}__month": month}))
+        qs = self.model.objects.all().filter(
+            **{f"{self.date_field}__year": year, f"{self.date_field}__month": month}
+        )
         return await qs
 
 
@@ -444,6 +454,7 @@ class WeekArchiveView(ArchiveView):
 
     async def get_queryset(self):
         import datetime
+
         year = int(self.kwargs.get("year", datetime.date.today().year))
         week = int(self.kwargs.get("week", 1))
         # ISO: Monday = 1
@@ -459,14 +470,17 @@ class DayArchiveView(ArchiveView):
 
     async def get_queryset(self):
         import datetime
+
         year = int(self.kwargs.get("year", datetime.date.today().year))
         month = int(self.kwargs.get("month", datetime.date.today().month))
         day = int(self.kwargs.get("day", datetime.date.today().day))
-        return await self.model.objects.all().filter(**{
-            f"{self.date_field}__year": year,
-            f"{self.date_field}__month": month,
-            f"{self.date_field}__day": day,
-        })
+        return await self.model.objects.all().filter(
+            **{
+                f"{self.date_field}__year": year,
+                f"{self.date_field}__month": month,
+                f"{self.date_field}__day": day,
+            }
+        )
 
 
 class TodayArchiveView(DayArchiveView):
@@ -474,6 +488,7 @@ class TodayArchiveView(DayArchiveView):
 
     async def get_queryset(self):
         import datetime
+
         today = datetime.date.today()
         self.kwargs = {
             "year": today.year,
@@ -503,6 +518,7 @@ class DateDetailView(SingleObjectMixin, TemplateMixin, View):
     async def get(self, request, **kwargs):
         self.kwargs = kwargs
         import datetime
+
         year = int(kwargs.get("year", datetime.date.today().year))
         month = int(kwargs.get("month", datetime.date.today().month))
         day = int(kwargs.get("day", datetime.date.today().day))
@@ -520,6 +536,7 @@ class DateDetailView(SingleObjectMixin, TemplateMixin, View):
         obj = await self.model.objects.filter(**date_filters).first()
         if obj is None:
             from buraq.exceptions import Http404
+
             raise Http404
         name = self.get_context_object_name()
         ctx = await self.get_context_data(object=obj, **{name: obj}, **kwargs)

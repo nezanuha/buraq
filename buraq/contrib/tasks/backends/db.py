@@ -34,6 +34,7 @@ Task rows are stored with:
 - ``started_at``  — UTC timestamp (nullable)
 - ``finished_at`` — UTC timestamp (nullable)
 """
+
 from __future__ import annotations
 
 import importlib

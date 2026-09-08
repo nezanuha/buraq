@@ -13,6 +13,7 @@ picks the backend, the rest configures it. It is the shape the project already
 uses for the database, and the shape a container hands an application in an
 environment variable.
 """
+
 from __future__ import annotations
 
 from urllib.parse import urlparse
@@ -49,9 +50,7 @@ def parse_cache_url(url: str) -> tuple[str, dict]:
     ``locmem://``              -> the in-process backend
     """
     if not isinstance(url, str) or not url.strip():
-        raise ImproperlyConfigured(
-            "CACHE_URL is empty. It looks like 'redis://localhost:6379/0'."
-        )
+        raise ImproperlyConfigured("CACHE_URL is empty. It looks like 'redis://localhost:6379/0'.")
 
     parsed = urlparse(url)
     scheme = parsed.scheme.lower()
@@ -82,8 +81,7 @@ def parse_cache_url(url: str) -> tuple[str, dict]:
         path = f"{parsed.netloc}{parsed.path}"
         if not path:
             raise ImproperlyConfigured(
-                f"CACHE_URL = {url!r} names no directory. Write it as "
-                f"'file:///var/tmp/cache'."
+                f"CACHE_URL = {url!r} names no directory. Write it as 'file:///var/tmp/cache'."
             )
         options["cache_dir"] = path
     elif scheme in ("db", "database"):

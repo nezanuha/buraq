@@ -36,8 +36,7 @@ def get_connection(using: str | None = None) -> BaseEmailBackend:
         if using is not None:
             if using not in mailers:
                 raise ValueError(
-                    f"No mailer named {using!r} in MAILERS setting. "
-                    f"Available: {list(mailers)}"
+                    f"No mailer named {using!r} in MAILERS setting. Available: {list(mailers)}"
                 )
             config = dict(mailers[using])
             backend_path = config.pop("BACKEND")
@@ -144,10 +143,12 @@ async def send_template_mail(
 ) -> bool:
     """Send an email rendered from a Jinja2 template."""
     from buraq.core.templating import get_templates
+
     templates = get_templates()
     html_body = templates.get_template(template_name).render(context)
 
     import re
+
     plain_body = re.sub(r"<[^>]+>", "", html_body).strip()
 
     email = EmailMultiAlternatives(

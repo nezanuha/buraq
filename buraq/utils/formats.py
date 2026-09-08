@@ -8,6 +8,7 @@ Usage::
     number_format(1234.5)          # "1,234.5"
     date_format(date.today(), "N j, Y")
 """
+
 from __future__ import annotations
 
 import datetime
@@ -34,6 +35,7 @@ def get_format(format_type: str, lang: str | None = None, use_l10n: bool | None 
     }
     try:
         from buraq.conf import settings
+
         return getattr(settings, format_type, _defaults.get(format_type, ""))
     except Exception:
         return _defaults.get(format_type, "")
@@ -42,6 +44,7 @@ def get_format(format_type: str, lang: str | None = None, use_l10n: bool | None 
 def date_format(value, format: str | None = None, use_l10n: bool | None = None) -> str:
     """Format a date using the template format codes."""
     from buraq.template.builtins import _format_date
+
     fmt = format or get_format("DATE_FORMAT")
     return _format_date(value, fmt)
 
@@ -49,6 +52,7 @@ def date_format(value, format: str | None = None, use_l10n: bool | None = None) 
 def time_format(value, format: str | None = None, use_l10n: bool | None = None) -> str:
     """Format a time value."""
     from buraq.template.builtins import time_filter
+
     fmt = format or get_format("TIME_FORMAT")
     return time_filter(value, fmt)
 
@@ -61,8 +65,10 @@ def number_format(
 ) -> str:
     """Format a number with locale-aware separators."""
     from buraq.utils.numberformat import format as _fmt
+
     try:
         from buraq.conf import settings
+
         dec_sep = getattr(settings, "DECIMAL_SEPARATOR", DECIMAL_SEPARATOR)
         thou_sep = getattr(settings, "THOUSAND_SEPARATOR", THOUSAND_SEPARATOR)
         grouping = getattr(settings, "NUMBER_GROUPING", NUMBER_GROUPING)

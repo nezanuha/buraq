@@ -19,15 +19,15 @@ def _bootstrap_cli() -> None:
     import sys
     from pathlib import Path
 
-    if os.environ.get('BURAQ_NO_BOOTSTRAP'):
+    if os.environ.get("BURAQ_NO_BOOTSTRAP"):
         return
-    if Path(sys.argv[0]).stem != 'buraq':
+    if Path(sys.argv[0]).stem != "buraq":
         return
 
-    venv = Path.cwd() / '.venv'
-    python = venv / 'Scripts' / 'python.exe'
+    venv = Path.cwd() / ".venv"
+    python = venv / "Scripts" / "python.exe"
     if not python.exists():
-        python = venv / 'bin' / 'python'
+        python = venv / "bin" / "python"
     if not python.exists():
         return
 
@@ -38,10 +38,10 @@ def _bootstrap_cli() -> None:
     if same:
         return
 
-    os.environ['BURAQ_NO_BOOTSTRAP'] = '1'   # guard against exec loops
-    argv = [str(python), '-m', 'buraq.management.cli', *sys.argv[1:]]
+    os.environ["BURAQ_NO_BOOTSTRAP"] = "1"  # guard against exec loops
+    argv = [str(python), "-m", "buraq.management.cli", *sys.argv[1:]]
 
-    if os.name == 'nt':
+    if os.name == "nt":
         # Windows has no real exec: os.execv() spawns a new process and exits
         # this one, so the shell sees the command finish and returns the prompt
         # while the server keeps running detached -- Ctrl+C then reaches nobody.
@@ -71,21 +71,40 @@ try:
     from importlib.metadata import PackageNotFoundError
     from importlib.metadata import version as _version
 
-    __version__ = _version('buraq')
+    __version__ = _version("buraq")
 except PackageNotFoundError:  # running from a source checkout
-    __version__ = '0.0.0+unknown'
+    __version__ = "0.0.0+unknown"
 
 __all__ = [
     # App
-    "Buraq", "Router", "Base", "get_db",
+    "Buraq",
+    "Router",
+    "Base",
+    "get_db",
     # URL routing
-    "path", "get", "post", "put", "patch", "delete", "include",
+    "path",
+    "get",
+    "post",
+    "put",
+    "patch",
+    "delete",
+    "include",
     # Shortcuts
-    "render", "redirect", "get_object_or_404",
+    "render",
+    "redirect",
+    "get_object_or_404",
     # ORM
-    "models", "Q", "F", "Count", "Sum", "Avg", "Min", "Max",
+    "models",
+    "Q",
+    "F",
+    "Count",
+    "Sum",
+    "Avg",
+    "Min",
+    "Max",
     # Views & Forms
-    "views", "forms",
+    "views",
+    "forms",
     # DB
     "db",
 ]

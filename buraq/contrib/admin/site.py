@@ -24,6 +24,7 @@ class AdminSite:
 
     def register(self, model, admin_class=None, **options):
         from buraq.contrib.admin.options import ModelAdmin as _ModelAdmin
+
         if admin_class is None:
             admin_class = _ModelAdmin
         if options:

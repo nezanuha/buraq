@@ -8,6 +8,7 @@ Usage:
         row_num=Window(RowNumber(), partition_by="author_id", order_by="-created_at")
     )
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -20,30 +21,36 @@ class _WindowFunc:
 
 
 class RowNumber(_WindowFunc):
-    def sa_func(self): return func.row_number()
+    def sa_func(self):
+        return func.row_number()
 
 
 class Rank(_WindowFunc):
-    def sa_func(self): return func.rank()
+    def sa_func(self):
+        return func.rank()
 
 
 class DenseRank(_WindowFunc):
-    def sa_func(self): return func.dense_rank()
+    def sa_func(self):
+        return func.dense_rank()
 
 
 class PercentRank(_WindowFunc):
-    def sa_func(self): return func.percent_rank()
+    def sa_func(self):
+        return func.percent_rank()
 
 
 class CumeDist(_WindowFunc):
-    def sa_func(self): return func.cume_dist()
+    def sa_func(self):
+        return func.cume_dist()
 
 
 class Ntile(_WindowFunc):
     def __init__(self, num_buckets: int):
         self.num_buckets = num_buckets
 
-    def sa_func(self): return func.ntile(self.num_buckets)
+    def sa_func(self):
+        return func.ntile(self.num_buckets)
 
 
 class Lag(_WindowFunc):
@@ -52,7 +59,8 @@ class Lag(_WindowFunc):
         self.offset = offset
         self.default = default
 
-    def sa_func(self): return None  # resolved in Window.resolve
+    def sa_func(self):
+        return None  # resolved in Window.resolve
 
     def resolve_expr(self, model):
         col = getattr(model, self.field)
@@ -68,7 +76,8 @@ class Lead(_WindowFunc):
         self.offset = offset
         self.default = default
 
-    def sa_func(self): return None
+    def sa_func(self):
+        return None
 
     def resolve_expr(self, model):
         col = getattr(model, self.field)
@@ -82,7 +91,8 @@ class FirstValue(_WindowFunc):
     def __init__(self, field: str):
         self.field = field
 
-    def sa_func(self): return None
+    def sa_func(self):
+        return None
 
     def resolve_expr(self, model):
         return func.first_value(getattr(model, self.field))
@@ -92,7 +102,8 @@ class LastValue(_WindowFunc):
     def __init__(self, field: str):
         self.field = field
 
-    def sa_func(self): return None
+    def sa_func(self):
+        return None
 
     def resolve_expr(self, model):
         return func.last_value(getattr(model, self.field))
@@ -103,7 +114,8 @@ class NthValue(_WindowFunc):
         self.field = field
         self.nth = nth
 
-    def sa_func(self): return None
+    def sa_func(self):
+        return None
 
     def resolve_expr(self, model):
         return func.nth_value(getattr(model, self.field), self.nth)
@@ -148,6 +160,15 @@ class Window:
 
 __all__ = [
     "Window",
-    "RowNumber", "Rank", "DenseRank", "PercentRank", "CumeDist", "Ntile",
-    "Lag", "Lead", "FirstValue", "LastValue", "NthValue",
+    "RowNumber",
+    "Rank",
+    "DenseRank",
+    "PercentRank",
+    "CumeDist",
+    "Ntile",
+    "Lag",
+    "Lead",
+    "FirstValue",
+    "LastValue",
+    "NthValue",
 ]

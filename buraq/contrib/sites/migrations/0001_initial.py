@@ -16,14 +16,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table('sites_site',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('domain', sa.String(length=255), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('domain')
+    op.create_table(
+        "sites_site",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("domain", sa.String(length=255), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("domain"),
     )
 
 
 def downgrade() -> None:
-    op.drop_table('sites_site')
+    op.drop_table("sites_site")

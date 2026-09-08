@@ -5,6 +5,7 @@ Usage::
 
     from buraq.utils.text import slugify, truncatechars, truncatewords
 """
+
 from __future__ import annotations
 
 import html
@@ -14,6 +15,7 @@ import unicodedata
 from html.parser import HTMLParser
 
 # ── slugify ───────────────────────────────────────────────────────────────────
+
 
 def slugify(value: str, allow_unicode: bool = False) -> str:
     """
@@ -44,6 +46,7 @@ def slugify(value: str, allow_unicode: bool = False) -> str:
 
 
 # ── truncation ────────────────────────────────────────────────────────────────
+
 
 def truncatechars(value: str, num: int, truncate: str = "…") -> str:
     """
@@ -97,6 +100,7 @@ def truncatewords_html(value: str, num: int, truncate: str = "…") -> str:
 
 # ── capfirst ──────────────────────────────────────────────────────────────────
 
+
 def capfirst(value: str) -> str:
     """
     Capitalize only the first character of *value*, leaving the rest unchanged.
@@ -109,6 +113,7 @@ def capfirst(value: str) -> str:
 
 
 # ── camel_case_to_spaces ──────────────────────────────────────────────────────
+
 
 def camel_case_to_spaces(value: str) -> str:
     """
@@ -123,6 +128,7 @@ def camel_case_to_spaces(value: str) -> str:
 
 
 # ── get_valid_filename ────────────────────────────────────────────────────────
+
 
 def get_valid_filename(name: str) -> str:
     """
@@ -175,6 +181,7 @@ def smart_split(text: str):
 
 # ── wrap ──────────────────────────────────────────────────────────────────────
 
+
 def wrap(text: str, width: int) -> str:
     """
     Word-wrap *text* so that each line is at most *width* characters.
@@ -194,6 +201,7 @@ def wrap(text: str, width: int) -> str:
 
 # ── unescape_entities ─────────────────────────────────────────────────────────
 
+
 def unescape_entities(text: str) -> str:
     """
     Convert HTML entities to their corresponding characters.
@@ -208,10 +216,24 @@ def unescape_entities(text: str) -> str:
 
 # ── HTML truncation internals ─────────────────────────────────────────────────
 
-_VOID_ELEMENTS = frozenset([
-    "area", "base", "br", "col", "embed", "hr", "img",
-    "input", "link", "meta", "param", "source", "track", "wbr",
-])
+_VOID_ELEMENTS = frozenset(
+    [
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
+    ]
+)
 
 
 class _TruncateHTMLParser(HTMLParser):
@@ -219,13 +241,13 @@ class _TruncateHTMLParser(HTMLParser):
 
     def __init__(self, limit: int, truncate: str, by: str):
         super().__init__(convert_charrefs=False)
-        self.limit   = limit
+        self.limit = limit
         self.truncate = truncate
-        self.by      = by          # "chars" or "words"
+        self.by = by  # "chars" or "words"
         self.output: list[str] = []
         self._open_tags: list[str] = []
-        self._count  = 0           # chars or words consumed
-        self._done   = False
+        self._count = 0  # chars or words consumed
+        self._done = False
 
     # ── internal counter ──────────────────────────────────────────────────────
 

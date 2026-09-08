@@ -16,6 +16,7 @@ Usage:
     @cache_control(max_age=3600)
     async def static_view(request): ...
 """
+
 import functools
 import logging
 from collections.abc import Callable
@@ -37,18 +38,21 @@ def login_required(
         @login_required
         @login_required(login_url="/signin")
     """
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(request, *args, **kwargs):
             user = getattr(request, "user", None)
             if not (user and getattr(user, "is_authenticated", False)):
                 from urllib.parse import urlencode
+
                 next_url = urlencode({redirect_field_name: str(request.url)})
                 return RedirectResponse(
                     url=f"{login_url}?{next_url}",
                     status_code=302,
                 )
             return await func(request, *args, **kwargs)
+
         return wrapper
 
     if view_func is not None:
@@ -59,6 +63,7 @@ def login_required(
 
 def staff_required(view_func=None, login_url: str = "/auth/login"):
     """Require is_staff=True. Returns 403 if logged in but not staff."""
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(request, *args, **kwargs):
@@ -68,6 +73,7 @@ def staff_required(view_func=None, login_url: str = "/auth/login"):
             if not getattr(user, "is_staff", False):
                 raise HTTPException(status_code=403, detail="Staff access required.")
             return await func(request, *args, **kwargs)
+
         return wrapper
 
     if view_func is not None:
@@ -77,6 +83,7 @@ def staff_required(view_func=None, login_url: str = "/auth/login"):
 
 def superuser_required(view_func=None, login_url: str = "/auth/login"):
     """Require is_superuser=True."""
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(request, *args, **kwargs):
@@ -86,6 +93,7 @@ def superuser_required(view_func=None, login_url: str = "/auth/login"):
             if not getattr(user, "is_superuser", False):
                 raise HTTPException(status_code=403, detail="Superuser access required.")
             return await func(request, *args, **kwargs)
+
         return wrapper
 
     if view_func is not None:
@@ -104,6 +112,7 @@ def permission_required(perm: str, login_url: str = "/auth/login", raise_excepti
         @permission_required("posts.add_post")
         async def create_post(request): ...
     """
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(request, *args, **kwargs):
@@ -114,6 +123,7 @@ def permission_required(perm: str, login_url: str = "/auth/login", raise_excepti
                 return RedirectResponse(url=login_url, status_code=302)
 
             import inspect as _inspect
+
             if hasattr(user, "has_perm"):
                 if _inspect.iscoroutinefunction(user.has_perm):
                     result = await user.has_perm(perm)
@@ -129,7 +139,9 @@ def permission_required(perm: str, login_url: str = "/auth/login", raise_excepti
                 return RedirectResponse(url=login_url, status_code=302)
 
             return await func(request, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -141,6 +153,7 @@ def cache_control(**kwargs):
         @cache_control(max_age=3600, public=True)
         async def my_view(request): ...
     """
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(request, *args, **kw):
@@ -155,12 +168,15 @@ def cache_control(**kwargs):
                         parts.append(f"{header_key}={val}")
                 response.headers["Cache-Control"] = ", ".join(parts)
             return response
+
         return wrapper
+
     return decorator
 
 
 def never_cache(func):
     """Set headers to prevent caching."""
+
     @functools.wraps(func)
     async def wrapper(request, *args, **kwargs):
         response = await func(request, *args, **kwargs)
@@ -171,11 +187,13 @@ def never_cache(func):
             response.headers["Expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
             response.headers["Pragma"] = "no-cache"
         return response
+
     return wrapper
 
 
 def vary_on_headers(*headers):
     """Add Vary header — tells caches the response varies by these request headers."""
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(request, *args, **kwargs):
@@ -185,7 +203,9 @@ def vary_on_headers(*headers):
                 new_vary = ", ".join(filter(None, [existing] + list(headers)))
                 response.headers["Vary"] = new_vary
             return response
+
         return wrapper
+
     return decorator
 
 
@@ -214,11 +234,13 @@ def require_http_methods(*methods):
                     headers={"Allow": ", ".join(allowed)},
                 )
             return await func(request, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
-require_GET  = require_http_methods("GET")
+require_GET = require_http_methods("GET")
 require_POST = require_http_methods("POST")
 require_safe = require_http_methods("GET", "HEAD")
 
@@ -282,14 +304,10 @@ def ratelimit(
         try:
             parse_rate(limit)
         except ValueError as exc:
-            raise ValueError(
-                f"ratelimit() takes limits like '5/minute', not {limit!r}."
-            ) from exc
+            raise ValueError(f"ratelimit() takes limits like '5/minute', not {limit!r}.") from exc
 
     if not (callable(key) or key in ("ip", "user")):
-        raise ValueError(
-            f"ratelimit(key=...) takes 'ip', 'user', or a function, not {key!r}."
-        )
+        raise ValueError(f"ratelimit(key=...) takes 'ip', 'user', or a function, not {key!r}.")
     if not isinstance(cost, int) or isinstance(cost, bool) or cost < 1:
         raise ValueError(f"ratelimit(cost=...) takes a whole number >= 1, not {cost!r}.")
     if exempt is not None and not callable(exempt):
@@ -313,6 +331,7 @@ def user_passes_test(test_func, login_url: str = "/auth/login"):
         @user_passes_test(lambda u: u.is_staff)
         async def admin_view(request): ...
     """
+
     def decorator(view_func):
         @functools.wraps(view_func)
         async def wrapper(request, *args, **kwargs):
@@ -321,7 +340,9 @@ def user_passes_test(test_func, login_url: str = "/auth/login"):
             if not result:
                 return RedirectResponse(login_url, status_code=302)
             return await view_func(request, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -347,6 +368,7 @@ def condition(etag_func=None, last_modified_func=None):
 
     ``last_modified_func`` should return a ``datetime`` or ``None``.
     """
+
     def decorator(view_func):
         @functools.wraps(view_func)
         async def wrapper(request, *args, **kwargs):
@@ -376,6 +398,7 @@ def condition(etag_func=None, last_modified_func=None):
                 client_etag = req_headers.get("if-none-match", "")
                 if client_etag and etag.strip('"') in client_etag:
                     from starlette.responses import Response
+
                     return Response(status_code=304)
 
             # Last-Modified check
@@ -386,6 +409,7 @@ def condition(etag_func=None, last_modified_func=None):
                         client_dt = parsedate_to_datetime(ims_header)
                         if isinstance(last_modified, _dt) and last_modified <= client_dt:
                             from starlette.responses import Response
+
                             return Response(status_code=304)
                     except Exception:
                         pass
@@ -401,7 +425,9 @@ def condition(etag_func=None, last_modified_func=None):
                     )
 
             return response
+
         return wrapper
+
     return decorator
 
 
@@ -443,12 +469,14 @@ def conditional_page(view_func=None):
             client_etag = request.headers.get("if-none-match", "")
             if client_etag and digest in client_etag:
                 from starlette.responses import Response
+
                 return Response(status_code=304)
 
             if hasattr(response, "headers"):
                 response.headers.setdefault("ETag", etag)
 
             return response
+
         return wrapper
 
     if view_func is not None:
@@ -466,10 +494,12 @@ def cache_page(timeout: int, *, cache: str = "default", key_prefix: str = ""):
         @cache_page(60 * 15)   # cache for 15 minutes
         async def article_list(request): ...
     """
+
     def decorator(view_func):
         @functools.wraps(view_func)
         async def wrapper(request, *args, **kwargs):
             from buraq.contrib.cache.core import cache as _default_cache
+
             c = _default_cache
 
             # Build cache key from prefix + method + path + query string
@@ -480,6 +510,7 @@ def cache_page(timeout: int, *, cache: str = "default", key_prefix: str = ""):
             cached = await c.get(cache_key)
             if cached is not None:
                 from starlette.responses import Response
+
                 return Response(
                     content=cached["body"],
                     status_code=cached.get("status", 200),
@@ -500,16 +531,23 @@ def cache_page(timeout: int, *, cache: str = "default", key_prefix: str = ""):
                 # Strip headers that must never be shared across users.
                 _UNCACHEABLE_HEADERS = {"set-cookie", "authorization", "www-authenticate"}
                 safe_headers = {
-                    k: v for k, v in dict(getattr(response, "headers", {})).items()
+                    k: v
+                    for k, v in dict(getattr(response, "headers", {})).items()
                     if k.lower() not in _UNCACHEABLE_HEADERS
                 }
-                await c.set(cache_key, {
-                    "body": body,
-                    "status": getattr(response, "status_code", 200),
-                    "media_type": getattr(response, "media_type", "text/html"),
-                    "headers": safe_headers,
-                }, timeout=timeout)
+                await c.set(
+                    cache_key,
+                    {
+                        "body": body,
+                        "status": getattr(response, "status_code", 200),
+                        "media_type": getattr(response, "media_type", "text/html"),
+                        "headers": safe_headers,
+                    },
+                    timeout=timeout,
+                )
 
             return response
+
         return wrapper
+
     return decorator

@@ -3,6 +3,7 @@ Static file finders — locate static files across multiple source directories.
 
 Configured via STATICFILES_FINDERS in settings.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -100,9 +101,11 @@ class AppDirectoriesFinder:
 
 # ── Module-level helpers ──────────────────────────────────────────────────────
 
+
 def get_finders() -> list:
     """Return instantiated finder objects from STATICFILES_FINDERS."""
     from buraq.utils.module_loading import import_string
+
     finders = []
     for finder_path in getattr(settings, "STATICFILES_FINDERS", []):
         try:

@@ -4,6 +4,7 @@ Sitemap framework — Sitemap, GenericSitemap, and async sitemap view.
 Usage:
     from buraq.contrib.sitemaps import Sitemap, GenericSitemap
 """
+
 from __future__ import annotations
 
 import inspect
@@ -91,12 +92,14 @@ class Sitemap:
             else:
                 lastmod_str = None
 
-            urls.append({
-                "location": loc,
-                "lastmod": lastmod_str,
-                "changefreq": self._get_changefreq(item),
-                "priority": self._get_priority(item),
-            })
+            urls.append(
+                {
+                    "location": loc,
+                    "lastmod": lastmod_str,
+                    "changefreq": self._get_changefreq(item),
+                    "priority": self._get_priority(item),
+                }
+            )
 
         return urls
 

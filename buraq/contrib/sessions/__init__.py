@@ -13,6 +13,7 @@ Usage:
     cart = request.session.get("cart", [])
     request.session.flush()   # clear session
 """
+
 from buraq.contrib.sessions.middleware import SessionMiddleware
 from buraq.contrib.sessions.server import ServerSessionMiddleware, revoke_session
 

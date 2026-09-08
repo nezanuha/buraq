@@ -4,6 +4,7 @@ HTML utilities — escaping, safe strings, formatting.
 Usage:
     from buraq.utils.html import escape, format_html, mark_safe, strip_tags
 """
+
 from __future__ import annotations
 
 import re
@@ -50,7 +51,7 @@ def escapejs(value: str) -> SafeString:
     """
     _JS_ESCAPES = {
         ord("\\"): "\\\\",
-        ord("\""): "\\\"",
+        ord('"'): '\\"',
         ord("'"): "\\'",
         ord("\n"): "\\n",
         ord("\r"): "\\r",
@@ -133,6 +134,7 @@ _URL_RE = re.compile(
 
 def urlize(value: str, trim_url_limit: int = None, nofollow: bool = False) -> SafeString:
     """Convert URLs in plain text to clickable HTML links."""
+
     def replace_url(match):
         url = match.group(0)
         href = url if url.startswith("http") else f"http://{url}"
@@ -142,10 +144,19 @@ def urlize(value: str, trim_url_limit: int = None, nofollow: bool = False) -> Sa
             label = url[:trim_url_limit] + "…"
         rel = ' rel="nofollow"' if nofollow else ""
         return f'<a href="{escape(href)}"{rel}>{escape(label)}</a>'
+
     return SafeString(_URL_RE.sub(replace_url, escape(value)))
 
 
 __all__ = [
-    "SafeString", "mark_safe", "escape", "escapejs", "conditional_escape",
-    "format_html", "format_html_join", "linebreaks", "strip_tags", "urlize",
+    "SafeString",
+    "mark_safe",
+    "escape",
+    "escapejs",
+    "conditional_escape",
+    "format_html",
+    "format_html_join",
+    "linebreaks",
+    "strip_tags",
+    "urlize",
 ]

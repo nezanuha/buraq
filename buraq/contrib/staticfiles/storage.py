@@ -4,6 +4,7 @@ Static file storage backends.
 STATICFILES_STORAGE = "buraq.contrib.staticfiles.storage.StaticFilesStorage"       # default
 STATICFILES_STORAGE = "buraq.contrib.staticfiles.storage.ManifestStaticFilesStorage"  # production
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -22,10 +23,22 @@ _log = logging.getLogger(__name__)
 
 #: Extensions worth compressing. Images, fonts and archives are already
 #: compressed; running gzip over them costs CPU and produces a larger file.
-_COMPRESSIBLE = frozenset({
-    ".css", ".js", ".mjs", ".map", ".json", ".xml", ".svg",
-    ".txt", ".html", ".htm", ".csv", ".ico",
-})
+_COMPRESSIBLE = frozenset(
+    {
+        ".css",
+        ".js",
+        ".mjs",
+        ".map",
+        ".json",
+        ".xml",
+        ".svg",
+        ".txt",
+        ".html",
+        ".htm",
+        ".csv",
+        ".ico",
+    }
+)
 
 #: Below this, the gzip header costs more than the compression saves.
 _COMPRESS_MIN_BYTES = 512
@@ -98,9 +111,7 @@ class StaticFilesStorage:
     """
 
     def __init__(self, location: str | None = None, base_url: str | None = None):
-        self.location = location or (
-            settings.STATIC_ROOT or str(Path.cwd() / "staticfiles")
-        )
+        self.location = location or (settings.STATIC_ROOT or str(Path.cwd() / "staticfiles"))
         self.base_url = _normalize_url_prefix(base_url or settings.STATIC_URL).rstrip("/") + "/"
 
     def path(self, name: str) -> str:
@@ -237,6 +248,7 @@ class ManifestStaticFilesStorage(StaticFilesStorage):
 
 # ── In-memory storage ────────────────────────────────────────────────────────
 
+
 class InMemoryStorage:
     """
     Volatile in-memory storage backend — no disk I/O, no cleanup needed.
@@ -314,6 +326,7 @@ def get_storage() -> StaticFilesStorage:
     global _storage_instance
     if _storage_instance is None:
         from buraq.utils.module_loading import import_string
+
         storage_path = getattr(
             settings,
             "STATICFILES_STORAGE",

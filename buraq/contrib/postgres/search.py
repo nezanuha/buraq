@@ -20,6 +20,7 @@ Usage:
         SearchQuery("buraq", field="title", config="english")
     ).all()
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -35,6 +36,7 @@ def SearchVector(*fields: str, config: str = "english"):
 
         Post.objects.annotate_expr(search=SearchVector("title", "body"))
     """
+
     def _build(model):
         parts = [
             sa.func.to_tsvector(
@@ -47,6 +49,7 @@ def SearchVector(*fields: str, config: str = "english"):
         for p in parts[1:]:
             vec = vec.op("||")(p)
         return vec
+
     return _build
 
 
@@ -81,6 +84,7 @@ def SearchRank(field: str, query: str, *, config: str = "english"):
     Usage:
         Post.objects.annotate_expr(rank=SearchRank("body", "hello world"))
     """
+
     def _build(model):
         vec = sa.func.to_tsvector(
             sa.cast(config, REGCONFIG),
@@ -88,4 +92,5 @@ def SearchRank(field: str, query: str, *, config: str = "english"):
         )
         tsq = sa.func.plainto_tsquery(sa.cast(config, REGCONFIG), query)
         return sa.func.ts_rank(vec, tsq)
+
     return _build

@@ -3,6 +3,7 @@ Usage:
     from buraq.http import HttpResponse, JsonResponse, Http404
     from buraq.http import HttpResponseRedirect, HttpResponseForbidden
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
@@ -13,6 +14,7 @@ from starlette.responses import Response
 from starlette.responses import StreamingResponse as _StreamingResponse
 
 # ── Base response ──────────────────────────────────────────────────────────────
+
 
 class HttpResponse(Response):
     """
@@ -81,6 +83,7 @@ class HttpResponse(Response):
 
 # ── JSON response ──────────────────────────────────────────────────────────────
 
+
 class JsonResponse(HttpResponse):
     """
     An HTTP response with JSON-encoded body — uses orjson for Rust-speed serialization.
@@ -103,14 +106,13 @@ class JsonResponse(HttpResponse):
         json_opts: int = 0,
     ) -> None:
         if safe and not isinstance(data, dict):
-            raise TypeError(
-                "In order to allow non-dict objects to be serialized set safe=False."
-            )
+            raise TypeError("In order to allow non-dict objects to be serialized set safe=False.")
         content = orjson.dumps(data, option=json_opts)
         super().__init__(content=content, content_type="application/json", status=status)
 
 
 # ── Streaming response ─────────────────────────────────────────────────────────
+
 
 class StreamingHttpResponse(_StreamingResponse):
     """
@@ -140,8 +142,10 @@ class StreamingHttpResponse(_StreamingResponse):
 
 # ── Redirect responses ─────────────────────────────────────────────────────────
 
+
 class HttpResponseRedirect(HttpResponse):
     """302 redirect."""
+
     def __init__(self, redirect_to: str) -> None:
         super().__init__(status=302)
         self["Location"] = redirect_to
@@ -149,6 +153,7 @@ class HttpResponseRedirect(HttpResponse):
 
 class HttpResponsePermanentRedirect(HttpResponse):
     """301 permanent redirect."""
+
     def __init__(self, redirect_to: str) -> None:
         super().__init__(status=301)
         self["Location"] = redirect_to
@@ -156,32 +161,38 @@ class HttpResponsePermanentRedirect(HttpResponse):
 
 # ── Client error responses ─────────────────────────────────────────────────────
 
+
 class HttpResponseNotModified(HttpResponse):
     """304 Not Modified — no body."""
+
     def __init__(self) -> None:
         super().__init__(status=304)
 
 
 class HttpResponseBadRequest(HttpResponse):
     """400 Bad Request."""
+
     def __init__(self, content: str = "") -> None:
         super().__init__(content=content, status=400)
 
 
 class HttpResponseNotFound(HttpResponse):
     """404 Not Found."""
+
     def __init__(self, content: str = "") -> None:
         super().__init__(content=content, status=404)
 
 
 class HttpResponseForbidden(HttpResponse):
     """403 Forbidden."""
+
     def __init__(self, content: str = "") -> None:
         super().__init__(content=content, status=403)
 
 
 class HttpResponseNotAllowed(HttpResponse):
     """405 Method Not Allowed. Pass the list of permitted methods."""
+
     def __init__(self, permitted_methods: list[str]) -> None:
         super().__init__(status=405)
         self["Allow"] = ", ".join(permitted_methods)
@@ -189,17 +200,20 @@ class HttpResponseNotAllowed(HttpResponse):
 
 class HttpResponseGone(HttpResponse):
     """410 Gone."""
+
     def __init__(self, content: str = "") -> None:
         super().__init__(content=content, status=410)
 
 
 class HttpResponseServerError(HttpResponse):
     """500 Internal Server Error."""
+
     def __init__(self, content: str = "") -> None:
         super().__init__(content=content, status=500)
 
 
 # ── Exception ──────────────────────────────────────────────────────────────────
+
 
 class FileResponse(HttpResponse):
     """

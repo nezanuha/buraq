@@ -14,6 +14,7 @@ CSRF_COOKIE_NAME = "csrftoken"
 CSRF_HEADER_NAME = "x-csrftoken"
 CSRF_FIELD_NAME = "csrfmiddlewaretoken"
 
+
 def _is_exempt(scope) -> bool:
     """
     Whether the view this request will reach is marked ``@csrf_exempt``.
@@ -91,6 +92,7 @@ class CsrfViewMiddleware:
                     more_body = message.get("more_body", False)
 
                 import urllib.parse
+
                 try:
                     fields = dict(urllib.parse.parse_qsl(body_bytes.decode()))
                     token = fields.get(CSRF_FIELD_NAME, "")
@@ -99,6 +101,7 @@ class CsrfViewMiddleware:
 
                 # Replay body for the view
                 idx = 0
+
                 async def replay_receive():
                     nonlocal idx
                     if idx < len(buffered):
@@ -106,6 +109,7 @@ class CsrfViewMiddleware:
                         idx += 1
                         return msg
                     return {"type": "http.disconnect"}
+
                 receive = replay_receive
 
             from buraq.contrib.csrf import unmask_token
@@ -114,11 +118,13 @@ class CsrfViewMiddleware:
             # size in a compressed response says nothing about the secret.
             submitted = unmask_token(token) if token else ""
             if not stored or not secrets.compare_digest(stored, submitted):
-                await send({
-                    "type": "http.response.start",
-                    "status": 403,
-                    "headers": [(b"content-type", b"text/plain")],
-                })
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 403,
+                        "headers": [(b"content-type", b"text/plain")],
+                    }
+                )
                 await send({"type": "http.response.body", "body": b"CSRF verification failed."})
                 return
 
@@ -142,6 +148,7 @@ class CsrfViewMiddleware:
                 headers = list(message.get("headers", []))
                 try:
                     from buraq.conf import settings
+
                     secure = not settings.DEBUG
                 except Exception:
                     secure = False
@@ -149,9 +156,8 @@ class CsrfViewMiddleware:
 
                 # Masked like the form field: a client reads this cookie and
                 # echoes it back, so it must survive unmasking the same way.
-                cookie = (
-                    f"{CSRF_COOKIE_NAME}={mask_token(stored)}; Path=/; SameSite=Lax"
-                    + ("; Secure" if secure else "")
+                cookie = f"{CSRF_COOKIE_NAME}={mask_token(stored)}; Path=/; SameSite=Lax" + (
+                    "; Secure" if secure else ""
                 )
                 headers.append((b"set-cookie", cookie.encode()))
                 await send({**message, "headers": headers})

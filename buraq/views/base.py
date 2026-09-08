@@ -1,6 +1,7 @@
 """
 Class-based views — View base class and dispatch machinery.
 """
+
 import inspect
 
 from starlette.responses import Response
@@ -57,6 +58,7 @@ class View:
         # Copy signature from the handler with the most path params so FastAPI
         # correctly injects path parameters for all HTTP methods.
         from starlette.requests import Request
+
         best_sig = None
         best_param_count = -1
         for method_name in cls.http_method_names:
@@ -65,9 +67,11 @@ class View:
                 continue
             sig = inspect.signature(handler)
             path_params = [
-                p for p in sig.parameters.values()
+                p
+                for p in sig.parameters.values()
                 if p.name not in ("self", "request", "kwargs")
-                and p.kind not in (
+                and p.kind
+                not in (
                     inspect.Parameter.VAR_POSITIONAL,
                     inspect.Parameter.VAR_KEYWORD,
                 )
@@ -82,9 +86,11 @@ class View:
                 "request", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Request
             )
             new_params = [req_param] + [
-                p for p in params
+                p
+                for p in params
                 if p.name not in ("self", "request")
-                and p.kind not in (
+                and p.kind
+                not in (
                     inspect.Parameter.VAR_POSITIONAL,
                     inspect.Parameter.VAR_KEYWORD,
                 )

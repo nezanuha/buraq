@@ -4,6 +4,7 @@ AsyncClient and RequestFactory for testing Buraq views.
 ``AsyncClient``    — makes HTTP requests through the ASGI app in-process
 ``RequestFactory`` — builds raw Request objects without sending them
 """
+
 from __future__ import annotations
 
 import json as _json
@@ -37,10 +38,7 @@ class _ResponseCapture:
     async def __call__(self, message: dict) -> None:
         if message["type"] == "http.response.start":
             self.status_code = message["status"]
-            self.headers = {
-                k.decode(): v.decode()
-                for k, v in message.get("headers", [])
-            }
+            self.headers = {k.decode(): v.decode() for k, v in message.get("headers", [])}
         elif message["type"] == "http.response.body":
             self._body_parts.append(message.get("body", b""))
 
@@ -94,6 +92,7 @@ class AsyncClient:
         if self._app is None:
             try:
                 from config.urls import app
+
                 self._app = app
             except ImportError as exc:
                 raise RuntimeError(
@@ -201,6 +200,7 @@ class AsyncClient:
         ``aget_user`` (e.g. permission-only backends).
         """
         from buraq.contrib.auth.backends import _load_backends
+
         for backend in _load_backends():
             if hasattr(backend, "get_user") or hasattr(backend, "aget_user"):
                 break

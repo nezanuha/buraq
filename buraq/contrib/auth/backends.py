@@ -23,6 +23,7 @@ Usage (custom backend)::
             from buraq.contrib.auth.models import User
             return await User.objects.get_or_none(id=user_id)
 """
+
 from __future__ import annotations
 
 _DUMMY_HASH = (
@@ -60,6 +61,7 @@ class ModelBackend:
 
     async def get_user(self, user_id: int):
         from buraq.contrib.auth.models import User
+
         return await User.objects.get_or_none(id=user_id)
 
 
@@ -101,6 +103,7 @@ class AllowAllUsersRemoteUserBackend:
         if not remote_user:
             return None
         from buraq.contrib.auth.models import User
+
         user, _ = await User.objects.get_or_create(
             username=remote_user,
             defaults={"is_active": True},
@@ -109,6 +112,7 @@ class AllowAllUsersRemoteUserBackend:
 
     async def get_user(self, user_id: int):
         from buraq.contrib.auth.models import User
+
         return await User.objects.get_or_none(id=user_id)
 
 

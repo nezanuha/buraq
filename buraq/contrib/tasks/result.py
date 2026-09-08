@@ -4,6 +4,7 @@ TaskResult — the return value of Task.aenqueue().
 Holds the current state of a background task and lets callers refresh or wait
 for the result.
 """
+
 from __future__ import annotations
 
 import enum

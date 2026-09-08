@@ -30,6 +30,7 @@ Usage:
     if await form.is_valid():
         post = await form.save()
 """
+
 from buraq.exceptions import NON_FIELD_ERRORS, ValidationError
 from buraq.forms.fields import Field
 from buraq.forms.widgets import HiddenInput
@@ -68,8 +69,7 @@ class ErrorDict(dict):
 
     def as_text(self) -> str:
         return "\n".join(
-            f"{field}\n" + "\n".join(f"  * {e}" for e in errors)
-            for field, errors in self.items()
+            f"{field}\n" + "\n".join(f"  * {e}" for e in errors) for field, errors in self.items()
         )
 
     def __str__(self):
@@ -77,6 +77,7 @@ class ErrorDict(dict):
 
 
 BLANK_CHOICE_LABEL = "---------"
+
 
 class MediaDefiningClass(type):
     """Metaclass that collects CSS/JS Media from fields and the class itself."""
@@ -223,6 +224,7 @@ class BaseForm:
         """
         if not hasattr(self, "_fields"):
             import copy
+
             self._fields = copy.deepcopy(self.declared_fields)
         return self._fields
 
@@ -244,6 +246,7 @@ class BaseForm:
                 post = await form.save()
         """
         import inspect
+
         self._errors = {}
         self._cleaned_data = {}
 
@@ -256,7 +259,8 @@ class BaseForm:
                 cleaner = getattr(self, f"clean_{name}", None)
                 if cleaner:
                     value = (
-                        await cleaner(value) if inspect.iscoroutinefunction(cleaner)
+                        await cleaner(value)
+                        if inspect.iscoroutinefunction(cleaner)
                         else cleaner(value)
                     )
                     self._cleaned_data[name] = value
@@ -324,11 +328,13 @@ class BaseForm:
     def as_p(self) -> str:
         """Render form as <p> tags."""
         from markupsafe import Markup
+
         rows = []
         nfe = self.non_field_errors()
         if nfe:
-            rows.append('<ul class="errorlist nonfield">' +
-                        "".join(f"<li>{e}</li>" for e in nfe) + "</ul>")
+            rows.append(
+                '<ul class="errorlist nonfield">' + "".join(f"<li>{e}</li>" for e in nfe) + "</ul>"
+            )
         for bf in self:
             errs = self._html_errors(bf.name)
             rows.append(
@@ -342,12 +348,14 @@ class BaseForm:
     def as_table(self) -> str:
         """Render form as <tr> rows (caller must wrap in <table>)."""
         from markupsafe import Markup
+
         rows = []
         nfe = self.non_field_errors()
         if nfe:
             rows.append(
-                '<tr><td colspan="2"><ul class="errorlist nonfield">' +
-                "".join(f"<li>{e}</li>" for e in nfe) + "</ul></td></tr>"
+                '<tr><td colspan="2"><ul class="errorlist nonfield">'
+                + "".join(f"<li>{e}</li>" for e in nfe)
+                + "</ul></td></tr>"
             )
         for bf in self:
             errs = self._html_errors(bf.name)
@@ -362,11 +370,13 @@ class BaseForm:
     def as_div(self) -> str:
         """Render form as <div> blocks."""
         from markupsafe import Markup
+
         rows = []
         nfe = self.non_field_errors()
         if nfe:
-            rows.append('<div class="errorlist nonfield">' +
-                        "".join(f"<p>{e}</p>" for e in nfe) + "</div>")
+            rows.append(
+                '<div class="errorlist nonfield">' + "".join(f"<p>{e}</p>" for e in nfe) + "</div>"
+            )
         for bf in self:
             errs = self._html_errors(bf.name)
             rows.append(
@@ -380,11 +390,15 @@ class BaseForm:
     def as_ul(self) -> str:
         """Render form as <li> items (caller must wrap in <ul>)."""
         from markupsafe import Markup
+
         rows = []
         nfe = self.non_field_errors()
         if nfe:
-            rows.append('<li><ul class="errorlist nonfield">' +
-                        "".join(f"<li>{e}</li>" for e in nfe) + "</ul></li>")
+            rows.append(
+                '<li><ul class="errorlist nonfield">'
+                + "".join(f"<li>{e}</li>" for e in nfe)
+                + "</ul></li>"
+            )
         for bf in self:
             errs = self._html_errors(bf.name)
             rows.append(
@@ -532,10 +546,7 @@ class ModelForm(BaseForm, metaclass=ModelFormMetaclass):
     def __init__(self, data=None, instance=None, **kwargs):
         self._instance = instance
         if instance and not data:
-            instance_initial = {
-                name: getattr(instance, name, None)
-                for name in self.fields
-            }
+            instance_initial = {name: getattr(instance, name, None) for name in self.fields}
             # Instance values are the base; explicitly passed initial overrides them
             passed_initial = kwargs.get("initial") or {}
             kwargs["initial"] = {**instance_initial, **passed_initial}
@@ -610,6 +621,7 @@ class BoundField:
     def label_tag(self, contents: str = None, attrs: dict = None, label_suffix: str = ":") -> str:
         """Render a <label> tag for this field."""
         from markupsafe import Markup
+
         label = contents or self.label
         extra = ""
         if attrs:
@@ -638,6 +650,7 @@ class BoundField:
         """Render this field's widget as HTML — optionally with a different
         widget instance/class or extra attrs than the field's own."""
         from markupsafe import Markup
+
         w = widget or self.field.widget
         if isinstance(w, type):
             w = w()
@@ -647,6 +660,7 @@ class BoundField:
     def as_text(self, attrs: dict = None) -> str:
         """Render as a text <input>."""
         from markupsafe import Markup
+
         v = self.value
         a = self.build_widget_attrs(attrs)
         attr_str = " ".join(f'{k}="{v2}"' for k, v2 in a.items())
@@ -655,6 +669,7 @@ class BoundField:
     def as_textarea(self, attrs: dict = None) -> str:
         """Render as a <textarea>."""
         from markupsafe import Markup
+
         v = self.value
         a = self.build_widget_attrs(attrs)
         attr_str = " ".join(f'{k}="{v2}"' for k, v2 in a.items())
@@ -663,6 +678,7 @@ class BoundField:
     def as_hidden(self, attrs: dict = None) -> str:
         """Render as a hidden <input>."""
         from markupsafe import Markup
+
         v = self.value
         a = self.build_widget_attrs(attrs)
         attr_str = " ".join(f'{k}="{v2}"' for k, v2 in a.items())
@@ -702,6 +718,7 @@ class SuccessMessageMixin:
         if msg:
             try:
                 from buraq.contrib.messages import success as _success
+
                 _success(self.request, msg)
             except Exception:
                 pass

@@ -12,15 +12,11 @@ from sqlalchemy.pool import StaticPool
 
 # Context var tracking the active session inside an atomic() block.
 # None when no atomic block is active.
-_current_session: ContextVar[AsyncSession | None] = ContextVar(
-    "_current_session", default=None
-)
+_current_session: ContextVar[AsyncSession | None] = ContextVar("_current_session", default=None)
 
 # Context var collecting on_commit callbacks registered inside an atomic() block.
 # None when no atomic block is active (callbacks run immediately in that case).
-_on_commit_callbacks: ContextVar[list | None] = ContextVar(
-    "_on_commit_callbacks", default=None
-)
+_on_commit_callbacks: ContextVar[list | None] = ContextVar("_on_commit_callbacks", default=None)
 
 
 #: The async driver to recommend for each backend, and the extra that installs it.
@@ -33,10 +29,18 @@ _ASYNC_DRIVERS = {
 }
 
 #: Drivers that exist but block. Naming one is the same mistake as naming none.
-_SYNC_DRIVERS = frozenset({
-    "pysqlite", "psycopg2", "psycopg2cffi", "pymysql", "mysqldb",
-    "mysqlconnector", "cx_oracle", "pyodbc",
-})
+_SYNC_DRIVERS = frozenset(
+    {
+        "pysqlite",
+        "psycopg2",
+        "psycopg2cffi",
+        "pymysql",
+        "mysqldb",
+        "mysqlconnector",
+        "cx_oracle",
+        "pyodbc",
+    }
+)
 
 
 def _check_database_url(url: str) -> None:
@@ -53,11 +57,11 @@ def _check_database_url(url: str) -> None:
     backend, _, driver = scheme.partition("+")
 
     if driver and driver not in _SYNC_DRIVERS:
-        return                              # async, or a driver we do not know
+        return  # async, or a driver we do not know
 
     suggested, extra = _ASYNC_DRIVERS.get(backend, (None, None))
     if suggested is None:
-        if driver:                          # blocking, on a backend we cannot advise on
+        if driver:  # blocking, on a backend we cannot advise on
             raise ImproperlyConfigured(
                 f"DATABASE_URL uses {driver!r}, which is a blocking driver. Buraq "
                 f"is async throughout and needs one that can be awaited."

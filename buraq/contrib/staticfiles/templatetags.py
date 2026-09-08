@@ -16,6 +16,7 @@ These are equivalent to the function-call forms::
 
 Both forms return the correct URL — hashed when ManifestStaticFilesStorage is active.
 """
+
 from __future__ import annotations
 
 from jinja2 import nodes
@@ -42,11 +43,14 @@ class StaticExtension(Extension):
     def _static_url(self, path: str) -> str:
         try:
             from buraq.contrib.staticfiles.storage import get_storage
+
             return get_storage().url(path)
         except Exception:
             from buraq.conf import settings
+
             return settings.STATIC_URL.rstrip("/") + "/" + path.lstrip("/")
 
     def _media_url(self, path: str) -> str:
         from buraq.conf import settings
+
         return settings.MEDIA_URL.rstrip("/") + "/" + path.lstrip("/")

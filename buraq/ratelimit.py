@@ -16,6 +16,7 @@ The algorithm here is a moving window over a log of hit times. A fixed window --
 what slowapi used, and what most naive implementations do -- admits twice the
 limit across a boundary: five at 11:59:59 and five more at 12:00:00.
 """
+
 from __future__ import annotations
 
 import re
@@ -100,9 +101,7 @@ def parse_rate(rate: str) -> Rate:
     amount, multiple, unit = match.groups()
     seconds = _UNITS.get(unit.lower())
     if seconds is None:
-        raise ValueError(
-            f"{unit!r} is not a period. Use second, minute, hour, day or week."
-        )
+        raise ValueError(f"{unit!r} is not a period. Use second, minute, hour, day or week.")
     if int(amount) < 1:
         raise ValueError(f"a rate has to allow at least one call, not {rate!r}")
 

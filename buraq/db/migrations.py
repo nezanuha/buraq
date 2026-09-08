@@ -30,9 +30,7 @@ from alembic import context
 _APP_ENV_VAR = "BURAQ_MIGRATIONS_APP"
 
 
-def _include_object(
-    obj: Any, name: str, type_: str, reflected: bool, compare_to: Any
-) -> bool:
+def _include_object(obj: Any, name: str, type_: str, reflected: bool, compare_to: Any) -> bool:
     """Keep autogenerate away from tables this run does not own."""
     import os
 
@@ -149,7 +147,5 @@ def config(database_url: str | None = None) -> Config:
     # and Linux, and newline survives paths that contain spaces.
     cfg.set_main_option("path_separator", "newline")
     cfg.set_main_option("version_locations", "\n".join(version_locations()))
-    cfg.set_main_option(
-        "sqlalchemy.url", database_url or getattr(settings, "DATABASE_URL", "")
-    )
+    cfg.set_main_option("sqlalchemy.url", database_url or getattr(settings, "DATABASE_URL", ""))
     return cfg

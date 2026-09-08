@@ -35,6 +35,7 @@ Usage in any app's templatetags.py::
         request = context.get("request")
         return str(request.url) if request else ""
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -50,13 +51,17 @@ class Library:
     def __init__(self):
         self._globals: dict[str, Callable] = {}
         self._filters: dict[str, Callable] = {}
-        self._tests:   dict[str, Callable] = {}
+        self._tests: dict[str, Callable] = {}
 
     # ── @register.global ──────────────────────────────────────────────────────
 
     def global_(
-        self, func: Callable = None, *, name: str = None,
-        is_safe: bool = False, takes_context: bool = False,
+        self,
+        func: Callable = None,
+        *,
+        name: str = None,
+        is_safe: bool = False,
+        takes_context: bool = False,
     ):
         """
         Register a function as a Jinja2 global (callable from any template).
@@ -71,18 +76,23 @@ class Library:
         passed as the first argument — see ``jinja2.pass_context``, which
         this wraps.
         """
+
         def decorator(fn: Callable) -> Callable:
             key = name or fn.__name__
             registered = fn
             if is_safe:
                 from markupsafe import Markup
+
                 original = registered
+
                 def _safe(*args, **kwargs):
                     return Markup(original(*args, **kwargs))
+
                 _safe.__name__ = fn.__name__
                 registered = _safe
             if takes_context:
                 from jinja2 import pass_context
+
                 registered = pass_context(registered)
             self._globals[key] = registered
             return fn
@@ -97,8 +107,12 @@ class Library:
     # ── @register.filter ──────────────────────────────────────────────────────
 
     def filter(
-        self, func: Callable = None, *, name: str = None,
-        is_safe: bool = False, takes_context: bool = False,
+        self,
+        func: Callable = None,
+        *,
+        name: str = None,
+        is_safe: bool = False,
+        takes_context: bool = False,
     ):
         """
         Register a function as a Jinja2 filter.
@@ -111,18 +125,23 @@ class Library:
         With ``takes_context=True``, the current render context is passed as
         the first argument, ahead of the piped value — see ``global_()``.
         """
+
         def decorator(fn: Callable) -> Callable:
             key = name or fn.__name__
             registered = fn
             if is_safe:
                 from markupsafe import Markup
+
                 original = registered
+
                 def _safe(*args, **kwargs):
                     return Markup(original(*args, **kwargs))
+
                 _safe.__name__ = fn.__name__
                 registered = _safe
             if takes_context:
                 from jinja2 import pass_context
+
                 registered = pass_context(registered)
             self._filters[key] = registered
             return fn
@@ -141,6 +160,7 @@ class Library:
             @register.test
             @register.test(name="my_test")
         """
+
         def decorator(fn: Callable) -> Callable:
             key = name or fn.__name__
             self._tests[key] = fn

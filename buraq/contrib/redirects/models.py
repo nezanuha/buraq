@@ -1,4 +1,5 @@
 """URL redirect model — database-driven 301/410 redirects."""
+
 from __future__ import annotations
 
 import sqlalchemy as sa

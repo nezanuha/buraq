@@ -30,9 +30,7 @@ _NAMING = {"uq": "uq_%(table_name)s_%(column_0_name)s"}
 def upgrade() -> None:
     # SQLite cannot drop or add a constraint in place; batch_alter_table copies
     # the table, which is also correct on every other backend.
-    with op.batch_alter_table(
-        "buraq_permissions", schema=None, naming_convention=_NAMING
-    ) as batch:
+    with op.batch_alter_table("buraq_permissions", schema=None, naming_convention=_NAMING) as batch:
         batch.drop_constraint("uq_buraq_permissions_codename", type_="unique")
         batch.create_unique_constraint(
             "uq_buraq_permissions_content_type_codename", ["content_type", "codename"]
@@ -48,10 +46,6 @@ def downgrade() -> None:
             "(SELECT MIN(id) FROM buraq_permissions GROUP BY codename)"
         )
     )
-    with op.batch_alter_table(
-        "buraq_permissions", schema=None, naming_convention=_NAMING
-    ) as batch:
-        batch.drop_constraint(
-            "uq_buraq_permissions_content_type_codename", type_="unique"
-        )
+    with op.batch_alter_table("buraq_permissions", schema=None, naming_convention=_NAMING) as batch:
+        batch.drop_constraint("uq_buraq_permissions_content_type_codename", type_="unique")
         batch.create_unique_constraint("uq_buraq_permissions_codename", ["codename"])

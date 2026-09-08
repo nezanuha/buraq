@@ -4,6 +4,7 @@ Cache decorators — re-exported from the canonical implementation in buraq.deco
 Import from here for convenience:
     from buraq.contrib.cache.decorators import cache_page, cache_result, never_cache
 """
+
 import functools
 import hashlib
 import json
@@ -23,6 +24,7 @@ def cache_result(key: str | None = None, timeout: int = 300):
         async def get_user_stats(user_id: int):
             ...
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -43,4 +45,5 @@ def cache_result(key: str | None = None, timeout: int = 300):
             return result
 
         return wrapper
+
     return decorator

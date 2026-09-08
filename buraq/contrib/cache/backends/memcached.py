@@ -39,6 +39,7 @@ class MemcachedCacheBackend(BaseCacheBackend):
         """``location`` is the server, or servers, when it comes from a CACHES
         entry -- what it means for Django's memcached backend."""
         from buraq.conf import settings
+
         self._init_shared(key_prefix, timeout, version)
         self._client = None
 
@@ -63,6 +64,7 @@ class MemcachedCacheBackend(BaseCacheBackend):
     async def _get_client(self):
         if self._client is None:
             import aiomcache
+
             if len(self._servers) == 1:
                 host, port = self._servers[0]
                 self._client = aiomcache.Client(host, port)
@@ -80,6 +82,7 @@ class MemcachedCacheBackend(BaseCacheBackend):
         full = prefix + key.encode()
         if len(full) > 250:
             import hashlib
+
             digest = hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()
             full = prefix + digest.encode()
         return full
@@ -113,9 +116,7 @@ class MemcachedCacheBackend(BaseCacheBackend):
         if not hasattr(client, "add"):  # pragma: no cover - client dependent
             return await super().add(key, value, timeout)
         exptime = self._resolve_timeout(timeout) or 0
-        return bool(
-            await client.add(self._make_key(key), pickle.dumps(value), exptime=exptime)
-        )
+        return bool(await client.add(self._make_key(key), pickle.dumps(value), exptime=exptime))
 
     async def incr(self, key: str, delta: int = 1) -> int:
         """Not atomic here, unlike Redis and the database.

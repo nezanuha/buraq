@@ -43,6 +43,7 @@ Backends
 Custom backends can be created by subclassing
 ``buraq.contrib.tasks.backends.base.BaseTaskBackend``.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable

@@ -7,6 +7,7 @@ Usage:
 
     json.dumps({"ts": datetime.now()}, cls=BuraqJSONEncoder)
 """
+
 from __future__ import annotations
 
 import datetime

@@ -56,6 +56,7 @@ class EmailMessage:
 
     async def send(self) -> bool:
         from buraq.contrib.email.send import get_connection
+
         backend = get_connection()
         return await backend.send(self)
 
@@ -63,6 +64,7 @@ class EmailMessage:
 @dataclass
 class EmailMultiAlternatives(EmailMessage):
     """Email with both plain text and HTML alternatives."""
+
     html_body: str = ""
 
     def build_mime(self) -> MIMEMultipart:

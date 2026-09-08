@@ -13,6 +13,7 @@ Usage:
     # Pluralization
     label = ngettext("%(count)d item", "%(count)d items", count) % {"count": count}
 """
+
 from __future__ import annotations
 
 import contextvars
@@ -35,8 +36,10 @@ _catalog_lock = threading.Lock()
 
 # ── Language state ─────────────────────────────────────────────────────────────
 
+
 def _get_default_language() -> str:
     from buraq.conf.defaults import settings
+
     return settings.LANGUAGE_CODE
 
 
@@ -92,6 +95,7 @@ def override(language: str) -> Generator[None, None, None]:
 
 # ── Locale helpers ─────────────────────────────────────────────────────────────
 
+
 def to_locale(language: str) -> str:
     """
     Convert a language code to a locale string.
@@ -116,21 +120,32 @@ def check_for_language(lang: str) -> bool:
 def get_supported_languages() -> list[str]:
     """Return list of supported language codes from settings."""
     from buraq.conf.defaults import settings
+
     return [code for code, _ in getattr(settings, "LANGUAGES", [])]
 
 
 def get_language_info_list() -> list[dict[str, str]]:
     """Return info for all configured languages — useful for rendering a switcher."""
     from buraq.conf.defaults import settings
-    return [
-        {"code": code, "name": name}
-        for code, name in getattr(settings, "LANGUAGES", [])
-    ]
+
+    return [{"code": code, "name": name} for code, name in getattr(settings, "LANGUAGES", [])]
 
 
-_RTL_LANGUAGES: frozenset[str] = frozenset({
-    "ar", "he", "fa", "ur", "ps", "ku", "ckb", "yi", "sd", "dv", "ug",
-})
+_RTL_LANGUAGES: frozenset[str] = frozenset(
+    {
+        "ar",
+        "he",
+        "fa",
+        "ur",
+        "ps",
+        "ku",
+        "ckb",
+        "yi",
+        "sd",
+        "dv",
+        "ug",
+    }
+)
 
 
 def get_language_bidi(lang: str | None = None) -> bool:
@@ -194,6 +209,7 @@ def get_language_switch_urls(
 
 # ── Catalog loading ────────────────────────────────────────────────────────────
 
+
 def _load_catalog(language: str) -> _gettext.NullTranslations:
     if language in _catalogs:
         return _catalogs[language]
@@ -203,6 +219,7 @@ def _load_catalog(language: str) -> _gettext.NullTranslations:
             return _catalogs[language]
 
         from buraq.conf.defaults import settings
+
         locale_paths: list[str] = getattr(settings, "LOCALE_PATHS", [])
 
         catalog: _gettext.NullTranslations = _gettext.NullTranslations()
@@ -273,6 +290,7 @@ def invalidate_cache() -> None:
 
 # ── Immediate translation functions ───────────────────────────────────────────
 
+
 def gettext(message: str) -> str:
     """Translate a string using the active language."""
     return _translate(message)
@@ -299,6 +317,7 @@ def gettext_noop(message: str) -> str:
 
 
 # ── Lazy translation proxies ───────────────────────────────────────────────────
+
 
 class _LazyStr:
     """Base proxy — defers translation until str() is called."""

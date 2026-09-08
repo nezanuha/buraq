@@ -4,6 +4,7 @@ Built-in template filters for Jinja2.
 Registered automatically into every Jinja2 environment via get_templates().
 Import and call register_builtins(env) to apply manually.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -15,15 +16,37 @@ from html import escape as html_escape
 # ── Date / time formatting ────────────────────────────────────────────────────
 
 _MONTH_NAMES = [
-    "", "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ]
 _MONTH_ABBR = [
-    "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
 ]
 _DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-_DAY_ABBR  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+_DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 _ORDINALS = {1: "st", 2: "nd", 3: "rd"}
 
@@ -112,6 +135,7 @@ def _format_date(value, fmt: str) -> str:
             result.append(str(dt.timetuple().tm_yday - 1))
         elif c == "t":
             import calendar
+
             result.append(str(calendar.monthrange(dt.year, dt.month)[1]))
         elif c == "e":
             result.append(dt.tzname() or "")
@@ -137,14 +161,15 @@ def time_filter(value, fmt: str = "P") -> str:
 
 # ── timesince / timeuntil ─────────────────────────────────────────────────────
 
+
 def _time_chunks():
     return [
         (60 * 60 * 24 * 365, "year"),
-        (60 * 60 * 24 * 30,  "month"),
-        (60 * 60 * 24 * 7,   "week"),
-        (60 * 60 * 24,       "day"),
-        (60 * 60,            "hour"),
-        (60,                 "minute"),
+        (60 * 60 * 24 * 30, "month"),
+        (60 * 60 * 24 * 7, "week"),
+        (60 * 60 * 24, "day"),
+        (60 * 60, "hour"),
+        (60, "minute"),
     ]
 
 
@@ -188,10 +213,11 @@ def timeuntil_filter(value, now=None) -> str:
 
 # ── Text ──────────────────────────────────────────────────────────────────────
 
+
 def truncatechars_filter(value, length: int) -> str:
     s = str(value)
     length = int(length)
-    return s if len(s) <= length else s[:max(0, length - 1)] + "…"
+    return s if len(s) <= length else s[: max(0, length - 1)] + "…"
 
 
 def truncatewords_filter(value, num: int) -> str:
@@ -204,6 +230,7 @@ def truncatewords_filter(value, num: int) -> str:
 
 def truncatechars_html_filter(value, length: int) -> str:
     from markupsafe import Markup
+
     text = re.sub(r"<[^>]+>", "", str(value))
     return Markup(truncatechars_filter(text, length))
 
@@ -231,6 +258,7 @@ def slugify_filter(value) -> str:
 
 def linenumbers_filter(value) -> str:
     from markupsafe import Markup
+
     lines = str(value).splitlines()
     width = len(str(len(lines)))
     numbered = [f"{i + 1:{width}}. {line}" for i, line in enumerate(lines)]
@@ -269,22 +297,42 @@ def default_if_none_filter(value, default="") -> str:
 
 def phone2numeric_filter(value) -> str:
     mapping = {
-        "a": "2", "b": "2", "c": "2",
-        "d": "3", "e": "3", "f": "3",
-        "g": "4", "h": "4", "i": "4",
-        "j": "5", "k": "5", "l": "5",
-        "m": "6", "n": "6", "o": "6",
-        "p": "7", "q": "7", "r": "7", "s": "7",
-        "t": "8", "u": "8", "v": "8",
-        "w": "9", "x": "9", "y": "9", "z": "9",
+        "a": "2",
+        "b": "2",
+        "c": "2",
+        "d": "3",
+        "e": "3",
+        "f": "3",
+        "g": "4",
+        "h": "4",
+        "i": "4",
+        "j": "5",
+        "k": "5",
+        "l": "5",
+        "m": "6",
+        "n": "6",
+        "o": "6",
+        "p": "7",
+        "q": "7",
+        "r": "7",
+        "s": "7",
+        "t": "8",
+        "u": "8",
+        "v": "8",
+        "w": "9",
+        "x": "9",
+        "y": "9",
+        "z": "9",
     }
     return "".join(mapping.get(c.lower(), c) for c in str(value))
 
 
 # ── HTML ──────────────────────────────────────────────────────────────────────
 
+
 def linebreaks_filter(value) -> str:
     from markupsafe import Markup
+
     s = html_escape(str(value))
     paragraphs = re.split(r"\n{2,}", s)
     result = []
@@ -296,18 +344,16 @@ def linebreaks_filter(value) -> str:
 
 def linebreaksbr_filter(value) -> str:
     from markupsafe import Markup
+
     return Markup(html_escape(str(value)).replace("\n", "<br>"))
 
 
 def urlize_filter(value, autoescape: bool = True) -> str:
     from markupsafe import Markup
+
     text = str(value)
-    url_re = re.compile(
-        r"(https?://[^\s<>\"']+)"
-    )
-    email_re = re.compile(
-        r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)"
-    )
+    url_re = re.compile(r"(https?://[^\s<>\"']+)")
+    email_re = re.compile(r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)")
 
     def replace_url(m):
         url = m.group(1)
@@ -342,6 +388,7 @@ def escapejs_filter(value) -> str:
 
 def json_script_filter(value, element_id: str) -> str:
     from markupsafe import Markup
+
     data = json.dumps(value, cls=_SafeJSONEncoder)
     safe_data = data.replace("<", "\\u003C").replace(">", "\\u003E").replace("&", "\\u0026")
     return Markup(
@@ -358,13 +405,18 @@ class _SafeJSONEncoder(json.JSONEncoder):
 
 # ── Numbers / sizes ───────────────────────────────────────────────────────────
 
+
 def filesizeformat_filter(value) -> str:
     try:
         size = float(value)
     except (TypeError, ValueError):
         return "0 bytes"
     for unit, threshold in [
-        ("PB", 1e15), ("TB", 1e12), ("GB", 1e9), ("MB", 1e6), ("KB", 1e3),
+        ("PB", 1e15),
+        ("TB", 1e12),
+        ("GB", 1e9),
+        ("MB", 1e6),
+        ("KB", 1e3),
     ]:
         if size >= threshold:
             v = size / threshold
@@ -387,6 +439,7 @@ def floatformat_filter(value, precision: int = -1) -> str:
 # ── Apply to Jinja2 env ───────────────────────────────────────────────────────
 
 # ── Missing filters ───────────────────────────────────────────────────────────
+
 
 def striptags_filter(value) -> str:
     return re.sub(r"<[^>]+>", "", str(value))
@@ -415,6 +468,7 @@ def dictsortreversed_filter(value, key: str) -> list:
 
 def iriencode_filter(value) -> str:
     from urllib.parse import quote
+
     return quote(str(value), safe="/:@!$&'()*+,;=~")
 
 
@@ -424,17 +478,20 @@ def make_list_filter(value) -> list:
 
 def random_filter(value) -> object:
     import random as _random
+
     lst = list(value)
     return _random.choice(lst) if lst else ""
 
 
 def wordwrap_filter(value, width: int) -> str:
     import textwrap
+
     return textwrap.fill(str(value), int(width))
 
 
 def truncatewords_html_filter(value, num: int) -> str:
     from markupsafe import Markup
+
     text = striptags_filter(str(value))
     return Markup(truncatewords_filter(text, num))
 
@@ -447,6 +504,7 @@ def urlizetrunc_filter(value, limit: int, autoescape: bool = True) -> str:
 
 def force_escape_filter(value) -> str:
     from markupsafe import Markup, escape
+
     return Markup(escape(str(value)))
 
 
@@ -563,59 +621,66 @@ def safeseq_filter(value):
 
 
 _FILTERS: dict = {
-    "date":               date_filter,
-    "time":               time_filter,
-    "timesince":          timesince_filter,
-    "timeuntil":          timeuntil_filter,
-    "truncatechars":      truncatechars_filter,
-    "truncatewords":      truncatewords_filter,
+    "date": date_filter,
+    "time": time_filter,
+    "timesince": timesince_filter,
+    "timeuntil": timeuntil_filter,
+    "truncatechars": truncatechars_filter,
+    "truncatewords": truncatewords_filter,
     "truncatechars_html": truncatechars_html_filter,
     "truncatewords_html": truncatewords_html_filter,
-    "wordcount":          wordcount_filter,
-    "capfirst":           capfirst_filter,
-    "addslashes":         addslashes_filter,
-    "slugify":            slugify_filter,
-    "linenumbers":        linenumbers_filter,
-    "pluralize":          pluralize_filter,
-    "yesno":              yesno_filter,
-    "default_if_none":    default_if_none_filter,
-    "phone2numeric":      phone2numeric_filter,
-    "linebreaks":         linebreaks_filter,
-    "linebreaksbr":       linebreaksbr_filter,
-    "urlize":             urlize_filter,
-    "urlizetrunc":        urlizetrunc_filter,
-    "escapejs":           escapejs_filter,
-    "json_script":        json_script_filter,
-    "filesizeformat":     filesizeformat_filter,
-    "floatformat":        floatformat_filter,
-    "striptags":          striptags_filter,
-    "title":              title_filter,
-    "cut":                cut_filter,
-    "dictsort":           dictsort_filter,
-    "dictsortreversed":   dictsortreversed_filter,
-    "iriencode":          iriencode_filter,
-    "make_list":          make_list_filter,
-    "random":             random_filter,
-    "wordwrap":           wordwrap_filter,
-    "force_escape":       force_escape_filter,
-    "getdigit":           getdigit_filter,
+    "wordcount": wordcount_filter,
+    "capfirst": capfirst_filter,
+    "addslashes": addslashes_filter,
+    "slugify": slugify_filter,
+    "linenumbers": linenumbers_filter,
+    "pluralize": pluralize_filter,
+    "yesno": yesno_filter,
+    "default_if_none": default_if_none_filter,
+    "phone2numeric": phone2numeric_filter,
+    "linebreaks": linebreaks_filter,
+    "linebreaksbr": linebreaksbr_filter,
+    "urlize": urlize_filter,
+    "urlizetrunc": urlizetrunc_filter,
+    "escapejs": escapejs_filter,
+    "json_script": json_script_filter,
+    "filesizeformat": filesizeformat_filter,
+    "floatformat": floatformat_filter,
+    "striptags": striptags_filter,
+    "title": title_filter,
+    "cut": cut_filter,
+    "dictsort": dictsort_filter,
+    "dictsortreversed": dictsortreversed_filter,
+    "iriencode": iriencode_filter,
+    "make_list": make_list_filter,
+    "random": random_filter,
+    "wordwrap": wordwrap_filter,
+    "force_escape": force_escape_filter,
+    "getdigit": getdigit_filter,
     # Django spells it with the underscore; a ported template writes that.
-    "get_digit":          getdigit_filter,
-    "add":                add_filter,
-    "divisibleby":        divisibleby_filter,
-    "stringformat":       stringformat_filter,
-    "escapeseq":          escapeseq_filter,
-    "safeseq":            safeseq_filter,
-    "center":             center_filter,
-    "ljust":              ljust_filter,
-    "rjust":              rjust_filter,
-    "unordered_list":     unordered_list_filter,
+    "get_digit": getdigit_filter,
+    "add": add_filter,
+    "divisibleby": divisibleby_filter,
+    "stringformat": stringformat_filter,
+    "escapeseq": escapeseq_filter,
+    "safeseq": safeseq_filter,
+    "center": center_filter,
+    "ljust": ljust_filter,
+    "rjust": rjust_filter,
+    "unordered_list": unordered_list_filter,
 }
 
 # These filters produce safe HTML and must be marked as such in Jinja2
 _SAFE_FILTERS = {
-    "linebreaks", "linebreaksbr", "urlize", "urlizetrunc", "json_script",
-    "linenumbers", "force_escape", "unordered_list", "truncatewords_html",
+    "linebreaks",
+    "linebreaksbr",
+    "urlize",
+    "urlizetrunc",
+    "json_script",
+    "linenumbers",
+    "force_escape",
+    "unordered_list",
+    "truncatewords_html",
 }
 
 
@@ -628,9 +693,11 @@ def register_builtins(env) -> None:
 
     def _now(fmt: str = "N j, Y, P") -> str:
         return _format_date(datetime.datetime.now(), fmt)
+
     env.globals.setdefault("now", _now)
 
     import pprint as _pprint
+
     env.globals.setdefault("pprint", _pprint.pformat)
 
     def _regroup(iterable, grouper: str):
@@ -674,6 +741,7 @@ def register_builtins(env) -> None:
         iteration would build a new one every time and always return the first
         value.
         """
+
         def __init__(self, *values):
             self._values = values
             self._index = 0
@@ -704,6 +772,7 @@ def register_builtins(env) -> None:
             {{ spaceless(content) }}
         """
         import re as _re
+
         return _re.sub(r">\s+<", "><", html.strip())
 
     env.globals.setdefault("spaceless", _spaceless)
@@ -719,6 +788,7 @@ def register_builtins(env) -> None:
             if value:
                 return value
         return default
+
     env.globals.setdefault("firstof", _firstof)
 
     def _widthratio(value, max_value, max_width) -> int:
@@ -733,6 +803,7 @@ def register_builtins(env) -> None:
         except (TypeError, ValueError, ZeroDivisionError):
             return 0
         return int(round(ratio))
+
     env.globals.setdefault("widthratio", _widthratio)
 
     def _querystring(request=None, **changes) -> str:
@@ -765,6 +836,7 @@ def register_builtins(env) -> None:
                 pairs.append((key, str(value)))
         query = urlencode(pairs)
         return f"?{query}" if query else ""
+
     env.globals.setdefault("querystring", _querystring)
 
     class _IfChanged:
@@ -779,6 +851,7 @@ def register_builtins(env) -> None:
               {{ item.name }}
             {% endfor %}
         """
+
         def __init__(self):
             self._last = object()
 

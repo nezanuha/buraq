@@ -32,8 +32,7 @@ def discover_settings_module() -> str | None:
     found = [
         path
         for path in cwd.glob("*/settings.py")
-        if not path.parent.name.startswith(".")
-        and (path.parent / "__init__.py").is_file()
+        if not path.parent.name.startswith(".") and (path.parent / "__init__.py").is_file()
     ]
     return f"{found[0].parent.name}.settings" if len(found) == 1 else None
 

@@ -16,14 +16,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table('redirects_redirect',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('old_path', sa.String(length=255), nullable=False),
-    sa.Column('new_path', sa.String(length=255), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('old_path')
+    op.create_table(
+        "redirects_redirect",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("old_path", sa.String(length=255), nullable=False),
+        sa.Column("new_path", sa.String(length=255), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("old_path"),
     )
 
 
 def downgrade() -> None:
-    op.drop_table('redirects_redirect')
+    op.drop_table("redirects_redirect")

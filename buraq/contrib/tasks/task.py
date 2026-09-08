@@ -4,6 +4,7 @@ Task — a callable decorated with @background_task.
 ``Task`` wraps an async or sync function and adds an ``aenqueue()`` method
 that submits the function to the configured backend for background execution.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable

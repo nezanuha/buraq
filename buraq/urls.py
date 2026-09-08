@@ -87,6 +87,7 @@ class URLInclude:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+
 def include(module_path_or_patterns, namespace: str = "") -> URLInclude:
     """
     Include urlpatterns from a module path string or an inline list of patterns.
@@ -105,7 +106,6 @@ def include(module_path_or_patterns, namespace: str = "") -> URLInclude:
 
 
 _ALL_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
-
 
 
 def path(
@@ -172,6 +172,7 @@ _i18n_prefix_default: dict[str, bool] = {}
 @dataclass
 class I18nURLGroup:
     """Wraps URL patterns that should be served under a language prefix."""
+
     patterns: list
     prefix_default_language: bool = True
 
@@ -219,6 +220,7 @@ def reverse_lazy(name: str, **path_params: Any):
             success_url = reverse_lazy("post_list")
     """
     from buraq.utils.functional import lazy
+
     _lazy_reverse = lazy(reverse, str)
     return _lazy_reverse(name, **path_params)
 
@@ -236,8 +238,7 @@ class ResolverMatch:
 
     def __repr__(self):
         return (
-            f"ResolverMatch(func={self.func!r}, kwargs={self.kwargs!r},"
-            f" url_name={self.url_name!r})"
+            f"ResolverMatch(func={self.func!r}, kwargs={self.kwargs!r}, url_name={self.url_name!r})"
         )
 
 
@@ -311,6 +312,7 @@ def reverse(name: str, **path_params: Any) -> str:
     """
     if name not in _route_registry:
         from buraq.exceptions import NoReverseMatch
+
         raise NoReverseMatch(f"No URL pattern with name {name!r}. Did you set name= on path()?")
 
     path_str = _route_registry[name]
@@ -340,6 +342,7 @@ def reverse(name: str, **path_params: Any) -> str:
 
 # ── Internal registration ─────────────────────────────────────────────────────
 
+
 def _inject_request(view: Callable) -> Callable:
     """
     Wrap a view so FastAPI injects the Starlette Request object into a
@@ -365,10 +368,12 @@ def _inject_request(view: Callable) -> Callable:
     new_sig = sig.replace(parameters=new_params)
 
     if inspect.iscoroutinefunction(view):
+
         @functools.wraps(view)
         async def wrapper(*args, **kwargs):
             return await view(*args, **kwargs)
     else:
+
         @functools.wraps(view)
         async def wrapper(*args, **kwargs):
             return view(*args, **kwargs)
@@ -487,8 +492,7 @@ def _apply_ratelimits(app: Any, view: Callable) -> Callable:
 
     # Parsed once at registration rather than per request.
     rules = [
-        (parse_rate(limit), _keyfunc(key), cost, exempt)
-        for limit, key, cost, exempt in limits
+        (parse_rate(limit), _keyfunc(key), cost, exempt) for limit, key, cost, exempt in limits
     ]
     check = limiter.check
     # The backend keys on the limit and the identifier, so two views both
@@ -499,9 +503,7 @@ def _apply_ratelimits(app: Any, view: Callable) -> Callable:
 
     @functools.wraps(view)
     async def limited(*args, **kwargs):
-        request = kwargs.get("request") or next(
-            (a for a in args if hasattr(a, "scope")), None
-        )
+        request = kwargs.get("request") or next((a for a in args if hasattr(a, "scope")), None)
         binding = None
         if request is not None:
             for rate, keyfunc, cost, exempt in rules:
@@ -552,7 +554,10 @@ def register_urlpatterns(
     for item in patterns:
         if isinstance(item, I18nURLGroup):
             register_urlpatterns(
-                app, item.patterns, prefix, _i18n=True,
+                app,
+                item.patterns,
+                prefix,
+                _i18n=True,
                 _namespace=_namespace,
                 _prefix_default_language=item.prefix_default_language,
             )
@@ -565,9 +570,7 @@ def register_urlpatterns(
 
             item.site.prefix = (prefix + item._prefix).rstrip("/") or "/admin"
             item.site.autodiscover()
-            app.include_router(
-                get_admin_router(item.site), prefix=prefix + item._prefix
-            )
+            app.include_router(get_admin_router(item.site), prefix=prefix + item._prefix)
             from buraq.contrib.admin.setup import _mount_admin_static
 
             _mount_admin_static(app)
@@ -580,7 +583,10 @@ def register_urlpatterns(
                 sub_patterns = getattr(module, "urlpatterns", [])
             ns = item.namespace or _namespace
             register_urlpatterns(
-                app, sub_patterns, prefix + item._prefix, _i18n=_i18n,
+                app,
+                sub_patterns,
+                prefix + item._prefix,
+                _i18n=_i18n,
                 _namespace=ns,
                 _prefix_default_language=_prefix_default_language,
             )

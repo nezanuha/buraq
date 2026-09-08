@@ -13,6 +13,7 @@ Add to MIDDLEWARE in settings:
         ...
     ]
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -54,13 +55,13 @@ def _detect_language(scope: dict) -> tuple[str, dict]:
     if path and path != "/":
         prefix = path.split("/")[1]
         if prefix in supported:
-            stripped_path = path[len(prefix) + 1:] or "/"
+            stripped_path = path[len(prefix) + 1 :] or "/"
             new_scope = {**scope, "path": stripped_path}
             # Update raw_path too so ASGI servers stay consistent
             raw = scope.get("raw_path", b"")
             prefix_bytes = f"/{prefix}".encode()
             if raw.startswith(prefix_bytes):
-                new_scope["raw_path"] = raw[len(prefix_bytes):] or b"/"
+                new_scope["raw_path"] = raw[len(prefix_bytes) :] or b"/"
             return prefix, new_scope
 
     # 2. Cookie

@@ -9,6 +9,7 @@ Usage:
     d.getlist("a")   # → [1, 2, 3]
     d.getfirst("a")  # → 1
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator

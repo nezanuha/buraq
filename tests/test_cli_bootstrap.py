@@ -12,6 +12,7 @@ replaces the process, so it is exercised through a subprocess.
 """
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -75,8 +76,22 @@ def test_escape_hatch_disables_the_swap(tmp_path):
     assert "IMPORTED" in result.stdout
 
 
+@pytest.mark.skipif(
+    Path(sys.executable).resolve().parent.parent != (REPO_ROOT / ".venv"),
+    reason=(
+        "premise not met: this only means anything when pytest is itself "
+        "running from the repo's .venv"
+    ),
+)
 def test_no_reexec_when_already_on_the_project_interpreter():
-    """Running from the repo, sys.executable already is ./.venv — must not loop."""
+    """Running from the repo, sys.executable already is ./.venv — must not loop.
+
+    Skipped when the suite is run by an interpreter from somewhere else, which
+    is how Buraq gets checked against another Python version: the bootstrap
+    then correctly swaps to ./.venv, and the test failed reporting that correct
+    behaviour as a fault. A false failure on every cross-version run is worse
+    than no coverage on those runs.
+    """
     result = _run(
         "import buraq; print('IMPORTED')",
         cwd=REPO_ROOT,
@@ -116,7 +131,10 @@ def test_windows_keeps_the_parent_attached():
     """
     source = (REPO_ROOT / "buraq" / "__init__.py").read_text(encoding="utf-8")
 
-    assert "os.name == 'nt'" in source
+    # Quote-agnostic: this asserted on `os.name == 'nt'` with single quotes and
+    # broke the day `ruff format` normalised the file to double ones. The
+    # behaviour under test is the branch, not how its string literal is spelt.
+    assert re.search(r"""os\.name == ['"]nt['"]""", source)
     assert "subprocess.run(argv).returncode" in source
     # execv is still the right call everywhere else
     assert "os.execv(str(python), argv)" in source

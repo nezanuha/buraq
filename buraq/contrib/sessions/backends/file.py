@@ -9,6 +9,7 @@ Settings::
     SESSION_ENGINE = "buraq.contrib.sessions.backends.file"
     SESSION_FILE_PATH = "/tmp/buraq_sessions"   # optional
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -23,6 +24,7 @@ from buraq.contrib.sessions.backends.base import SessionBase
 def _get_storage_path() -> Path:
     try:
         from buraq.conf import settings
+
         p = getattr(settings, "SESSION_FILE_PATH", None)
         if p:
             return Path(p)
@@ -94,6 +96,7 @@ class FileSessionBackend(SessionBase):
 
     async def clear_expired(self) -> int:
         """Remove all expired session files. Returns count deleted."""
+
         def _cull() -> int:
             storage = _get_storage_path()
             if not storage.exists():

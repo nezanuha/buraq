@@ -11,6 +11,7 @@ Usage:
     # F expressions
     await Post.objects.filter(views__gt=F("likes"))
 """
+
 import operator as _op
 
 import sqlalchemy as sa
@@ -39,12 +40,23 @@ class F:
         f._expression = (self, op, other)
         return f
 
-    def __add__(self, other): return _FExpr(self, "+", other)
-    def __sub__(self, other): return _FExpr(self, "-", other)
-    def __mul__(self, other): return _FExpr(self, "*", other)
-    def __truediv__(self, other): return _FExpr(self, "/", other)
-    def __radd__(self, other): return _FExpr(other, "+", self)
-    def __rsub__(self, other): return _FExpr(other, "-", self)
+    def __add__(self, other):
+        return _FExpr(self, "+", other)
+
+    def __sub__(self, other):
+        return _FExpr(self, "-", other)
+
+    def __mul__(self, other):
+        return _FExpr(self, "*", other)
+
+    def __truediv__(self, other):
+        return _FExpr(self, "/", other)
+
+    def __radd__(self, other):
+        return _FExpr(other, "+", self)
+
+    def __rsub__(self, other):
+        return _FExpr(other, "-", self)
 
 
 class _FExpr:
@@ -87,9 +99,15 @@ class Q:
         q.children = [self, other]
         return q
 
-    def __and__(self, other): return self._combine(other, Q.AND)
-    def __or__(self, other): return self._combine(other, Q.OR)
-    def __xor__(self, other): return self._combine(other, Q.XOR)
+    def __and__(self, other):
+        return self._combine(other, Q.AND)
+
+    def __or__(self, other):
+        return self._combine(other, Q.OR)
+
+    def __xor__(self, other):
+        return self._combine(other, Q.XOR)
+
     def __invert__(self):
         q = Q(_connector=self.connector, _negated=not self.negated)
         q.children = list(self.children)
@@ -121,8 +139,7 @@ class Q:
 def _escape_like(value: str, escape_char: str = "\\") -> str:
     """Escape LIKE wildcards in a user-supplied string so they match literally."""
     return (
-        value
-        .replace(escape_char, escape_char * 2)
+        value.replace(escape_char, escape_char * 2)
         .replace("%", escape_char + "%")
         .replace("_", escape_char + "_")
     )
@@ -136,42 +153,42 @@ def _resolve_lookup(model, key: str, value) -> sa.sql.ClauseElement:
     from buraq.orm.expressions import OuterRef
 
     _OPS = {
-        "contains":    lambda c, v: c.contains(v),
-        "icontains":   lambda c, v: c.ilike(f"%{_escape_like(v)}%", escape="\\"),
-        "startswith":  lambda c, v: c.startswith(v),
+        "contains": lambda c, v: c.contains(v),
+        "icontains": lambda c, v: c.ilike(f"%{_escape_like(v)}%", escape="\\"),
+        "startswith": lambda c, v: c.startswith(v),
         "istartswith": lambda c, v: c.ilike(f"{_escape_like(v)}%", escape="\\"),
-        "endswith":    lambda c, v: c.endswith(v),
-        "iendswith":   lambda c, v: c.ilike(f"%{_escape_like(v)}", escape="\\"),
-        "exact":      lambda c, v: c == v,
-        "iexact":     lambda c, v: c.ilike(v),
-        "gt":         lambda c, v: c > v,
-        "gte":        lambda c, v: c >= v,
-        "lt":         lambda c, v: c < v,
-        "lte":        lambda c, v: c <= v,
-        "in":         lambda c, v: c.in_(v),
-        "isnull":     lambda c, v: c.is_(None) if v else c.isnot(None),
-        "range":      lambda c, v: c.between(v[0], v[1]),
-        "year":       lambda c, v: sa.extract("year", c) == v,
-        "month":      lambda c, v: sa.extract("month", c) == v,
-        "day":        lambda c, v: sa.extract("day", c) == v,
-        "hour":       lambda c, v: sa.extract("hour", c) == v,
-        "minute":     lambda c, v: sa.extract("minute", c) == v,
-        "second":     lambda c, v: sa.extract("second", c) == v,
-        "week":       lambda c, v: sa.extract("week", c) == v,
-        "week_day":   lambda c, v: sa.extract("dow", c) == v,
+        "endswith": lambda c, v: c.endswith(v),
+        "iendswith": lambda c, v: c.ilike(f"%{_escape_like(v)}", escape="\\"),
+        "exact": lambda c, v: c == v,
+        "iexact": lambda c, v: c.ilike(v),
+        "gt": lambda c, v: c > v,
+        "gte": lambda c, v: c >= v,
+        "lt": lambda c, v: c < v,
+        "lte": lambda c, v: c <= v,
+        "in": lambda c, v: c.in_(v),
+        "isnull": lambda c, v: c.is_(None) if v else c.isnot(None),
+        "range": lambda c, v: c.between(v[0], v[1]),
+        "year": lambda c, v: sa.extract("year", c) == v,
+        "month": lambda c, v: sa.extract("month", c) == v,
+        "day": lambda c, v: sa.extract("day", c) == v,
+        "hour": lambda c, v: sa.extract("hour", c) == v,
+        "minute": lambda c, v: sa.extract("minute", c) == v,
+        "second": lambda c, v: sa.extract("second", c) == v,
+        "week": lambda c, v: sa.extract("week", c) == v,
+        "week_day": lambda c, v: sa.extract("dow", c) == v,
         "iso_week_day": lambda c, v: sa.extract("isodow", c) == v,
-        "quarter":    lambda c, v: sa.extract("quarter", c) == v,
-        "iso_year":   lambda c, v: sa.extract("isoyear", c) == v,
-        "date":       lambda c, v: sa.cast(c, sa.Date) == v,
-        "time":       lambda c, v: sa.cast(c, sa.Time) == v,
-        "regex":      lambda c, v: c.regexp_match(v),
-        "iregex":     lambda c, v: c.regexp_match(v, flags="i"),
+        "quarter": lambda c, v: sa.extract("quarter", c) == v,
+        "iso_year": lambda c, v: sa.extract("isoyear", c) == v,
+        "date": lambda c, v: sa.cast(c, sa.Date) == v,
+        "time": lambda c, v: sa.cast(c, sa.Time) == v,
+        "regex": lambda c, v: c.regexp_match(v),
+        "iregex": lambda c, v: c.regexp_match(v, flags="i"),
         # JSON / array operators (PostgreSQL)
         "contained_by": lambda c, v: c.op("<@")(sa.cast(v, sa.JSON)),
-        "has_key":    lambda c, v: c.op("?")(v),
-        "has_keys":   lambda c, v: c.op("?&")(sa.cast(v, sa.ARRAY(sa.Text))),
+        "has_key": lambda c, v: c.op("?")(v),
+        "has_keys": lambda c, v: c.op("?&")(sa.cast(v, sa.ARRAY(sa.Text))),
         "has_any_keys": lambda c, v: c.op("?|")(sa.cast(v, sa.ARRAY(sa.Text))),
-        "overlap":    lambda c, v: c.op("&&")(v),
+        "overlap": lambda c, v: c.op("&&")(v),
     }
 
     def _resolve_value(v, col_model):
@@ -189,6 +206,7 @@ def _resolve_lookup(model, key: str, value) -> sa.sql.ClauseElement:
             col = getattr(model, field_name)
         except AttributeError as err:
             from buraq.exceptions import FieldError
+
             raise FieldError(
                 f"Cannot resolve keyword '{field_name}' into field. "
                 f"Choices are: {', '.join(c.name for c in model.__table__.columns)}"
@@ -201,6 +219,7 @@ def _resolve_lookup(model, key: str, value) -> sa.sql.ClauseElement:
             col = getattr(model, key)
         except AttributeError as err:
             from buraq.exceptions import FieldError
+
             raise FieldError(
                 f"Cannot resolve keyword '{key}' into field. "
                 f"Choices are: {', '.join(c.name for c in model.__table__.columns)}"

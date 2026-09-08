@@ -14,6 +14,7 @@ No email is actually delivered.  Useful in tests::
     assert outbox[0].subject == "Hi"
     clear_outbox()  # reset between tests
 """
+
 from __future__ import annotations
 
 import logging

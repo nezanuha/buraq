@@ -11,6 +11,7 @@ Usage:
         model = Post
         permission_required = "blog.change_post"
 """
+
 from __future__ import annotations
 
 from starlette.responses import RedirectResponse
@@ -28,6 +29,7 @@ class AccessMixin:
     async def handle_no_permission(self, request):
         if self.raise_exception:
             from starlette.responses import Response
+
             return Response("Forbidden", status_code=403)
         return RedirectResponse(self.get_login_url(), status_code=302)
 
@@ -97,6 +99,7 @@ class PermissionRequiredMixin(LoginRequiredMixin):
             return await self.handle_no_permission(request)
         # Skip LoginRequiredMixin dispatch (already checked)
         from buraq.views.base import View
+
         return await View.dispatch(self, request, **kwargs)
 
 
@@ -126,6 +129,7 @@ class SuccessMessageMixin:
         if msg:
             try:
                 from buraq.contrib.messages import success
+
                 success(request, msg)
             except Exception:
                 pass
@@ -133,6 +137,9 @@ class SuccessMessageMixin:
 
 
 __all__ = [
-    "AccessMixin", "LoginRequiredMixin", "UserPassesTestMixin",
-    "PermissionRequiredMixin", "SuccessMessageMixin",
+    "AccessMixin",
+    "LoginRequiredMixin",
+    "UserPassesTestMixin",
+    "PermissionRequiredMixin",
+    "SuccessMessageMixin",
 ]

@@ -27,6 +27,7 @@ Override any action to change it, and leave the rest generated. Anything the
 viewset does not define is simply not routed, so a read-only resource is a
 viewset with `create`, `update` and `destroy` removed.
 """
+
 from __future__ import annotations
 
 from typing import Any

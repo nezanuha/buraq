@@ -29,9 +29,7 @@ def register(*models, site=site):
 
     def decorator(admin_class):
         if not issubclass(admin_class, ModelAdmin):
-            raise TypeError(
-                f"{admin_class.__name__} must subclass ModelAdmin to be registered."
-            )
+            raise TypeError(f"{admin_class.__name__} must subclass ModelAdmin to be registered.")
         for model in models:
             site.register(model, admin_class)
         return admin_class

@@ -12,6 +12,7 @@ whatever order the suite happens to run next.
 
     CACHE_URL = "dummy://"
 """
+
 from __future__ import annotations
 
 from typing import Any

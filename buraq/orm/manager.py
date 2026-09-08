@@ -12,7 +12,7 @@ T = TypeVar("T")
 
 # ── Fetch mode constants ──────────────────────────────────────────────────────
 
-FETCH_ONE   = "FETCH_ONE"    # default — fetch only for current instance
+FETCH_ONE = "FETCH_ONE"  # default — fetch only for current instance
 FETCH_PEERS = "FETCH_PEERS"  # on-demand prefetch across all queryset peers
 FETCH_RAISE = "FETCH_RAISE"  # raise FieldFetchBlocked on any deferred access
 
@@ -77,6 +77,7 @@ class QuerySet:
 
     def filter(self, *q_objs, **kwargs) -> "QuerySet":
         from buraq.orm.query import F, Q, _resolve_lookup
+
         q = self._query
         for q_obj in q_objs:
             if isinstance(q_obj, Q):
@@ -93,6 +94,7 @@ class QuerySet:
 
     def exclude(self, *q_objs, **kwargs) -> "QuerySet":
         from buraq.orm.query import Q, _resolve_lookup
+
         q = self._query
         for q_obj in q_objs:
             if isinstance(q_obj, Q):
@@ -100,6 +102,7 @@ class QuerySet:
         for key, value in kwargs.items():
             if "__" in key:
                 from buraq.orm.query import _resolve_lookup
+
                 clause = _resolve_lookup(self._model, key, value)
                 q = q.where(sa.not_(clause))
             else:
@@ -200,7 +203,8 @@ class QuerySet:
             if not isinstance(target_model, type):
                 continue  # unresolved string reference — leave the raw id in place
             related_ids = {
-                getattr(obj, field_name) for obj in instances
+                getattr(obj, field_name)
+                for obj in instances
                 if getattr(obj, field_name, None) is not None
             }
             if not related_ids:
@@ -234,12 +238,14 @@ class QuerySet:
 
     def only(self, *fields) -> "QuerySet":
         from sqlalchemy.orm import load_only
+
         attrs = [getattr(self._model, f) for f in fields]
         q = self._query.options(load_only(*attrs))
         return self._clone(q)
 
     def defer(self, *fields) -> "QuerySet":
         from sqlalchemy.orm import defer as sa_defer
+
         q = self._query
         for field in fields:
             q = q.options(sa_defer(getattr(self._model, field)))
@@ -330,8 +336,9 @@ class QuerySet:
                 return True
         return False
 
-    def extra(self, select=None, where=None, params=None, tables=None,
-              order_by=None, select_params=None) -> "QuerySet":
+    def extra(
+        self, select=None, where=None, params=None, tables=None, order_by=None, select_params=None
+    ) -> "QuerySet":
         """
         Add raw SQL fragments to the query.
 
@@ -340,10 +347,10 @@ class QuerySet:
         """
         q = self._query
         if where:
-            for clause in (where if isinstance(where, (list, tuple)) else [where]):
+            for clause in where if isinstance(where, (list, tuple)) else [where]:
                 q = q.where(sa.text(clause))
         if select:
-            for label, expr in (select.items() if isinstance(select, dict) else select):
+            for label, expr in select.items() if isinstance(select, dict) else select:
                 q = q.add_columns(sa.literal_column(expr).label(label))
         return self._clone(q)
 
@@ -460,9 +467,7 @@ class QuerySet:
         if not items:
             raise self._model.DoesNotExist(f"{self._model.__name__} matching query does not exist.")
         if len(items) > 1:
-            raise MultipleObjectsReturned(
-                f"get() returned more than one {self._model.__name__}."
-            )
+            raise MultipleObjectsReturned(f"get() returned more than one {self._model.__name__}.")
         return items[0]
 
     async def get_or_none(self, *q_objs, **kwargs) -> Any | None:
@@ -475,6 +480,7 @@ class QuerySet:
     async def delete(self) -> int:
         """Bulk delete all rows matching current filters."""
         from buraq.core.db import _current_session
+
         where_clauses = self._query.whereclause
         q = sa_delete(self._model)
         if where_clauses is not None:
@@ -493,6 +499,7 @@ class QuerySet:
         """Bulk update all rows matching current filters."""
         from buraq.core.db import _current_session
         from buraq.orm.query import F, _FExpr
+
         resolved = {}
         for key, value in kwargs.items():
             if isinstance(value, (F, _FExpr)):
@@ -522,6 +529,7 @@ class QuerySet:
             # → {"total": 42, "avg": 7.3}
         """
         from buraq.orm.aggregates import Aggregate
+
         cols = []
         labels = []
         for label, agg in kwargs.items():
@@ -628,6 +636,7 @@ class QuerySet:
         from sqlalchemy.engine import make_url as _make_url
 
         from buraq.conf import settings
+
         col = getattr(self._model, field)
         try:
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
@@ -655,6 +664,7 @@ class QuerySet:
         from sqlalchemy.engine import make_url as _make_url
 
         from buraq.conf import settings
+
         col = getattr(self._model, field)
         try:
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
@@ -662,16 +672,22 @@ class QuerySet:
             dialect = "postgresql"
         if dialect == "sqlite":
             _fmt = {
-                "year": "%Y-01-01 00:00:00", "month": "%Y-%m-01 00:00:00",
-                "day": "%Y-%m-%d 00:00:00", "hour": "%Y-%m-%d %H:00:00",
-                "minute": "%Y-%m-%d %H:%M:00", "second": "%Y-%m-%d %H:%M:%S",
+                "year": "%Y-01-01 00:00:00",
+                "month": "%Y-%m-01 00:00:00",
+                "day": "%Y-%m-%d 00:00:00",
+                "hour": "%Y-%m-%d %H:00:00",
+                "minute": "%Y-%m-%d %H:%M:00",
+                "second": "%Y-%m-%d %H:%M:%S",
             }
             trunc = sa.cast(func.strftime(_fmt.get(kind, "%Y-%m-%d %H:%M:%S"), col), sa.DateTime)
         elif dialect in ("mysql", "mariadb"):
             _fmt = {
-                "year": "%Y-01-01 00:00:00", "month": "%Y-%m-01 00:00:00",
-                "day": "%Y-%m-%d 00:00:00", "hour": "%Y-%m-%d %H:00:00",
-                "minute": "%Y-%m-%d %H:%i:00", "second": "%Y-%m-%d %H:%i:%S",
+                "year": "%Y-01-01 00:00:00",
+                "month": "%Y-%m-01 00:00:00",
+                "day": "%Y-%m-%d 00:00:00",
+                "hour": "%Y-%m-%d %H:00:00",
+                "minute": "%Y-%m-%d %H:%i:00",
+                "second": "%Y-%m-%d %H:%i:%S",
             }
             trunc = sa.cast(func.date_format(col, _fmt.get(kind, "%Y-%m-%d %H:%i:%S")), sa.DateTime)
         else:
@@ -702,6 +718,7 @@ class QuerySet:
         from sqlalchemy.engine import make_url as _make_url
 
         from buraq.conf import settings
+
         try:
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
         except Exception:
@@ -795,22 +812,16 @@ class RelatedManager:
     async def get(self, **kwargs) -> Any:
         items = await self._base_qs().filter(**kwargs).limit(2).all()
         if not items:
-            raise DoesNotExist(
-                f"{self._model.__name__} matching query does not exist."
-            )
+            raise DoesNotExist(f"{self._model.__name__} matching query does not exist.")
         if len(items) > 1:
-            raise MultipleObjectsReturned(
-                f"get() returned more than one {self._model.__name__}."
-            )
+            raise MultipleObjectsReturned(f"get() returned more than one {self._model.__name__}.")
         return items[0]
 
     async def add(self, *objs) -> None:
         if not objs:
             return
         ids = [obj.id for obj in objs]
-        await Manager(self._model).filter(id__in=ids).update(
-            **{self._fk_field: self._instance.id}
-        )
+        await Manager(self._model).filter(id__in=ids).update(**{self._fk_field: self._instance.id})
         for obj in objs:
             setattr(obj, self._fk_field, self._instance.id)
 
@@ -818,9 +829,7 @@ class RelatedManager:
         if not objs:
             return
         ids = [obj.id for obj in objs]
-        await Manager(self._model).filter(id__in=ids).update(
-            **{self._fk_field: None}
-        )
+        await Manager(self._model).filter(id__in=ids).update(**{self._fk_field: None})
         for obj in objs:
             setattr(obj, self._fk_field, None)
 
@@ -913,6 +922,7 @@ class Manager:
 
     async def create(self, **kwargs) -> Any:
         from buraq.core.db import SessionLocal, _current_session
+
         active = _current_session.get()
         if active is not None:
             obj = self._model(**kwargs)
@@ -934,6 +944,7 @@ class Manager:
         if obj is not None:
             return obj, False
         from sqlalchemy.exc import IntegrityError
+
         try:
             obj = await self.create(**{**kwargs, **(defaults or {})})
             return obj, True
@@ -951,6 +962,7 @@ class Manager:
             await obj.save()
             return obj, False
         from sqlalchemy.exc import IntegrityError
+
         try:
             obj = await self.create(**{**kwargs, **(defaults or {})})
             return obj, True
@@ -963,15 +975,12 @@ class Manager:
 
     async def update(self, pk: int, **kwargs) -> Any:
         from buraq.core.db import SessionLocal
+
         async with SessionLocal() as db:
-            result = await db.execute(
-                select(self._model).where(self._model.id == pk)
-            )
+            result = await db.execute(select(self._model).where(self._model.id == pk))
             obj = result.scalar_one_or_none()
             if not obj:
-                raise DoesNotExist(
-                    f"{self._model.__name__} with id={pk} does not exist."
-                )
+                raise DoesNotExist(f"{self._model.__name__} with id={pk} does not exist.")
             for key, value in kwargs.items():
                 setattr(obj, key, value)
             await db.commit()
@@ -980,21 +989,19 @@ class Manager:
 
     async def delete(self, pk: int) -> None:
         from buraq.core.db import SessionLocal
+
         async with SessionLocal() as db:
-            result = await db.execute(
-                select(self._model).where(self._model.id == pk)
-            )
+            result = await db.execute(select(self._model).where(self._model.id == pk))
             obj = result.scalar_one_or_none()
             if not obj:
-                raise DoesNotExist(
-                    f"{self._model.__name__} with id={pk} does not exist."
-                )
+                raise DoesNotExist(f"{self._model.__name__} with id={pk} does not exist.")
             await db.delete(obj)
             await db.commit()
 
     async def bulk_create(self, records: list[dict], ignore_conflicts: bool = False) -> list:
 
         from buraq.core.db import SessionLocal, _current_session
+
         col_names = {c.name for c in self._model.__table__.columns}
         clean_records = [{k: v for k, v in r.items() if k in col_names} for r in records]
         active = _current_session.get()
@@ -1027,6 +1034,7 @@ class Manager:
         if not objs:
             return 0
         from buraq.core.db import SessionLocal
+
         # Build a list of dicts {id, field1, field2, ...} for bulk parameter binding.
         # SQLAlchemy executes this as a single round-trip with multi-row binding.
         params = [{"_pk": obj.id, **{f: getattr(obj, f) for f in fields}} for obj in objs]

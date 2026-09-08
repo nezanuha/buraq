@@ -1,5 +1,3 @@
-
-
 """
 What an admin class may say about a model.
 
@@ -121,8 +119,7 @@ class ModelAdmin:
             func = getattr(self, action, None) if isinstance(action, str) else action
             if func is None:
                 raise AttributeError(
-                    f"{type(self).__name__}.actions names {action!r}, which is "
-                    f"not a method on it."
+                    f"{type(self).__name__}.actions names {action!r}, which is not a method on it."
                 )
             found[getattr(func, "__name__", str(action))] = func
         return found

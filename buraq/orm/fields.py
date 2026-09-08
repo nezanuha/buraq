@@ -117,7 +117,8 @@ class PositiveIntegerField(Field):
             sa.Integer,
             (
                 sa.CheckConstraint(f"{name} >= 0", name=constraint_name)
-                if name else sa.CheckConstraint("value >= 0")
+                if name
+                else sa.CheckConstraint("value >= 0")
             ),
             nullable=self.null,
             unique=self.unique,
@@ -133,7 +134,8 @@ class PositiveSmallIntegerField(Field):
             sa.SmallInteger,
             (
                 sa.CheckConstraint(f"{name} >= 0", name=constraint_name)
-                if name else sa.CheckConstraint("value >= 0")
+                if name
+                else sa.CheckConstraint("value >= 0")
             ),
             nullable=self.null,
             unique=self.unique,
@@ -300,9 +302,16 @@ class BigAutoField(Field):
 class FilePathField(CharField):
     """CharField that stores a filesystem path; optionally restricted to a directory."""
 
-    def __init__(self, path: str = "", match: str = None, recursive: bool = False,
-                 allow_files: bool = True, allow_folders: bool = False,
-                 max_length: int = 100, **kwargs):
+    def __init__(
+        self,
+        path: str = "",
+        match: str = None,
+        recursive: bool = False,
+        allow_files: bool = True,
+        allow_folders: bool = False,
+        max_length: int = 100,
+        **kwargs,
+    ):
         super().__init__(max_length=max_length, **kwargs)
         self.path = path
         self.match = match
@@ -319,8 +328,12 @@ class ForeignKey(Field):
     """
 
     def __init__(
-        self, to: Any, on_delete: str = "CASCADE", null: bool = False,
-        related_name: str = "", **kwargs
+        self,
+        to: Any,
+        on_delete: str = "CASCADE",
+        null: bool = False,
+        related_name: str = "",
+        **kwargs,
     ):
         super().__init__(null=null, **kwargs)
         self._to = to
@@ -396,8 +409,12 @@ class ManyToManyField(Field):
     """
 
     def __init__(
-        self, to: Any, through: Any = None, related_name: str = "",
-        symmetrical: bool = True, **kwargs
+        self,
+        to: Any,
+        through: Any = None,
+        related_name: str = "",
+        symmetrical: bool = True,
+        **kwargs,
     ):
         # ManyToManyField does NOT create a column on the model table
         super().__init__(**kwargs)
@@ -422,26 +439,31 @@ class ManyToManyField(Field):
         # Create association table if no through model specified
         if through is None:
             from buraq.core.db import Base
+
             source_table = model_cls.__tablename__
             target_table = (
-                to if isinstance(to, str)
-                else getattr(to, "__tablename__", str(to).lower() + "s")
+                to if isinstance(to, str) else getattr(to, "__tablename__", str(to).lower() + "s")
             )
             assoc_table_name = f"{source_table}_{target_table}"
 
             # Only create if not already defined
             from sqlalchemy import Column, ForeignKey, Integer, Table
+
             if assoc_table_name not in Base.metadata.tables:
                 self._assoc_table = Table(
                     assoc_table_name,
                     Base.metadata,
                     Column(
-                        "source_id", Integer,
-                        ForeignKey(f"{source_table}.id", ondelete="CASCADE"), primary_key=True,
+                        "source_id",
+                        Integer,
+                        ForeignKey(f"{source_table}.id", ondelete="CASCADE"),
+                        primary_key=True,
                     ),
                     Column(
-                        "target_id", Integer,
-                        ForeignKey(f"{target_table}.id", ondelete="CASCADE"), primary_key=True,
+                        "target_id",
+                        Integer,
+                        ForeignKey(f"{target_table}.id", ondelete="CASCADE"),
+                        primary_key=True,
                     ),
                 )
             else:
@@ -451,6 +473,7 @@ class ManyToManyField(Field):
                 self._assoc_table = through.__table__
             elif isinstance(through, str):
                 from buraq.core.db import Base
+
                 self._assoc_table = Base.metadata.tables.get(through)
             else:
                 self._assoc_table = None
@@ -496,13 +519,16 @@ class _M2MManager:
         import sqlalchemy as sa
 
         from buraq.core.db import SessionLocal
+
         assoc = self._field._assoc_table
         to = self._field._to
         if isinstance(to, str):
             raise RuntimeError("ManyToManyField target must be a Model class to use .all()")
         async with SessionLocal() as db:
-            q = sa.select(to).join(assoc, to.id == assoc.c.target_id).where(
-                assoc.c.source_id == self._instance.id
+            q = (
+                sa.select(to)
+                .join(assoc, to.id == assoc.c.target_id)
+                .where(assoc.c.source_id == self._instance.id)
             )
             result = await db.execute(q)
             return list(result.scalars().all())
@@ -513,34 +539,49 @@ class _M2MManager:
         from buraq.conf import settings
         from buraq.core.db import SessionLocal
         from buraq.signals import m2m_changed
+
         assoc = self._field._assoc_table
         rows = [{"source_id": self._instance.id, "target_id": obj.id} for obj in objs]
         pk_set = {obj.id for obj in objs}
         target_model = self._field._to if not isinstance(self._field._to, str) else None
         await m2m_changed.send(
-            sender=assoc, action="pre_add", instance=self._instance,
-            reverse=False, model=target_model, pk_set=pk_set,
+            sender=assoc,
+            action="pre_add",
+            instance=self._instance,
+            reverse=False,
+            model=target_model,
+            pk_set=pk_set,
         )
         url = settings.DATABASE_URL
         from buraq.orm.upsert import insert_ignoring_duplicates
+
         async with SessionLocal() as db:
             await db.execute(insert_ignoring_duplicates(assoc, rows, url))
             await db.commit()
         await m2m_changed.send(
-            sender=assoc, action="post_add", instance=self._instance,
-            reverse=False, model=target_model, pk_set=pk_set,
+            sender=assoc,
+            action="post_add",
+            instance=self._instance,
+            reverse=False,
+            model=target_model,
+            pk_set=pk_set,
         )
 
     async def remove(self, *objs) -> None:
         from buraq.core.db import SessionLocal
         from buraq.signals import m2m_changed
+
         assoc = self._field._assoc_table
         ids = [obj.id for obj in objs]
         pk_set = set(ids)
         target_model = self._field._to if not isinstance(self._field._to, str) else None
         await m2m_changed.send(
-            sender=assoc, action="pre_remove", instance=self._instance,
-            reverse=False, model=target_model, pk_set=pk_set,
+            sender=assoc,
+            action="pre_remove",
+            instance=self._instance,
+            reverse=False,
+            model=target_model,
+            pk_set=pk_set,
         )
         async with SessionLocal() as db:
             await db.execute(
@@ -551,8 +592,12 @@ class _M2MManager:
             )
             await db.commit()
         await m2m_changed.send(
-            sender=assoc, action="post_remove", instance=self._instance,
-            reverse=False, model=target_model, pk_set=pk_set,
+            sender=assoc,
+            action="post_remove",
+            instance=self._instance,
+            reverse=False,
+            model=target_model,
+            pk_set=pk_set,
         )
 
     async def set(self, objs) -> None:
@@ -561,51 +606,64 @@ class _M2MManager:
         from buraq.core.db import SessionLocal
         from buraq.orm.upsert import insert_ignoring_duplicates
         from buraq.signals import m2m_changed
+
         assoc = self._field._assoc_table
         target_model = self._field._to if not isinstance(self._field._to, str) else None
         rows = [{"source_id": self._instance.id, "target_id": obj.id} for obj in objs]
         pk_set = {obj.id for obj in objs}
         await m2m_changed.send(
-            sender=assoc, action="pre_clear", instance=self._instance,
-            reverse=False, model=target_model, pk_set=None,
+            sender=assoc,
+            action="pre_clear",
+            instance=self._instance,
+            reverse=False,
+            model=target_model,
+            pk_set=None,
         )
         async with SessionLocal() as db:
-            await db.execute(
-                assoc.delete().where(assoc.c.source_id == self._instance.id)
-            )
+            await db.execute(assoc.delete().where(assoc.c.source_id == self._instance.id))
             if rows:
-                await db.execute(
-                    insert_ignoring_duplicates(assoc, rows, settings.DATABASE_URL)
-                )
+                await db.execute(insert_ignoring_duplicates(assoc, rows, settings.DATABASE_URL))
             await db.commit()
         await m2m_changed.send(
-            sender=assoc, action="post_add", instance=self._instance,
-            reverse=False, model=target_model, pk_set=pk_set,
+            sender=assoc,
+            action="post_add",
+            instance=self._instance,
+            reverse=False,
+            model=target_model,
+            pk_set=pk_set,
         )
 
     async def clear(self) -> None:
         from buraq.core.db import SessionLocal
         from buraq.signals import m2m_changed
+
         assoc = self._field._assoc_table
         target_model = self._field._to if not isinstance(self._field._to, str) else None
         await m2m_changed.send(
-            sender=assoc, action="pre_clear", instance=self._instance,
-            reverse=False, model=target_model, pk_set=None,
+            sender=assoc,
+            action="pre_clear",
+            instance=self._instance,
+            reverse=False,
+            model=target_model,
+            pk_set=None,
         )
         async with SessionLocal() as db:
-            await db.execute(
-                assoc.delete().where(assoc.c.source_id == self._instance.id)
-            )
+            await db.execute(assoc.delete().where(assoc.c.source_id == self._instance.id))
             await db.commit()
         await m2m_changed.send(
-            sender=assoc, action="post_clear", instance=self._instance,
-            reverse=False, model=target_model, pk_set=None,
+            sender=assoc,
+            action="post_clear",
+            instance=self._instance,
+            reverse=False,
+            model=target_model,
+            pk_set=None,
         )
 
     async def count(self) -> int:
         from sqlalchemy import func, select
 
         from buraq.core.db import SessionLocal
+
         assoc = self._field._assoc_table
         async with SessionLocal() as db:
             result = await db.execute(
@@ -712,4 +770,3 @@ class CompositePrimaryKey:
 
     def __repr__(self) -> str:
         return f"CompositePrimaryKey({', '.join(repr(f) for f in self.fields)})"
-

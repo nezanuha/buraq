@@ -4,6 +4,7 @@ Abstract base class for server-side session backends.
 Each backend stores session data keyed by a session_key string and
 exposes the same async interface so backends are interchangeable.
 """
+
 from __future__ import annotations
 
 import secrets
@@ -150,10 +151,12 @@ class SessionBase(ABC):
 
     def _encode(self, data: dict) -> str:
         import json
+
         return json.dumps(data)
 
     def _decode(self, raw: str) -> dict:
         import json
+
         try:
             return json.loads(raw)
         except Exception:

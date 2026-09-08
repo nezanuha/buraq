@@ -7,6 +7,7 @@ Uses ``contextvars`` for async-safe per-request timezone state.
 Usage:
     from buraq.utils.timezone import now, localtime, make_aware, override
 """
+
 from __future__ import annotations
 
 import contextvars
@@ -25,17 +26,21 @@ _active_timezone: contextvars.ContextVar[ZoneInfo | None] = contextvars.ContextV
 
 # ── Settings helpers ───────────────────────────────────────────────────────────
 
+
 def _settings_tz() -> ZoneInfo:
     from buraq.conf.defaults import settings
+
     return ZoneInfo(getattr(settings, "TIME_ZONE", "UTC"))
 
 
 def _use_tz() -> bool:
     from buraq.conf.defaults import settings
+
     return getattr(settings, "USE_TZ", True)
 
 
 # ── Active timezone ────────────────────────────────────────────────────────────
+
 
 def get_current_timezone() -> ZoneInfo:
     """Return the active timezone (from override() or TIME_ZONE setting)."""
@@ -84,6 +89,7 @@ def override(timezone: ZoneInfo | str) -> Generator[None, None, None]:
 
 
 # ── Core functions ─────────────────────────────────────────────────────────────
+
 
 def now() -> datetime:
     """

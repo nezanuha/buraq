@@ -44,13 +44,17 @@ class RedisCacheBackend(BaseCacheBackend):
     ):
         """``location`` is what a CACHES entry calls the server, as in Django."""
         from buraq.conf import settings
-        self._url = url or location or getattr(settings, "CACHE_REDIS_URL", "redis://localhost:6379/0")  # type: ignore[attr-defined]
+
+        self._url = (
+            url or location or getattr(settings, "CACHE_REDIS_URL", "redis://localhost:6379/0")
+        )  # type: ignore[attr-defined]
         self._init_shared(key_prefix, timeout, version)
         self._client = None
 
     async def _get_client(self):
         if self._client is None:
             import redis.asyncio as aioredis
+
             self._client = aioredis.from_url(self._url, decode_responses=True)
         return self._client
 

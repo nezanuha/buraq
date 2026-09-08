@@ -13,6 +13,7 @@ Usage:
     comment = await Comment.objects.get(id=1)
     post = await comment.content_object   # resolves to the linked object
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -63,8 +64,10 @@ class ContentType(Model):
         ``self.app_label``.
         """
         import importlib
+
         try:
             from buraq.conf import settings
+
             installed = getattr(settings, "INSTALLED_APPS", [])
         except Exception:
             installed = []
@@ -77,10 +80,7 @@ class ContentType(Model):
                     mod = importlib.import_module(mod_name)
                     for attr in dir(mod):
                         obj = getattr(mod, attr, None)
-                        if (
-                            isinstance(obj, type)
-                            and attr.lower() == self.model.lower()
-                        ):
+                        if isinstance(obj, type) and attr.lower() == self.model.lower():
                             return obj
                 except ImportError:
                     continue

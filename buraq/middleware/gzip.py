@@ -8,6 +8,7 @@ Usage::
         "buraq.middleware.gzip.GZipMiddleware",
     ]
 """
+
 from __future__ import annotations
 
 import gzip
@@ -26,11 +27,18 @@ class GZipMiddleware:
     than buffered, so a large download does not sit in memory on its way past.
     """
 
-    compressible_types = frozenset({
-        "text/plain", "text/html", "text/css", "text/javascript",
-        "application/json", "application/javascript", "application/xml",
-        "image/svg+xml",
-    })
+    compressible_types = frozenset(
+        {
+            "text/plain",
+            "text/html",
+            "text/css",
+            "text/javascript",
+            "application/json",
+            "application/javascript",
+            "application/xml",
+            "image/svg+xml",
+        }
+    )
 
     def __init__(self, app, min_length: int = 200):
         self.app = app
@@ -107,7 +115,8 @@ class GZipMiddleware:
                 gz.write(body)
             body = buf.getvalue()
             headers = [
-                (k, v) for k, v in start_message.get("headers", [])
+                (k, v)
+                for k, v in start_message.get("headers", [])
                 if k.lower() != b"content-length"
             ]
             headers.append((b"content-encoding", b"gzip"))
@@ -115,9 +124,11 @@ class GZipMiddleware:
         else:
             headers = start_message.get("headers", [])
 
-        await send({
-            "type": "http.response.start",
-            "status": start_message.get("status", 200),
-            "headers": headers,
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": start_message.get("status", 200),
+                "headers": headers,
+            }
+        )
         await send({"type": "http.response.body", "body": body})

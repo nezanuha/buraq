@@ -56,18 +56,18 @@ def get_form_fields(model_admin, request=None, obj=None) -> list[dict]:
     for col in model_admin._all_columns():
         if _is_auto_col(col):
             continue
-        result.append({
-            "name": col.name,
-            "label": col.name.replace("_", " ").title(),
-            "type": get_column_type(col),
-            "required": (
-                not col.nullable
-                and col.default is None
-                and col.server_default is None
-            ),
-            "readonly": col.name in readonly or col.name not in editable,
-            "nullable": col.nullable,
-        })
+        result.append(
+            {
+                "name": col.name,
+                "label": col.name.replace("_", " ").title(),
+                "type": get_column_type(col),
+                "required": (
+                    not col.nullable and col.default is None and col.server_default is None
+                ),
+                "readonly": col.name in readonly or col.name not in editable,
+                "nullable": col.nullable,
+            }
+        )
     return result
 
 

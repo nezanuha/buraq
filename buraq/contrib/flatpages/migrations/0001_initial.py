@@ -16,18 +16,19 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table('flatpages_flatpage',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('url', sa.String(length=255), nullable=False),
-    sa.Column('title', sa.String(length=255), nullable=False),
-    sa.Column('content', sa.Text(), nullable=True),
-    sa.Column('enable_comments', sa.Boolean(), nullable=True),
-    sa.Column('template_name', sa.String(length=255), nullable=True),
-    sa.Column('registration_required', sa.Boolean(), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('url')
+    op.create_table(
+        "flatpages_flatpage",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("url", sa.String(length=255), nullable=False),
+        sa.Column("title", sa.String(length=255), nullable=False),
+        sa.Column("content", sa.Text(), nullable=True),
+        sa.Column("enable_comments", sa.Boolean(), nullable=True),
+        sa.Column("template_name", sa.String(length=255), nullable=True),
+        sa.Column("registration_required", sa.Boolean(), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("url"),
     )
 
 
 def downgrade() -> None:
-    op.drop_table('flatpages_flatpage')
+    op.drop_table("flatpages_flatpage")

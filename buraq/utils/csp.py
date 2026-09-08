@@ -27,6 +27,7 @@ hyphens (``default_src`` → ``default-src``).  Values may be:
 - ``True`` / a bare string: value-less directive flag (e.g. ``upgrade-insecure-requests``).
 - ``False`` or ``None``: directive is omitted entirely.
 """
+
 from __future__ import annotations
 
 import secrets

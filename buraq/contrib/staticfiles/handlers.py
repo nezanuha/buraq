@@ -207,8 +207,11 @@ class StaticFilesHandler:
             # it falls back to ./static, which a scaffolded project has.
             return
         if _mount_path(settings.STATIC_URL) is None:
-            _log.debug("STATIC_URL (%s) leaves no path to mount; not serving "
-                       "static files from this process", settings.STATIC_URL)
+            _log.debug(
+                "STATIC_URL (%s) leaves no path to mount; not serving "
+                "static files from this process",
+                settings.STATIC_URL,
+            )
         elif settings.DEBUG:
             self._mount_dev()
         else:
@@ -261,8 +264,10 @@ class StaticFilesHandler:
     def _mount_media(self) -> None:
         mount_at = _mount_path(settings.MEDIA_URL)
         if mount_at is None:
-            _log.debug("MEDIA_URL (%s) leaves no path to mount; not serving "
-                       "media from this process", settings.MEDIA_URL)
+            _log.debug(
+                "MEDIA_URL (%s) leaves no path to mount; not serving media from this process",
+                settings.MEDIA_URL,
+            )
             return
         media_dir = Path(settings.MEDIA_DIR) if settings.MEDIA_DIR else None
         if media_dir and media_dir.exists():
@@ -319,6 +324,7 @@ def collect_static(
                 copied += 1
     else:
         from buraq.contrib.staticfiles.finders import get_files
+
         for rel, full in get_files():
             dest_file = static_root / rel
             dest_file.parent.mkdir(parents=True, exist_ok=True)

@@ -20,6 +20,7 @@ Usage::
         },
     }
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -46,6 +47,7 @@ class AdminEmailHandler(logging.Handler):
             if record.exc_info:
                 body += "\n\n" + "".join(traceback.format_exception(*record.exc_info))
             import asyncio
+
             try:
                 loop = asyncio.get_running_loop()
                 loop.create_task(self._send(subject, body))
@@ -56,6 +58,7 @@ class AdminEmailHandler(logging.Handler):
 
     async def _send(self, subject: str, body: str) -> None:
         from buraq.contrib.email.send import mail_admins
+
         with contextlib.suppress(Exception):
             await mail_admins(subject, body)
 
@@ -66,6 +69,7 @@ class RequireDebugFalse(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         try:
             from buraq.conf import settings
+
             return not settings.DEBUG
         except Exception:
             return True
@@ -77,6 +81,7 @@ class RequireDebugTrue(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         try:
             from buraq.conf import settings
+
             return bool(settings.DEBUG)
         except Exception:
             return False
@@ -87,4 +92,5 @@ def configure_logging(logging_config: str | None, logging_settings: dict | None)
     if not logging_settings:
         return
     import logging.config
+
     logging.config.dictConfig(logging_settings)

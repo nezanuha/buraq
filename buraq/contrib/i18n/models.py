@@ -29,6 +29,7 @@ Usage::
     # All translations
     translations = await article.get_translations()   # list[ArticleTranslation]
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -57,9 +58,9 @@ class TranslatedFields:
         # Store on owner so __init_subclass__ can find it
         if not hasattr(owner, "_translated_field_defs"):
             owner._translated_field_defs = {}
-            owner._translated_attr_name  = name
+            owner._translated_attr_name = name
         owner._translated_field_defs = dict(self._fields)
-        owner._translated_attr_name  = name
+        owner._translated_attr_name = name
 
 
 class TranslatableModel(Model):
@@ -83,7 +84,7 @@ class TranslatableModel(Model):
     def __init_subclass__(cls, **kwargs):
         # Pull field defs off before super() runs so they don't confuse SQLAlchemy
         raw_defs: dict[str, Field] = dict(getattr(cls, "_translated_field_defs", {}))
-        attr_name: str | None      = getattr(cls, "_translated_attr_name", None)
+        attr_name: str | None = getattr(cls, "_translated_attr_name", None)
 
         # Remove the TranslatedFields descriptor from the class dict so that
         # SQLAlchemy's mapper never sees it.
@@ -99,8 +100,8 @@ class TranslatableModel(Model):
 
         # ── Build the translation model dynamically ────────────────────────
         master_table = cls.__tablename__
-        trans_table  = f"{master_table}_translation"
-        trans_name   = f"{cls.__name__}Translation"
+        trans_table = f"{master_table}_translation"
+        trans_name = f"{cls.__name__}Translation"
 
         # Convert Field descriptors → sa.Column objects
         translated_cols: dict[str, sa.Column] = {}
@@ -122,7 +123,8 @@ class TranslatableModel(Model):
             "language_code": sa.Column(sa.String(10), nullable=False),
             "__table_args__": (
                 sa.UniqueConstraint(
-                    "master_id", "language_code",
+                    "master_id",
+                    "language_code",
                     name=f"uq_{trans_table}_master_lang",
                 ),
             ),
@@ -133,9 +135,11 @@ class TranslatableModel(Model):
 
         # Attach Manager and DoesNotExist to the translation model
         translation_model.objects = Manager(translation_model)
-        translation_model.DoesNotExist = type("DoesNotExist", (DoesNotExist,), {
-            "__doc__": f"{trans_name} matching query does not exist."
-        })
+        translation_model.DoesNotExist = type(
+            "DoesNotExist",
+            (DoesNotExist,),
+            {"__doc__": f"{trans_name} matching query does not exist."},
+        )
 
         # Expose on the parent model
         cls.translation_model = translation_model
@@ -152,6 +156,7 @@ class TranslatableModel(Model):
         """
         if language_code is None:
             from buraq.utils.translation import get_language
+
             language_code = get_language()
 
         TM = self.__class__.translation_model
@@ -173,6 +178,7 @@ class TranslatableModel(Model):
         """
         if language_code is None:
             from buraq.utils.translation import get_language
+
             language_code = get_language()
 
         TM = self.__class__.translation_model
@@ -217,9 +223,7 @@ class TranslatableModel(Model):
         """Return all translation rows for this instance."""
         TM = self.__class__.translation_model
         async with SessionLocal() as db:
-            result = await db.execute(
-                sa.select(TM).where(TM.master_id == self.id)
-            )
+            result = await db.execute(sa.select(TM).where(TM.master_id == self.id))
             return list(result.scalars().all())
 
     async def delete_translation(self, language_code: str) -> None:

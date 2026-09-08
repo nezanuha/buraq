@@ -4,6 +4,7 @@ Functional utilities — lazy objects, cached_property, lazy().
 Usage:
     from buraq.utils.functional import cached_property, SimpleLazyObject, lazy
 """
+
 from __future__ import annotations
 
 import functools
@@ -173,5 +174,9 @@ def classproperty(func: Callable) -> Any:
 
 
 __all__ = [
-    "cached_property", "LazyObject", "SimpleLazyObject", "lazy", "classproperty",
+    "cached_property",
+    "LazyObject",
+    "SimpleLazyObject",
+    "lazy",
+    "classproperty",
 ]

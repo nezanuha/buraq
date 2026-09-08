@@ -10,6 +10,7 @@ The call sites picked the right dialect's ``insert()`` and then called
 have -- so adding to a many-to-many relation raised ``AttributeError: 'Insert'
 object has no attribute 'on_conflict_do_nothing'`` on MySQL, and only there.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -46,9 +47,7 @@ def insert_ignoring_duplicates(table, rows: list[dict[str, Any]], url: str):
         # duplicate, which is too much to discard for the convenience.
         columns = list(table.primary_key.columns) or list(table.columns)
         name = columns[0].name
-        return statement.on_duplicate_key_update(
-            {name: getattr(statement.inserted, name)}
-        )
+        return statement.on_duplicate_key_update({name: getattr(statement.inserted, name)})
 
     if dialect == "sqlite":
         from sqlalchemy.dialects.sqlite import insert as sqlite_insert

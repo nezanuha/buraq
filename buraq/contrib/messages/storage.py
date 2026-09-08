@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 
-DEBUG   = 10
-INFO    = 20
+DEBUG = 10
+INFO = 20
 SUCCESS = 25
 WARNING = 30
-ERROR   = 40
+ERROR = 40
 
 LEVEL_TAGS = {
-    DEBUG:   "debug",
-    INFO:    "info",
+    DEBUG: "debug",
+    INFO: "info",
     SUCCESS: "success",
     WARNING: "warning",
-    ERROR:   "error",
+    ERROR: "error",
 }
 
 

@@ -12,6 +12,7 @@ Usage:
     # normal accessor — post.comments.all() returns the cached list instead of
     # issuing a query once it has been prefetched.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -68,7 +69,8 @@ class Prefetch:
             # A class is itself callable — exclude it explicitly, or resolving
             # an already-resolved class here builds a blank instance instead.
             child_model = (
-                child_getter() if callable(child_getter) and not isinstance(child_getter, type)
+                child_getter()
+                if callable(child_getter) and not isinstance(child_getter, type)
                 else child_getter
             )
             fk_field = descriptor._fk_field
@@ -99,9 +101,11 @@ class Prefetch:
                 return
 
             async with SessionLocal() as db:
-                q = sa.select(assoc.c.source_id, to).join(
-                    to, to.id == assoc.c.target_id
-                ).where(assoc.c.source_id.in_(source_ids))
+                q = (
+                    sa.select(assoc.c.source_id, to)
+                    .join(to, to.id == assoc.c.target_id)
+                    .where(assoc.c.source_id.in_(source_ids))
+                )
                 result = await db.execute(q)
                 rows = result.all()
 

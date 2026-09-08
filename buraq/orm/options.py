@@ -78,8 +78,7 @@ class Options:
             # which would otherwise leave the model on default behaviour with no
             # indication anything was wrong.
             raise TypeError(
-                f"{model_cls.__name__}: class Meta got invalid attribute(s): "
-                + ", ".join(unknown)
+                f"{model_cls.__name__}: class Meta got invalid attribute(s): " + ", ".join(unknown)
             )
 
         get = lambda name, default=None: getattr(meta, name, default)  # noqa: E731

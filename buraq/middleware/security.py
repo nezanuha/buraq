@@ -18,6 +18,7 @@ Configure via settings:
     SECURE_PERMISSIONS_POLICY = {}          # e.g. {"camera": "()", "microphone": "()"}
     X_FRAME_OPTIONS = "SAMEORIGIN"          # "DENY" | "SAMEORIGIN" | "" (disable)
 """
+
 from __future__ import annotations
 
 from starlette.datastructures import MutableHeaders
@@ -48,10 +49,12 @@ class SecurityMiddleware:
             scheme = scope.get("scheme", "http")
             if scheme == "http":
                 from buraq.conf import settings
+
                 host_raw = dict(scope.get("headers", [])).get(b"host", b"").decode().split(":")[0]
                 allowed = settings.ALLOWED_HOSTS
                 if allowed != ["*"] and host_raw not in allowed:
                     from starlette.responses import Response
+
                     bad = Response("Bad Request: invalid Host header.", status_code=400)
                     await bad(scope, receive, send)
                     return
@@ -101,4 +104,5 @@ class SecurityMiddleware:
 
 def _redirect_response(url: str):
     from starlette.responses import RedirectResponse
+
     return RedirectResponse(url, status_code=301)

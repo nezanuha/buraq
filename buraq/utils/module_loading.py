@@ -7,6 +7,7 @@ Usage:
     Backend = import_string("buraq.contrib.cache.backends.redis.RedisCacheBackend")
     autodiscover_modules("signals")   # imports <app>.signals for each INSTALLED_APP
 """
+
 from __future__ import annotations
 
 import importlib
@@ -40,9 +41,7 @@ def import_string(dotted_path: str):
     try:
         module = importlib.import_module(module_path)
     except ImportError as exc:
-        raise ImportError(
-            f"Could not import module {module_path!r}: {exc}"
-        ) from exc
+        raise ImportError(f"Could not import module {module_path!r}: {exc}") from exc
 
     try:
         return getattr(module, attr_name)
@@ -51,9 +50,7 @@ def import_string(dotted_path: str):
         try:
             return importlib.import_module(dotted_path)
         except ImportError as exc:
-            raise ImportError(
-                f"Module {module_path!r} does not define {attr_name!r}"
-            ) from exc
+            raise ImportError(f"Module {module_path!r} does not define {attr_name!r}") from exc
 
 
 def autodiscover_modules(*module_names: str, register_to=None) -> None:

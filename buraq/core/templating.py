@@ -56,8 +56,7 @@ def _import_dotted(path: str, setting: str):
         return getattr(importlib.import_module(module_path), name)
     except (ImportError, AttributeError, ValueError) as exc:
         raise ImproperlyConfigured(
-            f"TEMPLATE_OPTIONS[{setting!r}] is {path!r}, "
-            f"which could not be imported: {exc}"
+            f"TEMPLATE_OPTIONS[{setting!r}] is {path!r}, which could not be imported: {exc}"
         ) from exc
 
 
@@ -137,16 +136,19 @@ def get_templates() -> Jinja2Templates:
 
         # Messages
         from buraq.contrib.messages import get_messages
+
         _templates.env.globals["get_messages"] = get_messages
 
         # URL reversal
         from buraq.urls import reverse
+
         _templates.env.globals["url"] = reverse
 
         # Static files — route through storage so ManifestStorage returns hashed URLs
         def _static(path: str) -> str:
             try:
                 from buraq.contrib.staticfiles.storage import get_storage
+
                 return get_storage().url(path)
             except Exception:
                 return settings.STATIC_URL.rstrip("/") + "/" + path.lstrip("/")
@@ -161,10 +163,12 @@ def get_templates() -> Jinja2Templates:
 
         # {% static %} / {% media %} block tags
         from buraq.contrib.staticfiles.templatetags import StaticExtension
+
         _templates.env.add_extension(StaticExtension)
 
         # Template fragment caching — {% cache 300 "key" %}...{% endcache %}
         from buraq.template.cache import CacheExtension
+
         _templates.env.add_extension(CacheExtension)
 
         # CSRF
@@ -177,6 +181,7 @@ def get_templates() -> Jinja2Templates:
         def _csrf_input(request=None):
             """Return a hidden <input> field with the CSRF token."""
             from markupsafe import Markup
+
             token = _get_csrf_token(request) if request else ""
             return Markup(f'<input type="hidden" name="csrfmiddlewaretoken" value="{token}">')
 
@@ -192,19 +197,22 @@ def get_templates() -> Jinja2Templates:
                 ngettext,
                 pgettext,
             )
-            _templates.env.globals["_"]               = gettext
-            _templates.env.globals["gettext"]         = gettext
-            _templates.env.globals["ngettext"]        = ngettext
-            _templates.env.globals["pgettext"]        = pgettext
-            _templates.env.globals["get_language"]    = get_language
+
+            _templates.env.globals["_"] = gettext
+            _templates.env.globals["gettext"] = gettext
+            _templates.env.globals["ngettext"] = ngettext
+            _templates.env.globals["pgettext"] = pgettext
+            _templates.env.globals["get_language"] = get_language
             _templates.env.globals["get_language_bidi"] = get_language_bidi
 
         # ── Built-in filters ───────────────────────────────────────────────
         from buraq.template.builtins import register_builtins
+
         register_builtins(_templates.env)
 
         # ── App templatetags ───────────────────────────────────────────────
         from buraq.template.registry import _registry
+
         _registry.apply(_templates.env)
 
     return _templates
@@ -228,5 +236,3 @@ def discover_templatetags() -> None:
             pass
         except Exception:
             _log.exception("Error loading templatetags from %s", module_path)
-
-

@@ -22,6 +22,7 @@ Usage::
         async def asyncTearDown(self):
             await Post.objects.filter(slug="hello").delete()
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -32,6 +33,7 @@ from typing import Any
 from buraq.test.client import AsyncClient
 
 # ── override_settings ─────────────────────────────────────────────────────────
+
 
 class override_settings:
     """
@@ -57,6 +59,7 @@ class override_settings:
     def _fire_setting_changed(self, key, value, enter):
         from buraq.conf import settings
         from buraq.signals import setting_changed
+
         coro = setting_changed.send(
             sender=settings.__class__, setting=key, value=value, enter=enter
         )
@@ -70,6 +73,7 @@ class override_settings:
 
     def _apply(self):
         from buraq.conf import settings
+
         for key, new_value in self._overrides.items():
             self._original[key] = getattr(settings, key, None)
             object.__setattr__(settings, key, new_value)
@@ -77,6 +81,7 @@ class override_settings:
 
     def _restore(self):
         from buraq.conf import settings
+
         for key, old_value in self._original.items():
             object.__setattr__(settings, key, old_value)
             self._fire_setting_changed(key, old_value, enter=False)
@@ -91,7 +96,9 @@ class override_settings:
 
     def __call__(self, func):
         import functools
+
         if asyncio.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
                 self._apply()
@@ -99,8 +106,10 @@ class override_settings:
                     return await func(*args, **kwargs)
                 finally:
                     self._restore()
+
             return async_wrapper
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
                 self._apply()
@@ -108,10 +117,12 @@ class override_settings:
                     return func(*args, **kwargs)
                 finally:
                     self._restore()
+
             return sync_wrapper
 
 
 # ── TestCase base classes ─────────────────────────────────────────────────────
+
 
 class SimpleTestCase(unittest.TestCase):
     """
@@ -122,8 +133,7 @@ class SimpleTestCase(unittest.TestCase):
 
     def assertStatusCode(self, response, code: int) -> None:
         self.assertEqual(
-            response.status_code, code,
-            f"Expected HTTP {code}, got {response.status_code}."
+            response.status_code, code, f"Expected HTTP {code}, got {response.status_code}."
         )
 
     def assertContains(self, response, text: str, status_code: int = 200, msg: str = None) -> None:
@@ -142,13 +152,15 @@ class SimpleTestCase(unittest.TestCase):
         msg_prefix: str = "",
     ) -> None:
         self.assertIn(
-            response.status_code, (301, 302, 303, 307, 308),
-            f"{msg_prefix}Expected a redirect, got HTTP {response.status_code}."
+            response.status_code,
+            (301, 302, 303, 307, 308),
+            f"{msg_prefix}Expected a redirect, got HTTP {response.status_code}.",
         )
         location = response.headers.get("location", "")
         self.assertEqual(
-            location, expected_url,
-            f"{msg_prefix}Expected redirect to '{expected_url}', got '{location}'."
+            location,
+            expected_url,
+            f"{msg_prefix}Expected redirect to '{expected_url}', got '{location}'.",
         )
 
     def assertFormError(self, form, field: str | None, errors) -> None:
@@ -174,10 +186,11 @@ class SimpleTestCase(unittest.TestCase):
 
         for error in errors:
             self.assertIn(
-                error, form_errors,
+                error,
+                form_errors,
                 f"Error '{error}' not found in"
                 f" form{'.' if field is None else f' field {field!r}.'} "
-                f"Actual errors: {form_errors}"
+                f"Actual errors: {form_errors}",
             )
 
     def assertJSONEqual(self, response, expected: dict | list) -> None:
@@ -186,8 +199,10 @@ class SimpleTestCase(unittest.TestCase):
     def assertHTMLEqual(self, html1: str, html2: str, msg: str = None) -> None:
         """Compare two HTML strings ignoring whitespace differences."""
         import re
+
         def _normalize(h):
             return re.sub(r"\s+", " ", h).strip()
+
         self.assertEqual(_normalize(html1), _normalize(html2), msg)
 
     def assertInHTML(
@@ -200,22 +215,22 @@ class SimpleTestCase(unittest.TestCase):
         asserts the fragment appears exactly that many times.
         """
         import re
+
         def _normalize(h):
             return re.sub(r"\s+", " ", h).strip()
+
         n = _normalize(needle)
         h = _normalize(haystack)
         occurrences = h.count(n)
         if count is not None:
             self.assertEqual(
-                occurrences, count,
+                occurrences,
+                count,
                 f"{msg_prefix}Found {occurrences} instances of {needle!r}"
-                f" in haystack (expected {count})."
+                f" in haystack (expected {count}).",
             )
         else:
-            self.assertTrue(
-                occurrences > 0,
-                f"{msg_prefix}{needle!r} not found in response HTML."
-            )
+            self.assertTrue(occurrences > 0, f"{msg_prefix}{needle!r} not found in response HTML.")
 
     def assertNumQueries(self, num: int):
         """Context manager that asserts exactly ``num`` SQL queries are executed."""
@@ -235,9 +250,10 @@ class SimpleTestCase(unittest.TestCase):
             errors = [errors]
         for error in errors:
             self.assertIn(
-                error, form_errors,
+                error,
+                form_errors,
                 f"Error {error!r} not found in formset form {form_index} field {field!r}. "
-                f"Actual: {form_errors}"
+                f"Actual: {form_errors}",
             )
 
     def assertRaisesMessage(self, expected_exception, expected_message, *args, **kwargs):
@@ -276,13 +292,9 @@ class MessagesTestMixin:
             expected_messages = [expected_messages]
 
         normalized_expected = [
-            (m if isinstance(m, tuple) else (None, m))
-            for m in expected_messages
+            (m if isinstance(m, tuple) else (None, m)) for m in expected_messages
         ]
-        normalized_actual = [
-            (getattr(m, "level", None), str(m))
-            for m in actual
-        ]
+        normalized_actual = [(getattr(m, "level", None), str(m)) for m in actual]
 
         if ordered:
             # Compare text only (ignore level) when expected has no level.
@@ -294,26 +306,30 @@ class MessagesTestMixin:
                     )
                 act_level, act_text = normalized_actual[i]
                 self.assertEqual(
-                    act_text, exp_text,
-                    f"Message at position {i}: expected {exp_text!r}, got {act_text!r}."
+                    act_text,
+                    exp_text,
+                    f"Message at position {i}: expected {exp_text!r}, got {act_text!r}.",
                 )
                 if exp_level is not None:
                     self.assertEqual(
-                        act_level, exp_level,
-                        f"Message level at position {i}: expected {exp_level}, got {act_level}."
+                        act_level,
+                        exp_level,
+                        f"Message level at position {i}: expected {exp_level}, got {act_level}.",
                     )
         else:
             actual_texts = {t for _, t in normalized_actual}
             for _, exp_text in normalized_expected:
                 self.assertIn(
-                    exp_text, actual_texts,
-                    f"Expected message {exp_text!r} not found. Actual: {list(actual_texts)}"
+                    exp_text,
+                    actual_texts,
+                    f"Expected message {exp_text!r} not found. Actual: {list(actual_texts)}",
                 )
 
         self.assertEqual(
-            len(actual), len(expected_messages),
+            len(actual),
+            len(expected_messages),
             f"Expected {len(expected_messages)} message(s), got {len(actual)}: "
-            f"{[str(m) for m in actual]}"
+            f"{[str(m) for m in actual]}",
         )
 
 
@@ -359,6 +375,7 @@ class captureOnCommitCallbacks(contextlib.AbstractContextManager):
 
     def __enter__(self):
         import buraq.db as _db
+
         self._original = _db.on_commit
 
         captured = self
@@ -368,6 +385,7 @@ class captureOnCommitCallbacks(contextlib.AbstractContextManager):
             if captured.execute:
                 import asyncio
                 import inspect
+
                 if inspect.iscoroutinefunction(func):
                     try:
                         loop = asyncio.get_running_loop()
@@ -382,6 +400,7 @@ class captureOnCommitCallbacks(contextlib.AbstractContextManager):
 
     def __exit__(self, *args):
         import buraq.db as _db
+
         _db.on_commit = self._original
 
 
@@ -425,6 +444,7 @@ class _QueryCounter:
             from sqlalchemy import event
 
             from buraq.core.db import engine
+
             event.remove(engine.sync_engine, "before_cursor_execute", self._listener)
             self._listener = None
 
@@ -447,9 +467,11 @@ class _AssertNumQueriesContext(contextlib.AbstractContextManager):
             from sqlalchemy import event
 
             from buraq.core.db import engine
+
             @event.listens_for(engine.sync_engine, "before_cursor_execute")
             def _count(conn, cursor, stmt, params, context, executemany):
                 self._queries.append(stmt)
+
             self._listener = _count
         except Exception:
             self._listener = None
@@ -460,13 +482,15 @@ class _AssertNumQueriesContext(contextlib.AbstractContextManager):
             from sqlalchemy import event
 
             from buraq.core.db import engine
+
             if self._listener:
                 event.remove(engine.sync_engine, "before_cursor_execute", self._listener)
         except Exception:
             pass
         self.test_case.assertEqual(
-            len(self._queries), self.num,
-            f"Expected {self.num} SQL queries, got {len(self._queries)}."
+            len(self._queries),
+            self.num,
+            f"Expected {self.num} SQL queries, got {len(self._queries)}.",
         )
 
 
@@ -500,6 +524,7 @@ class _AsyncMixin:
 
     def _callTestMethod(self):
         import inspect
+
         method = getattr(self, self._testMethodName)
         if inspect.iscoroutinefunction(method):
             self._loop.run_until_complete(method())
@@ -554,6 +579,7 @@ class TransactionTestCase(TestCase):
         self._session_token = None
         try:
             from buraq.core.db import SessionLocal, _current_session
+
             self._test_session = SessionLocal()
             self._test_conn = await self._test_session.__aenter__()
             await self._test_conn.begin_nested()
@@ -568,6 +594,7 @@ class TransactionTestCase(TestCase):
         try:
             if self._session_token is not None:
                 from buraq.core.db import _current_session
+
                 _current_session.reset(self._session_token)
             if self._test_conn is not None:
                 await self._test_conn.rollback()
@@ -633,6 +660,7 @@ class DiscoverRunner:
 
     def setup_test_environment(self) -> None:
         import os
+
         os.environ.setdefault("BURAQ_ENV", "test")
 
     def teardown_test_environment(self) -> None:
@@ -676,6 +704,7 @@ class LiveServerTestCase(TestCase):
 
         try:
             from buraq.core.app import get_app
+
             app = get_app()
         except Exception:
             app = self.app
@@ -693,6 +722,7 @@ class LiveServerTestCase(TestCase):
         config = uvicorn.Config(app, host=self.host, port=self.port, log_level="error")
         self._server = uvicorn.Server(config)
         import asyncio
+
         self._server_task = self._loop.create_task(self._server.serve())
         # Give the server a moment to start
         await asyncio.sleep(0.1)

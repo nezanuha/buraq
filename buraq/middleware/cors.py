@@ -41,9 +41,7 @@ class CORSMiddleware(_StarletteCORSMiddleware):
             # A browser rejects a credentialed request whose response says
             # `Access-Control-Allow-Origin: *`, so credentials only mean
             # anything once specific origins are named.
-            allow_credentials = bool(origins) and getattr(
-                settings, "CORS_ALLOW_CREDENTIALS", True
-            )
+            allow_credentials = bool(origins) and getattr(settings, "CORS_ALLOW_CREDENTIALS", True)
 
         super().__init__(
             app,

@@ -11,6 +11,7 @@ Usage:
 
     objects = deserialize("json", json_string)
 """
+
 from __future__ import annotations
 
 from buraq.serializers.base import DeserializationError, SerializationError
@@ -26,6 +27,7 @@ _REGISTRY: dict[str, type] = {
 
 try:
     from buraq.serializers.yaml import YamlSerializer
+
     _REGISTRY["yaml"] = YamlSerializer
 except Exception:
     pass
@@ -36,8 +38,7 @@ def get_serializer(format: str):
         return _REGISTRY[format]()
     except KeyError as err:
         raise SerializationError(
-            f"Unknown serialization format: {format!r}. "
-            f"Available: {list(_REGISTRY)}"
+            f"Unknown serialization format: {format!r}. Available: {list(_REGISTRY)}"
         ) from err
 
 
@@ -76,6 +77,7 @@ async def deserialize_objects(format: str, data: str) -> list:
         if model_label:
             try:
                 from buraq.utils.module_loading import import_string
+
                 parts = model_label.rsplit(".", 1)
                 if len(parts) == 2:
                     model_cls = import_string(f"{parts[0]}.models.{parts[1].title()}")
@@ -91,7 +93,11 @@ async def deserialize_objects(format: str, data: str) -> list:
 
 
 __all__ = [
-    "serialize", "deserialize", "deserialize_objects",
-    "get_serializer", "register_serializer",
-    "SerializationError", "DeserializationError",
+    "serialize",
+    "deserialize",
+    "deserialize_objects",
+    "get_serializer",
+    "register_serializer",
+    "SerializationError",
+    "DeserializationError",
 ]

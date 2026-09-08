@@ -88,7 +88,7 @@ class Select(ChoiceWidget):
         attr_str = _attrs_to_str(self.build_attrs(attrs))
         options = ""
         for val, label in self.choices:
-            selected = ' selected' if str(val) == str(value) else ''
+            selected = " selected" if str(val) == str(value) else ""
             options += f'<option value="{val}"{selected}>{label}</option>'
         return f'<select name="{name}"{attr_str}>{options}</select>'
 
@@ -98,7 +98,7 @@ class CheckboxInput(Widget):
 
     def render(self, name, value, attrs=None):
         attr_str = _attrs_to_str(self.build_attrs(attrs))
-        checked = ' checked' if value else ''
+        checked = " checked" if value else ""
         return f'<input type="checkbox" name="{name}"{checked}{attr_str}>'
 
 
@@ -141,6 +141,7 @@ class DateInput(FormatWidget):
 
     def render(self, name, value, attrs=None):
         from datetime import date
+
         attr_str = _attrs_to_str(self.build_attrs(attrs))
         if isinstance(value, date):
             value = value.strftime(self.format)
@@ -165,10 +166,10 @@ class RadioSelect(ChoiceWidget):
         attr_str = _attrs_to_str(item_attrs)
         items = ""
         for val, label in self.choices:
-            checked = ' checked' if str(val) == str(value) else ''
+            checked = " checked" if str(val) == str(value) else ""
             items += (
                 f'<label><input type="radio" name="{name}" value="{val}"'
-                f'{checked}{attr_str}> {label}</label>'
+                f"{checked}{attr_str}> {label}</label>"
             )
         return f'<div class="radio-select">{items}</div>'
 
@@ -182,7 +183,7 @@ class CheckboxSelectMultiple(ChoiceWidget):
         selected = {str(v) for v in (value or [])}
         items = ""
         for val, label in self.choices:
-            checked = ' checked' if str(val) in selected else ''
+            checked = " checked" if str(val) in selected else ""
             items += (
                 f'<label><input type="checkbox" name="{name}"'
                 f' value="{val}"{checked}{attr_str}> {label}</label>'
@@ -205,6 +206,7 @@ class DateTimeInput(FormatWidget):
 
     def render(self, name, value, attrs=None):
         from datetime import datetime
+
         attr_str = _attrs_to_str(self.build_attrs(attrs))
         if isinstance(value, datetime):
             value = value.strftime(self.format)
@@ -217,6 +219,7 @@ class TimeInput(FormatWidget):
 
     def render(self, name, value, attrs=None):
         from datetime import time
+
         attr_str = _attrs_to_str(self.build_attrs(attrs))
         if isinstance(value, time):
             value = value.strftime(self.format)
@@ -228,6 +231,7 @@ class SplitDateTimeWidget(Widget):
 
     def render(self, name, value, attrs=None):
         from datetime import datetime
+
         attr_str = _attrs_to_str(self.build_attrs(attrs))
         date_val = ""
         time_val = ""
@@ -247,6 +251,7 @@ class SplitHiddenDateTimeWidget(SplitDateTimeWidget):
 
     def render(self, name, value, attrs=None):
         from datetime import datetime
+
         date_val = ""
         time_val = ""
         if isinstance(value, datetime):
@@ -266,17 +271,28 @@ class SelectDateWidget(Widget):
     def __init__(self, attrs: dict = None, years=None, months=None, empty_label=None):
         super().__init__(attrs)
         import datetime
+
         current_year = datetime.date.today().year
         self.years = years or list(range(current_year - 10, current_year + 11))
         self.months = months or {
-            1: "January", 2: "February", 3: "March", 4: "April",
-            5: "May", 6: "June", 7: "July", 8: "August",
-            9: "September", 10: "October", 11: "November", 12: "December",
+            1: "January",
+            2: "February",
+            3: "March",
+            4: "April",
+            5: "May",
+            6: "June",
+            7: "July",
+            8: "August",
+            9: "September",
+            10: "October",
+            11: "November",
+            12: "December",
         }
         self.empty_label = empty_label
 
     def render(self, name, value, attrs=None):
         from datetime import date
+
         year_val = month_val = day_val = ""
         if isinstance(value, date):
             year_val, month_val, day_val = value.year, value.month, value.day
@@ -286,7 +302,7 @@ class SelectDateWidget(Widget):
         )
         month_opts = "".join(
             f'<option value="{m}"'
-            f'{"  selected" if str(m) == str(month_val) else ""}>{label}</option>'
+            f"{'  selected' if str(m) == str(month_val) else ''}>{label}</option>"
             for m, label in self.months.items()
         )
         day_opts = "".join(
@@ -329,9 +345,9 @@ class ClearableFileInput(FileInput):
         file_input = f'<input type="file" name="{name}"{attr_str}>'
         if value:
             clear = (
-                f'<label>'
+                f"<label>"
                 f'<input type="checkbox" name="{name}-clear"> Clear</label> '
-                f'<span>Currently: {value}</span>'
+                f"<span>Currently: {value}</span>"
             )
             return f"{clear} {file_input}"
         return file_input

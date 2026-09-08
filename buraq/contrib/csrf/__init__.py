@@ -19,6 +19,7 @@ Usage:
     async def cookie_view(request):
         ...
 """
+
 from __future__ import annotations
 
 import functools
@@ -87,6 +88,7 @@ def csrf_protect(func):
     All others must supply the token via ``X-CSRFToken`` header or
     ``csrfmiddlewaretoken`` POST field.
     """
+
     @functools.wraps(func)
     async def wrapper(request, *args, **kwargs):
         if request.method.upper() in ("GET", "HEAD", "OPTIONS", "TRACE"):
@@ -105,9 +107,11 @@ def csrf_protect(func):
 
         if not stored or not secrets.compare_digest(stored, token):
             from starlette.responses import Response
+
             return Response("CSRF verification failed.", status_code=403)
 
         return await func(request, *args, **kwargs)
+
     return wrapper
 
 
@@ -118,12 +122,14 @@ def ensure_csrf_cookie(func):
     Use on views that render forms via AJAX or need the cookie pre-set
     before the user submits.
     """
+
     @functools.wraps(func)
     async def wrapper(request, *args, **kwargs):
         token = get_token(request)
         response = await func(request, *args, **kwargs)
         if hasattr(response, "set_cookie"):
             from buraq.conf import settings
+
             response.set_cookie(
                 CSRF_COOKIE_NAME,
                 token,
@@ -132,6 +138,7 @@ def ensure_csrf_cookie(func):
                 secure=not settings.DEBUG,
             )
         return response
+
     return wrapper
 
 
@@ -144,6 +151,12 @@ from buraq.middleware.csrf import (  # noqa: E402
 )
 
 __all__ = [
-    "get_token", "csrf_protect", "ensure_csrf_cookie", "mask_token", "unmask_token",
-    "CSRF_COOKIE_NAME", "CSRF_FIELD_NAME", "CSRF_HEADER_NAME",
+    "get_token",
+    "csrf_protect",
+    "ensure_csrf_cookie",
+    "mask_token",
+    "unmask_token",
+    "CSRF_COOKIE_NAME",
+    "CSRF_FIELD_NAME",
+    "CSRF_HEADER_NAME",
 ]

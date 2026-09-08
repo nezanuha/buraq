@@ -21,6 +21,7 @@ Usage::
     token = dumps({"user_id": 42, "action": "activate"})
     data  = loads(token, max_age=3600)
 """
+
 from __future__ import annotations
 
 import base64
@@ -52,6 +53,7 @@ def _b64_decode(s: str) -> bytes:
 
 def _get_key() -> bytes:
     from buraq.conf import settings
+
     secret = getattr(settings, "SECRET_KEY", "")
     if not secret:
         raise RuntimeError("SECRET_KEY must be set in settings before using signing utilities.")
@@ -121,6 +123,7 @@ class Signer:
             data = data.encode()
         if compress:
             import zlib
+
             data = zlib.compress(data)
         encoded = _b64_encode(data)
         return self.sign(encoded)
@@ -135,6 +138,7 @@ class Signer:
         # Try decompressing — fall back to raw bytes if not compressed
         try:
             import zlib
+
             data = zlib.decompress(data)
         except Exception:
             pass
@@ -184,9 +188,7 @@ class TimestampSigner(Signer):
         if max_age is not None:
             age = time.time() - ts
             if age > max_age:
-                raise SignatureExpired(
-                    f"Signature age {age:.1f}s > max_age {max_age}s"
-                )
+                raise SignatureExpired(f"Signature age {age:.1f}s > max_age {max_age}s")
         return value
 
     def sign_object(self, obj: Any, serializer=json, compress: bool = False) -> str:
@@ -195,6 +197,7 @@ class TimestampSigner(Signer):
             data = data.encode()
         if compress:
             import zlib
+
             data = zlib.compress(data)
         encoded = _b64_encode(data)
         return self.sign(encoded)
@@ -209,6 +212,7 @@ class TimestampSigner(Signer):
             raise BadSignature("Encoded value is not valid base64") from e
         try:
             import zlib
+
             data = zlib.decompress(data)
         except Exception:
             pass

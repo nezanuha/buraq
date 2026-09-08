@@ -1,4 +1,5 @@
 """Sites framework — multi-domain support for a single Buraq installation."""
+
 from __future__ import annotations
 
 import sqlalchemy as sa

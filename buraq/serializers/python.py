@@ -11,6 +11,7 @@ class PythonSerializer(BaseSerializer):
     def deserialize(self, data: str):
         try:
             import ast
+
             return ast.literal_eval(data)
         except Exception as e:
             raise DeserializationError(str(e)) from e

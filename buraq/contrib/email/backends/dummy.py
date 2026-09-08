@@ -6,6 +6,7 @@ without printing to the console::
 
     EMAIL_BACKEND = "buraq.contrib.email.backends.dummy.DummyEmailBackend"
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

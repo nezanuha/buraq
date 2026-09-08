@@ -20,6 +20,7 @@ In templates (Jinja2):
 
 Requires buraq.contrib.sessions.middleware.SessionMiddleware (registered by default).
 """
+
 from buraq.contrib.messages.storage import DEBUG, ERROR, INFO, SUCCESS, WARNING, Message
 
 _SESSION_KEY = "_messages"

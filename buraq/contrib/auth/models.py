@@ -14,6 +14,7 @@ def get_user_model():
     """
     try:
         from buraq.conf import settings
+
         auth_model = getattr(settings, "AUTH_USER_MODEL", None)
     except Exception:
         auth_model = None
@@ -22,6 +23,7 @@ def get_user_model():
         return User  # default concrete model
 
     from buraq.utils.module_loading import import_string
+
     try:
         return import_string(auth_model)
     except ImportError:
@@ -117,10 +119,12 @@ class AbstractBaseUser(models.Model):
 
     async def set_password(self, raw_password: str) -> None:
         from buraq.contrib.auth import make_password
+
         self.hashed_password = await make_password(raw_password)
 
     async def check_password(self, raw_password: str) -> bool:
         from buraq.contrib.auth import check_password
+
         return await check_password(raw_password, self.hashed_password)
 
     @classmethod
@@ -131,6 +135,7 @@ class AbstractBaseUser(models.Model):
         import hashlib
 
         from buraq.conf import settings
+
         key = getattr(settings, "SECRET_KEY", "")
         return hashlib.sha256(f"{key}{self.hashed_password}".encode()).hexdigest()[:8]
 
@@ -175,11 +180,11 @@ class Permission(models.Model):
     Permissions follow the pattern ``"app.action_model"``, e.g. ``"blog.add_post"``.
     """
 
-    name        = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
     # Unique per content type, not globally: two apps may each define a Post,
     # and both legitimately need an "add_post". A global unique silently gave
     # the second one the first one's row.
-    codename    = models.CharField(max_length=100)
+    codename = models.CharField(max_length=100)
     content_type = models.CharField(max_length=100, null=True)
 
     class Meta:
@@ -218,6 +223,7 @@ class Group(models.Model):
 
     async def permissions(self):
         from buraq.contrib.auth.models import GroupPermission
+
         gps = await GroupPermission.objects.filter(group_id=self.id).all()
         perm_ids = [gp.permission_id for gp in gps]
         if not perm_ids:
@@ -228,7 +234,7 @@ class Group(models.Model):
 class UserGroup(models.Model):
     """Association table between User and Group."""
 
-    user_id  = models.ForeignKey("buraq_users", on_delete=models.CASCADE)
+    user_id = models.ForeignKey("buraq_users", on_delete=models.CASCADE)
     group_id = models.ForeignKey("buraq_groups", on_delete=models.CASCADE)
 
     class Meta:
@@ -238,7 +244,7 @@ class UserGroup(models.Model):
 class UserPermission(models.Model):
     """Direct user-level permission assignment."""
 
-    user_id       = models.ForeignKey("buraq_users", on_delete=models.CASCADE)
+    user_id = models.ForeignKey("buraq_users", on_delete=models.CASCADE)
     permission_id = models.ForeignKey("buraq_permissions", on_delete=models.CASCADE)
 
     class Meta:
@@ -248,7 +254,7 @@ class UserPermission(models.Model):
 class GroupPermission(models.Model):
     """Association table between Group and Permission."""
 
-    group_id      = models.ForeignKey("buraq_groups", on_delete=models.CASCADE)
+    group_id = models.ForeignKey("buraq_groups", on_delete=models.CASCADE)
     permission_id = models.ForeignKey("buraq_permissions", on_delete=models.CASCADE)
 
     class Meta:
@@ -257,11 +263,12 @@ class GroupPermission(models.Model):
 
 class AnonymousUser:
     """Represents an unauthenticated user."""
-    id           = None
-    pk           = None
-    username     = ""
-    is_active    = False
-    is_staff     = False
+
+    id = None
+    pk = None
+    username = ""
+    is_active = False
+    is_staff = False
     is_superuser = False
     is_authenticated = False
 
@@ -273,16 +280,16 @@ class AnonymousUser:
 
 
 class User(models.Model):
-    email           = models.CharField(max_length=255, unique=True, db_index=True)
-    username        = models.CharField(max_length=150, unique=True, db_index=True)
-    first_name      = models.CharField(max_length=150, null=True)
-    last_name       = models.CharField(max_length=150, null=True)
+    email = models.CharField(max_length=255, unique=True, db_index=True)
+    username = models.CharField(max_length=150, unique=True, db_index=True)
+    first_name = models.CharField(max_length=150, null=True)
+    last_name = models.CharField(max_length=150, null=True)
     hashed_password = models.CharField(max_length=255)
-    is_active       = models.BooleanField(default=True)
-    is_staff        = models.BooleanField(default=False)
-    is_superuser    = models.BooleanField(default=False)
-    date_joined     = models.DateTimeField(auto_now_add=True)
-    last_login      = models.DateTimeField(null=True)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(null=True)
 
     class Meta:
         table_name = "buraq_users"
@@ -295,10 +302,12 @@ class User(models.Model):
 
     async def check_password(self, raw_password: str) -> bool:
         from buraq.contrib.auth import check_password
+
         return await check_password(raw_password, self.hashed_password)
 
     async def set_password(self, raw_password: str) -> None:
         from buraq.contrib.auth import make_password
+
         self.hashed_password = await make_password(raw_password)
 
     async def _get_all_permission_codenames(self) -> set[str]:

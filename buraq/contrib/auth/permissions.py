@@ -57,9 +57,7 @@ async def create_permissions(verbosity: int = 1) -> int:
         key = (opts.label_lower, codename)
         if key in existing:
             continue
-        missing.append(
-            {"name": name, "codename": codename, "content_type": opts.label_lower}
-        )
+        missing.append({"name": name, "codename": codename, "content_type": opts.label_lower})
         existing.add(key)
         if verbosity > 1:
             print(f"  created permission {opts.app_label}.{codename}")

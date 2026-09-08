@@ -8,6 +8,7 @@ Usage:
     qs = await Post.objects.annotate(title_upper=F.Upper("title"))
     qs = await Post.objects.annotate(name=F.Coalesce("nickname", "username"))
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -54,6 +55,7 @@ class _MultiField:
 
 # ── Date / Time ──────────────────────────────────────────────────────────────
 
+
 class Now(_DBFunc):
     def __init__(self):
         pass
@@ -67,6 +69,7 @@ def _dialect_name() -> str:
         from sqlalchemy.engine import make_url as _make_url
 
         from buraq.conf import settings
+
         return _make_url(settings.DATABASE_URL).get_dialect().name
     except Exception:
         return "postgresql"
@@ -95,12 +98,12 @@ class _TruncPart(_DBFunc):
     @property
     def _mysql_fmt(self) -> str:
         _map = {
-            "hour":    "%Y-%m-%d %H:00:00",
-            "day":     "%Y-%m-%d 00:00:00",
-            "week":    "%Y-%m-%d 00:00:00",
-            "month":   "%Y-%m-01 00:00:00",
+            "hour": "%Y-%m-%d %H:00:00",
+            "day": "%Y-%m-%d 00:00:00",
+            "week": "%Y-%m-%d 00:00:00",
+            "month": "%Y-%m-01 00:00:00",
             "quarter": "%Y-%m-01 00:00:00",
-            "year":    "%Y-01-01 00:00:00",
+            "year": "%Y-01-01 00:00:00",
         }
         return _map.get(self._part, "%Y-%m-%d %H:00:00")
 
@@ -123,7 +126,7 @@ class TruncWeek(_TruncPart):
         if dialect == "sqlite":
             # SQLite: subtract weekday offset (0=Mon) to get Monday of the week
             dow = sa.cast(func.strftime("%w", col), sa.Integer)  # 0=Sun
-            adjusted = sa.case((dow == 0, 6), else_=dow - 1)     # shift: Mon=0
+            adjusted = sa.case((dow == 0, 6), else_=dow - 1)  # shift: Mon=0
             offset = sa.literal("-") + sa.cast(adjusted, sa.Text) + sa.literal(" days")
             return sa.func.date(col, offset)
         elif dialect in ("mysql", "mariadb"):
@@ -146,8 +149,7 @@ class TruncQuarter(_TruncPart):
             month = sa.cast(func.strftime("%m", col), sa.Integer)
             quarter_start_month = ((month - 1) / 3) * 3 + 1
             return sa.func.date(
-                func.strftime("%Y", col) + "-" +
-                sa.cast(quarter_start_month, sa.Text) + "-01"
+                func.strftime("%Y", col) + "-" + sa.cast(quarter_start_month, sa.Text) + "-01"
             )
         elif dialect in ("mysql", "mariadb"):
             return func.makedate(
@@ -169,42 +171,52 @@ class TruncYear(_TruncPart):
 
 
 class ExtractYear(_DBFunc):
-    def _apply(self, col): return sa.extract("year", col)
+    def _apply(self, col):
+        return sa.extract("year", col)
 
 
 class ExtractMonth(_DBFunc):
-    def _apply(self, col): return sa.extract("month", col)
+    def _apply(self, col):
+        return sa.extract("month", col)
 
 
 class ExtractDay(_DBFunc):
-    def _apply(self, col): return sa.extract("day", col)
+    def _apply(self, col):
+        return sa.extract("day", col)
 
 
 class ExtractHour(_DBFunc):
-    def _apply(self, col): return sa.extract("hour", col)
+    def _apply(self, col):
+        return sa.extract("hour", col)
 
 
 class ExtractMinute(_DBFunc):
-    def _apply(self, col): return sa.extract("minute", col)
+    def _apply(self, col):
+        return sa.extract("minute", col)
 
 
 class ExtractSecond(_DBFunc):
-    def _apply(self, col): return sa.extract("second", col)
+    def _apply(self, col):
+        return sa.extract("second", col)
 
 
 class ExtractWeek(_DBFunc):
-    def _apply(self, col): return sa.extract("week", col)
+    def _apply(self, col):
+        return sa.extract("week", col)
 
 
 class ExtractWeekDay(_DBFunc):
-    def _apply(self, col): return sa.extract("dow", col)
+    def _apply(self, col):
+        return sa.extract("dow", col)
 
 
 class ExtractQuarter(_DBFunc):
-    def _apply(self, col): return sa.extract("quarter", col)
+    def _apply(self, col):
+        return sa.extract("quarter", col)
 
 
 # ── String ────────────────────────────────────────────────────────────────────
+
 
 class Concat(_MultiField):
     def _apply(self, *cols):
@@ -215,49 +227,60 @@ class Concat(_MultiField):
 
 
 class Length(_DBFunc):
-    def _apply(self, col): return func.length(col)
+    def _apply(self, col):
+        return func.length(col)
 
 
 class Upper(_DBFunc):
-    def _apply(self, col): return func.upper(col)
+    def _apply(self, col):
+        return func.upper(col)
 
 
 class Lower(_DBFunc):
-    def _apply(self, col): return func.lower(col)
+    def _apply(self, col):
+        return func.lower(col)
 
 
 class Trim(_DBFunc):
-    def _apply(self, col): return func.trim(col)
+    def _apply(self, col):
+        return func.trim(col)
 
 
 class LTrim(_DBFunc):
-    def _apply(self, col): return func.ltrim(col)
+    def _apply(self, col):
+        return func.ltrim(col)
 
 
 class RTrim(_DBFunc):
-    def _apply(self, col): return func.rtrim(col)
+    def _apply(self, col):
+        return func.rtrim(col)
 
 
 class Reverse(_DBFunc):
-    def _apply(self, col): return func.reverse(col)
+    def _apply(self, col):
+        return func.reverse(col)
 
 
 class Chr(_DBFunc):
-    def _apply(self, col): return func.chr(col)
+    def _apply(self, col):
+        return func.chr(col)
 
 
 class Ord(_DBFunc):
-    def _apply(self, col): return func.ascii(col)
+    def _apply(self, col):
+        return func.ascii(col)
 
 
 class Replace(_MultiField):
     """Replace(field, old, new)"""
+
     def _apply(self, col, old, new):
         return func.replace(col, old, new)
 
 
 class Substr(_MultiField):
     """Substr(field, pos, length=None)"""
+
     def _apply(self, col, pos, length=None):
         if length is not None:
             return func.substr(col, pos, length)
@@ -270,32 +293,44 @@ class Substr(_MultiField):
 
 class Left(_MultiField):
     """Left(field, length)"""
-    def _apply(self, col, length): return func.left(col, length)
+
+    def _apply(self, col, length):
+        return func.left(col, length)
 
 
 class Right(_MultiField):
     """Right(field, length)"""
-    def _apply(self, col, length): return func.right(col, length)
+
+    def _apply(self, col, length):
+        return func.right(col, length)
 
 
 class Repeat(_MultiField):
     """Repeat(field, count)"""
-    def _apply(self, col, count): return func.repeat(col, count)
+
+    def _apply(self, col, count):
+        return func.repeat(col, count)
 
 
 class StrIndex(_MultiField):
     """StrIndex(string, substring)"""
-    def _apply(self, col, sub): return func.strpos(col, sub)
+
+    def _apply(self, col, sub):
+        return func.strpos(col, sub)
 
 
 class LPad(_MultiField):
     """LPad(field, length, fill)"""
-    def _apply(self, col, length, fill): return func.lpad(col, length, fill)
+
+    def _apply(self, col, length, fill):
+        return func.lpad(col, length, fill)
 
 
 class RPad(_MultiField):
     """RPad(field, length, fill)"""
-    def _apply(self, col, length, fill): return func.rpad(col, length, fill)
+
+    def _apply(self, col, length, fill):
+        return func.rpad(col, length, fill)
 
 
 class Collate(_DBFunc):
@@ -306,23 +341,27 @@ class Collate(_DBFunc):
         self.collation = collation
 
     def _apply(self, col):
-        return sa.type_coerce(col, sa.String().with_variant(
-            sa.String(collation=self.collation), "postgresql"
-        ))
+        return sa.type_coerce(
+            col, sa.String().with_variant(sa.String(collation=self.collation), "postgresql")
+        )
 
 
 # ── Math ──────────────────────────────────────────────────────────────────────
 
+
 class Abs(_DBFunc):
-    def _apply(self, col): return func.abs(col)
+    def _apply(self, col):
+        return func.abs(col)
 
 
 class Ceil(_DBFunc):
-    def _apply(self, col): return func.ceil(col)
+    def _apply(self, col):
+        return func.ceil(col)
 
 
 class Floor(_DBFunc):
-    def _apply(self, col): return func.floor(col)
+    def _apply(self, col):
+        return func.floor(col)
 
 
 class Round(_DBFunc):
@@ -330,15 +369,18 @@ class Round(_DBFunc):
         super().__init__(field)
         self.precision = precision
 
-    def _apply(self, col): return func.round(col, self.precision)
+    def _apply(self, col):
+        return func.round(col, self.precision)
 
 
 class Sign(_DBFunc):
-    def _apply(self, col): return func.sign(col)
+    def _apply(self, col):
+        return func.sign(col)
 
 
 class Sqrt(_DBFunc):
-    def _apply(self, col): return func.sqrt(col)
+    def _apply(self, col):
+        return func.sqrt(col)
 
 
 class Log(_DBFunc):
@@ -346,21 +388,27 @@ class Log(_DBFunc):
         super().__init__(field)
         self.base = base
 
-    def _apply(self, col): return func.log(self.base, col)
+    def _apply(self, col):
+        return func.log(self.base, col)
 
 
 class Ln(_DBFunc):
-    def _apply(self, col): return func.ln(col)
+    def _apply(self, col):
+        return func.ln(col)
 
 
 class Mod(_MultiField):
     """Mod(field, divisor)"""
-    def _apply(self, col, divisor): return func.mod(col, divisor)
+
+    def _apply(self, col, divisor):
+        return func.mod(col, divisor)
 
 
 class Power(_MultiField):
     """Power(field, exponent)"""
-    def _apply(self, col, exp): return func.power(col, exp)
+
+    def _apply(self, col, exp):
+        return func.power(col, exp)
 
 
 class Random(_DBFunc):
@@ -372,36 +420,45 @@ class Random(_DBFunc):
 
 
 class ACos(_DBFunc):
-    def _apply(self, col): return func.acos(col)
+    def _apply(self, col):
+        return func.acos(col)
 
 
 class ASin(_DBFunc):
-    def _apply(self, col): return func.asin(col)
+    def _apply(self, col):
+        return func.asin(col)
 
 
 class ATan(_DBFunc):
-    def _apply(self, col): return func.atan(col)
+    def _apply(self, col):
+        return func.atan(col)
 
 
 class ATan2(_MultiField):
     """ATan2(y_field, x_field)"""
-    def _apply(self, y, x): return func.atan2(y, x)
+
+    def _apply(self, y, x):
+        return func.atan2(y, x)
 
 
 class Cos(_DBFunc):
-    def _apply(self, col): return func.cos(col)
+    def _apply(self, col):
+        return func.cos(col)
 
 
 class Cot(_DBFunc):
-    def _apply(self, col): return func.cot(col)
+    def _apply(self, col):
+        return func.cot(col)
 
 
 class Degrees(_DBFunc):
-    def _apply(self, col): return func.degrees(col)
+    def _apply(self, col):
+        return func.degrees(col)
 
 
 class Exp(_DBFunc):
-    def _apply(self, col): return func.exp(col)
+    def _apply(self, col):
+        return func.exp(col)
 
 
 class Pi(_DBFunc):
@@ -413,35 +470,45 @@ class Pi(_DBFunc):
 
 
 class Radians(_DBFunc):
-    def _apply(self, col): return func.radians(col)
+    def _apply(self, col):
+        return func.radians(col)
 
 
 class Sin(_DBFunc):
-    def _apply(self, col): return func.sin(col)
+    def _apply(self, col):
+        return func.sin(col)
 
 
 class Tan(_DBFunc):
-    def _apply(self, col): return func.tan(col)
+    def _apply(self, col):
+        return func.tan(col)
 
 
 # ── NULL handling ─────────────────────────────────────────────────────────────
 
+
 class Coalesce(_MultiField):
     """Return first non-NULL value among fields/literals."""
-    def _apply(self, *cols): return func.coalesce(*cols)
+
+    def _apply(self, *cols):
+        return func.coalesce(*cols)
 
 
 class NullIf(_MultiField):
     """Return NULL if field equals value, else field."""
-    def _apply(self, col, val): return func.nullif(col, val)
+
+    def _apply(self, col, val):
+        return func.nullif(col, val)
 
 
 class Greatest(_MultiField):
-    def _apply(self, *cols): return func.greatest(*cols)
+    def _apply(self, *cols):
+        return func.greatest(*cols)
 
 
 class Least(_MultiField):
-    def _apply(self, *cols): return func.least(*cols)
+    def _apply(self, *cols):
+        return func.least(*cols)
 
 
 # ── Type ──────────────────────────────────────────────────────────────────────
@@ -477,28 +544,35 @@ class Cast(_DBFunc):
         else:
             self.sa_type = output_field
 
-    def _apply(self, col): return sa.cast(col, self.sa_type)
+    def _apply(self, col):
+        return sa.cast(col, self.sa_type)
 
 
 # ── Hash ──────────────────────────────────────────────────────────────────────
 
+
 class MD5(_DBFunc):
-    def _apply(self, col): return func.md5(col)
+    def _apply(self, col):
+        return func.md5(col)
 
 
 class SHA1(_DBFunc):
-    def _apply(self, col): return func.sha1(col)
+    def _apply(self, col):
+        return func.sha1(col)
 
 
 class SHA256(_DBFunc):
-    def _apply(self, col): return func.sha256(col)
+    def _apply(self, col):
+        return func.sha256(col)
 
 
 class SHA512(_DBFunc):
-    def _apply(self, col): return func.sha512(col)
+    def _apply(self, col):
+        return func.sha512(col)
 
 
 # ── UUID generation ───────────────────────────────────────────────────────────
+
 
 class UUID4:
     """
@@ -528,6 +602,7 @@ class UUID7:
             from sqlalchemy.engine import make_url as _make_url
 
             from buraq.conf import settings
+
             dialect = _make_url(settings.DATABASE_URL).get_dialect().name
         except Exception:
             dialect = "postgresql"
@@ -540,24 +615,81 @@ class UUID7:
 
 __all__ = [
     # Date/Time
-    "Now", "TruncDate", "TruncTime", "TruncHour", "TruncDay", "TruncWeek",
-    "TruncMonth", "TruncQuarter", "TruncYear",
-    "ExtractYear", "ExtractMonth", "ExtractDay", "ExtractHour",
-    "ExtractMinute", "ExtractSecond", "ExtractWeek", "ExtractWeekDay", "ExtractQuarter",
+    "Now",
+    "TruncDate",
+    "TruncTime",
+    "TruncHour",
+    "TruncDay",
+    "TruncWeek",
+    "TruncMonth",
+    "TruncQuarter",
+    "TruncYear",
+    "ExtractYear",
+    "ExtractMonth",
+    "ExtractDay",
+    "ExtractHour",
+    "ExtractMinute",
+    "ExtractSecond",
+    "ExtractWeek",
+    "ExtractWeekDay",
+    "ExtractQuarter",
     # String
-    "Concat", "Length", "Upper", "Lower", "Trim", "LTrim", "RTrim",
-    "Replace", "Substr", "Left", "Right", "Repeat", "Reverse",
-    "StrIndex", "Chr", "Ord", "LPad", "RPad", "Collate",
+    "Concat",
+    "Length",
+    "Upper",
+    "Lower",
+    "Trim",
+    "LTrim",
+    "RTrim",
+    "Replace",
+    "Substr",
+    "Left",
+    "Right",
+    "Repeat",
+    "Reverse",
+    "StrIndex",
+    "Chr",
+    "Ord",
+    "LPad",
+    "RPad",
+    "Collate",
     # Math
-    "Abs", "Ceil", "Floor", "Round", "Sign", "Sqrt", "Log", "Ln",
-    "Mod", "Power", "Random", "Exp", "Pi",
-    "ACos", "ASin", "ATan", "ATan2", "Cos", "Cot", "Degrees", "Radians", "Sin", "Tan",
+    "Abs",
+    "Ceil",
+    "Floor",
+    "Round",
+    "Sign",
+    "Sqrt",
+    "Log",
+    "Ln",
+    "Mod",
+    "Power",
+    "Random",
+    "Exp",
+    "Pi",
+    "ACos",
+    "ASin",
+    "ATan",
+    "ATan2",
+    "Cos",
+    "Cot",
+    "Degrees",
+    "Radians",
+    "Sin",
+    "Tan",
     # NULL
-    "Coalesce", "NullIf", "Greatest", "Least",
+    "Coalesce",
+    "NullIf",
+    "Greatest",
+    "Least",
     # Type
     "Cast",
     # Hash
-    "MD5", "SHA1", "SHA256", "SHA512",
+    "MD5",
+    "SHA1",
+    "SHA256",
+    "SHA512",
     # UUID
-    "UUID4", "UUID7",
+    "UUID4",
+    "UUID7",
 ]

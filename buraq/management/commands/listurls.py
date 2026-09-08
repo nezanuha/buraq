@@ -5,6 +5,7 @@ Usage:
     python manage.py listurls
     python manage.py listurls --urlconf config.urls
 """
+
 from buraq.management.base import BaseCommand
 
 
@@ -68,6 +69,7 @@ def _collect(patterns, prefix: str, rows: list) -> None:
         included = getattr(pattern, "urlconf", None)
         if included is not None:
             import importlib
+
             sub_mod = importlib.import_module(included) if isinstance(included, str) else included
             sub_patterns = getattr(sub_mod, "urlpatterns", [])
             _collect(sub_patterns, full_path, rows)

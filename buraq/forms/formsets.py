@@ -25,6 +25,7 @@ Usage::
             formset = BookFormSet()
         return await render(request, "books.html", {"formset": formset})
 """
+
 from __future__ import annotations
 
 from buraq.exceptions import ValidationError
@@ -127,7 +128,7 @@ class BaseFormSet:
 
         if self.data:
             form_data = {
-                k[len(form_prefix) + 1:]: v
+                k[len(form_prefix) + 1 :]: v
                 for k, v in self.data.items()
                 if k.startswith(f"{form_prefix}-")
             }
@@ -144,6 +145,7 @@ class BaseFormSet:
         # Inject ORDER and DELETE pseudo-fields so templates can render them
         if self.can_order:
             from buraq.forms.fields import IntegerField
+
             order_field = IntegerField(required=False, label="Order")
             form.declared_fields = dict(form.declared_fields)
             form.declared_fields[ORDERING_FIELD_NAME] = order_field
@@ -155,6 +157,7 @@ class BaseFormSet:
 
         if self.can_delete:
             from buraq.forms.fields import BooleanField
+
             delete_field = BooleanField(required=False, label="Delete")
             form.declared_fields = dict(form.declared_fields)
             form.declared_fields[DELETION_FIELD_NAME] = delete_field
@@ -164,9 +167,7 @@ class BaseFormSet:
     @property
     def forms(self) -> list[BaseForm]:
         if self._forms is None:
-            self._forms = [
-                self._construct_form(i) for i in range(self.total_form_count())
-            ]
+            self._forms = [self._construct_form(i) for i in range(self.total_form_count())]
         return self._forms
 
     @property
@@ -175,7 +176,7 @@ class BaseFormSet:
 
     @property
     def extra_forms(self) -> list[BaseForm]:
-        return self.forms[self.initial_form_count():]
+        return self.forms[self.initial_form_count() :]
 
     def _is_form_empty(self, form: BaseForm) -> bool:
         for field_name, _field in form.fields.items():
@@ -209,22 +210,19 @@ class BaseFormSet:
             all_valid = False
 
         if self.validate_min and self._filled_count() < self.min_num:
-            self._non_form_errors.append(
-                f"Please submit at least {self.min_num} form(s)."
-            )
+            self._non_form_errors.append(f"Please submit at least {self.min_num} form(s).")
             all_valid = False
 
         if self.validate_max and self._filled_count() > self.max_num:
-            self._non_form_errors.append(
-                f"Please submit at most {self.max_num} form(s)."
-            )
+            self._non_form_errors.append(f"Please submit at most {self.max_num} form(s).")
             all_valid = False
 
         return all_valid
 
     def _filled_count(self) -> int:
         return sum(
-            1 for i, f in enumerate(self.forms)
+            1
+            for i, f in enumerate(self.forms)
             if not (self._is_form_empty(f) and i >= self.initial_form_count())
         )
 
@@ -336,6 +334,7 @@ class BaseInlineFormSet(BaseModelFormSet):
 
 
 # ── Factory functions ────────────────────────────────────────────────────────
+
 
 def formset_factory(
     form: type[BaseForm],

@@ -1,4 +1,5 @@
 """Checks that the project's own modules import — registered automatically."""
+
 from __future__ import annotations
 
 import importlib
@@ -22,20 +23,23 @@ def check_root_urlconf_imports(settings, **kwargs):
     try:
         importlib.import_module(dotted)
     except ImportError as exc:
-        return [Error(
-            f"ROOT_URLCONF is {dotted!r}, which could not be imported: {exc}",
-            hint="Check the imports at the top of that file, and that every "
-                 "package it uses is installed in this environment.",
-            id="urls.E001",
-        )]
+        return [
+            Error(
+                f"ROOT_URLCONF is {dotted!r}, which could not be imported: {exc}",
+                hint="Check the imports at the top of that file, and that every "
+                "package it uses is installed in this environment.",
+                id="urls.E001",
+            )
+        ]
     except Exception as exc:
         # Anything else raised while importing is still a project that will not
         # start, and saying which module and what happened beats a traceback
         # from runserver a minute later.
-        return [Error(
-            f"ROOT_URLCONF is {dotted!r}, which raised "
-            f"{type(exc).__name__} on import: {exc}",
-            hint="Run the module directly to see the full traceback.",
-            id="urls.E002",
-        )]
+        return [
+            Error(
+                f"ROOT_URLCONF is {dotted!r}, which raised {type(exc).__name__} on import: {exc}",
+                hint="Run the module directly to see the full traceback.",
+                id="urls.E002",
+            )
+        ]
     return []

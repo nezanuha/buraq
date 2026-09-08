@@ -6,6 +6,7 @@ Must be added AFTER SessionMiddleware in the middleware stack:
     app.add_middleware(AuthenticationMiddleware)
     app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 """
+
 import logging
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -15,7 +16,6 @@ from buraq.contrib.auth.models import AnonymousUser
 
 _log = logging.getLogger(__name__)
 _AUTH_USER_SESSION_KEY = "_auth_user_id"
-
 
 
 def _static_prefixes() -> tuple[str, ...]:
@@ -102,6 +102,7 @@ async def _get_user(request: Request):
     try:
         from buraq.contrib.auth.models import User
         from buraq.orm.manager import DoesNotExist
+
         user = await User.objects.get(id=int(user_id))
         if not user.is_active:
             return AnonymousUser()

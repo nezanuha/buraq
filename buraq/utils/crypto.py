@@ -4,6 +4,7 @@ Cryptographic utilities.
 Usage:
     from buraq.utils.crypto import get_random_string, constant_time_compare, salted_hmac
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -53,6 +54,7 @@ def salted_hmac(
     """
     if secret is None:
         from buraq.conf import settings
+
         secret = settings.SECRET_KEY
     key = hashlib.new(algorithm, (key_salt + secret).encode()).digest()
     return hmac.new(key, msg=value.encode(), digestmod=algorithm)

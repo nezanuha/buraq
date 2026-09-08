@@ -14,6 +14,7 @@ Usage:
     from buraq.contrib.auth.password_validation import validate_password
     validate_password("mypassword", user=request.user)
 """
+
 from __future__ import annotations
 
 import importlib
@@ -41,6 +42,7 @@ def get_password_validators(validator_configs=None):
     """Instantiate validators from config list or settings.AUTH_PASSWORD_VALIDATORS."""
     if validator_configs is None:
         from buraq.conf import settings
+
         validator_configs = getattr(settings, "AUTH_PASSWORD_VALIDATORS", [])
     validators = []
     for config in validator_configs:
@@ -75,17 +77,44 @@ class CommonPasswordValidator:
 
     # A curated subset of the most common passwords. Production deployments should
     # supply a larger list via the passwords_list_path option.
-    COMMON_PASSWORDS = frozenset({
-        "password", "123456", "password1", "12345678", "111111", "1234567",
-        "sunshine", "qwerty", "iloveyou", "princess", "admin", "welcome",
-        "666666", "abc123", "football", "123123", "monkey", "654321",
-        "superman", "master", "shadow", "dragon", "pass", "letmein",
-        "michael", "qwerty123", "123456789", "1234567890", "000000",
-    })
+    COMMON_PASSWORDS = frozenset(
+        {
+            "password",
+            "123456",
+            "password1",
+            "12345678",
+            "111111",
+            "1234567",
+            "sunshine",
+            "qwerty",
+            "iloveyou",
+            "princess",
+            "admin",
+            "welcome",
+            "666666",
+            "abc123",
+            "football",
+            "123123",
+            "monkey",
+            "654321",
+            "superman",
+            "master",
+            "shadow",
+            "dragon",
+            "pass",
+            "letmein",
+            "michael",
+            "qwerty123",
+            "123456789",
+            "1234567890",
+            "000000",
+        }
+    )
 
     def __init__(self, passwords_list_path: str | None = None):
         if passwords_list_path:
             import pathlib
+
             self._extra = frozenset(
                 p.strip().lower()
                 for p in pathlib.Path(passwords_list_path).read_text(encoding="utf-8").splitlines()
@@ -153,6 +182,7 @@ class UserAttributeSimilarityValidator:
             return len(shorter) / len(longer)
         # SequenceMatcher-style ratio approximation.
         from difflib import SequenceMatcher
+
         return SequenceMatcher(None, a, b).ratio()
 
     def get_help_text(self) -> str:

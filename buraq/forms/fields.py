@@ -1,6 +1,7 @@
 """
 Form fields — built-in field types with validation.
 """
+
 import re
 from datetime import date as _date
 from datetime import datetime as _datetime
@@ -100,8 +101,12 @@ class Field:
 
 class CharField(Field):
     def __init__(
-        self, max_length: int = None, min_length: int = None,
-        strip: bool = True, empty_value: str = "", **kwargs
+        self,
+        max_length: int = None,
+        min_length: int = None,
+        strip: bool = True,
+        empty_value: str = "",
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.max_length = max_length
@@ -178,8 +183,12 @@ class DecimalField(Field):
     widget_class = NumberInput
 
     def __init__(
-        self, max_digits: int = None, decimal_places: int = None,
-        min_value=None, max_value=None, **kwargs
+        self,
+        max_digits: int = None,
+        decimal_places: int = None,
+        min_value=None,
+        max_value=None,
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.max_digits = max_digits
@@ -240,6 +249,7 @@ class EmailField(CharField):
         super().validate(value)
         if value:
             from buraq.validators import validate_email
+
             validate_email(value)
 
 
@@ -250,6 +260,7 @@ class URLField(CharField):
         super().validate(value)
         if value:
             from buraq.validators import validate_url
+
             validate_url(value)
 
 
@@ -258,6 +269,7 @@ class SlugField(CharField):
         super().validate(value)
         if value:
             from buraq.validators import validate_slug
+
             validate_slug(value)
 
 
@@ -308,6 +320,7 @@ class TimeField(Field):
         if value in (None, ""):
             return None
         from datetime import time as time_type
+
         if isinstance(value, time_type):
             return value
         for fmt in ["%H:%M:%S", "%H:%M"]:
@@ -402,6 +415,7 @@ class UUIDField(Field):
         if value in (None, ""):
             return None
         import uuid
+
         try:
             return uuid.UUID(str(value).strip())
         except (AttributeError, ValueError):
@@ -415,6 +429,7 @@ class JSONField(Field):
         if isinstance(value, (dict, list)):
             return value
         import json
+
         try:
             return json.loads(value)
         except (json.JSONDecodeError, TypeError) as exc:
@@ -434,16 +449,19 @@ class RegexField(CharField):
 
 class TextField(CharField):
     """Multi-line text field — renders as <textarea>."""
+
     widget_class = Textarea
 
 
 class PasswordField(CharField):
     """CharField that masks input."""
+
     widget_class = PasswordInput
 
 
 class HiddenField(CharField):
     """CharField rendered as hidden input."""
+
     widget_class = HiddenInput
 
 
@@ -452,6 +470,7 @@ class IPAddressField(CharField):
         super().validate(value)
         if value:
             import ipaddress
+
             try:
                 ipaddress.ip_address(value)
             except ValueError:
@@ -632,6 +651,7 @@ class DurationField(Field):
         if value in (None, ""):
             return None
         from datetime import timedelta
+
         if isinstance(value, timedelta):
             return value
         if isinstance(value, (int, float)):
@@ -664,8 +684,15 @@ class FilePathField(ChoiceField):
         attachment = FilePathField(path="/var/uploads", match=r".*\\.pdf$")
     """
 
-    def __init__(self, path: str, match: str = None, recursive: bool = False,
-                 allow_files: bool = True, allow_folders: bool = False, **kwargs):
+    def __init__(
+        self,
+        path: str,
+        match: str = None,
+        recursive: bool = False,
+        allow_files: bool = True,
+        allow_folders: bool = False,
+        **kwargs,
+    ):
         self.path = path
         self.match = match
         self.recursive = recursive
@@ -677,6 +704,7 @@ class FilePathField(ChoiceField):
     def _build_choices(self) -> list:
         import os
         import re as _re
+
         choices = []
         matcher = _re.compile(self.match) if self.match else None
         try:
@@ -699,7 +727,7 @@ class FilePathField(ChoiceField):
                     if ((self.allow_files and is_file) or (self.allow_folders and is_dir)) and (
                         matcher is None or matcher.search(entry)
                     ):
-                            choices.append((full, entry))
+                        choices.append((full, entry))
         except OSError:
             pass
         return sorted(choices)

@@ -4,6 +4,7 @@ Encoding utilities — force_str, force_bytes, URI helpers.
 Usage:
     from buraq.utils.encoding import force_str, force_bytes, iri_to_uri
 """
+
 from __future__ import annotations
 
 from urllib.parse import quote, unquote
@@ -62,6 +63,10 @@ def escape_uri_path(path: str) -> str:
 
 
 __all__ = [
-    "force_str", "smart_str", "force_bytes",
-    "iri_to_uri", "uri_to_iri", "escape_uri_path",
+    "force_str",
+    "smart_str",
+    "force_bytes",
+    "iri_to_uri",
+    "uri_to_iri",
+    "escape_uri_path",
 ]

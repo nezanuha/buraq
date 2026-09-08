@@ -1,4 +1,5 @@
 """PostgreSQL-specific SQL functions for use in expressions and annotations."""
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -13,8 +14,10 @@ def Unaccent(field: str):
     Usage:
         Post.objects.annotate_expr(clean_title=Unaccent("title"))
     """
+
     def _build(model):
         return sa.func.unaccent(getattr(model, field))
+
     return _build
 
 

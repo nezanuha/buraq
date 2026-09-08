@@ -50,6 +50,7 @@ that should receive an auto-generated per-request nonce::
 
 The nonce is available in templates as ``{{ csp_nonce }}``.
 """
+
 from __future__ import annotations
 
 import secrets

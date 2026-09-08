@@ -26,6 +26,7 @@ Revocation::
     if request.session.session_key:
         await request.session.flush()   # clears data + deletes server record
 """
+
 from __future__ import annotations
 
 import importlib
@@ -42,14 +43,11 @@ _log = logging.getLogger(__name__)
 
 def _load_backend_class(engine: str):
     from buraq.contrib.sessions.backends.base import SessionBase
+
     module = importlib.import_module(engine)
     for name in dir(module):
         obj = getattr(module, name)
-        if (
-            isinstance(obj, type)
-            and issubclass(obj, SessionBase)
-            and obj is not SessionBase
-        ):
+        if isinstance(obj, type) and issubclass(obj, SessionBase) and obj is not SessionBase:
             return obj
     raise ImportError(f"No SessionBase subclass found in {engine!r}")
 

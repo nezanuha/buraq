@@ -1,4 +1,5 @@
 """Flat page model — database-backed static content pages."""
+
 from __future__ import annotations
 
 import sqlalchemy as sa

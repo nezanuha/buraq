@@ -21,6 +21,7 @@ Usage::
     # Delete
     await default_storage.delete("uploads/photo.jpg")
 """
+
 from __future__ import annotations
 
 import os
@@ -77,21 +78,22 @@ class FileSystemStorage(Storage):
     def __init__(self, location: str | None = None, base_url: str | None = None):
         if location is None:
             from buraq.conf import settings
+
             location = settings.MEDIA_DIR or "./media"
         if base_url is None:
             from buraq.conf import settings
+
             base_url = settings.MEDIA_URL
         self.location = os.path.abspath(location)
         self.base_url = base_url.rstrip("/") + "/"
 
     def _full_path(self, name: str) -> str:
         from buraq.exceptions import SuspiciousFileOperation
+
         safe = os.path.normpath(name).lstrip(os.sep)
         full = os.path.realpath(os.path.join(self.location, safe))
         if not full.startswith(self.location + os.sep) and full != self.location:
-            raise SuspiciousFileOperation(
-                f"Attempted access to '{name}' outside the storage root."
-            )
+            raise SuspiciousFileOperation(f"Attempted access to '{name}' outside the storage root.")
         return full
 
     def get_available_name(self, name: str) -> str:

@@ -1,4 +1,5 @@
 """View that serves FlatPage objects by URL path."""
+
 from __future__ import annotations
 
 from starlette.requests import Request
@@ -20,6 +21,7 @@ async def flatpage(request: Request) -> HTMLResponse:
     template_name = page.template_name or "flatpages/default.html"
     try:
         from buraq.core.templating import templates
+
         return templates.TemplateResponse(request, template_name, {"flatpage": page})
     except Exception:
         return HTMLResponse(page.content)

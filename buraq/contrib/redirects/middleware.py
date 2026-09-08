@@ -1,4 +1,5 @@
 """ASGI middleware that processes database-driven URL redirects on 404."""
+
 from __future__ import annotations
 
 from urllib.parse import urlparse
@@ -50,6 +51,7 @@ class RedirectFallbackMiddleware:
             path = scope.get("path", "/")
             try:
                 from buraq.contrib.redirects.models import Redirect
+
                 rule = await Redirect.objects.get_or_none(old_path=path)
                 if rule is not None:
                     location = rule.new_path or ""
@@ -59,8 +61,13 @@ class RedirectFallbackMiddleware:
                     headers = [(b"content-length", b"0")]
                     if location:
                         headers.append((b"location", location.encode()))
-                    await send({"type": "http.response.start", "status": redirect_status,
-                                "headers": headers})
+                    await send(
+                        {
+                            "type": "http.response.start",
+                            "status": redirect_status,
+                            "headers": headers,
+                        }
+                    )
                     await send({"type": "http.response.body", "body": b""})
                     return
             except Exception:

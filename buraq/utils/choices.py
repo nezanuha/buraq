@@ -22,6 +22,7 @@ Usage:
     labels = Status.labels    # ["Draft", "Published", "Archived"]
     values = Status.values    # ["draft", "published", "archived"]
 """
+
 from __future__ import annotations
 
 import enum

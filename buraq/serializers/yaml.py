@@ -12,6 +12,7 @@ Usage::
     yaml_str = await serialize("yaml", await Post.objects.all())
     objects  = deserialize("yaml", yaml_str)
 """
+
 from __future__ import annotations
 
 from buraq.serializers.base import DeserializationError, SerializationError
@@ -24,6 +25,7 @@ class YamlSerializer(JsonSerializer):
     def _check_yaml(self):
         try:
             import yaml
+
             return yaml
         except ImportError as err:
             raise SerializationError(
@@ -33,6 +35,7 @@ class YamlSerializer(JsonSerializer):
     async def serialize(self, queryset, *, indent: int | None = 2) -> str:
         yaml = self._check_yaml()
         from buraq.serializers.base import _to_record
+
         objects = queryset if isinstance(queryset, list) else list(queryset)
         records = [_to_record(obj) for obj in objects]
         return yaml.dump(records, allow_unicode=True, default_flow_style=False)

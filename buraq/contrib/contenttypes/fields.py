@@ -1,4 +1,5 @@
 """Generic foreign key and reverse generic relation descriptors."""
+
 from __future__ import annotations
 
 import importlib
@@ -33,6 +34,7 @@ class GenericForeignKey:
 
     async def _resolve(self, instance):
         from buraq.contrib.contenttypes.models import ContentType
+
         ct_id = getattr(instance, self.ct_field)
         obj_id = getattr(instance, self.fk_field)
         if ct_id is None or obj_id is None:
@@ -43,7 +45,8 @@ class GenericForeignKey:
         try:
             module = importlib.import_module(ct.app_label)
             model_cls = next(
-                v for v in vars(module).values()
+                v
+                for v in vars(module).values()
                 if isinstance(v, type) and getattr(v, "__name__", "").lower() == ct.model
             )
             return await model_cls.objects.get_or_none(id=obj_id)
@@ -66,6 +69,7 @@ class _GenericRelatedManager:
 
     async def _get_ct_id(self) -> int:
         from buraq.contrib.contenttypes.models import ContentType
+
         ct = await ContentType.get_for_model(type(self._instance))
         return ct.id
 

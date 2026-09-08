@@ -302,9 +302,11 @@ class Model(Base):
 
         # ── 7. Attach managers and exceptions ─────────────────────────────
         _attach_managers(cls, opts)
-        cls.DoesNotExist = type("DoesNotExist", (DoesNotExist,), {
-            "__doc__": f"{cls.__name__} matching query does not exist."
-        })
+        cls.DoesNotExist = type(
+            "DoesNotExist",
+            (DoesNotExist,),
+            {"__doc__": f"{cls.__name__} matching query does not exist."},
+        )
 
         # ── 8. Legacy _meta_* aliases (admin reads these) ──────────────────
         _apply_legacy_meta_aliases(cls, opts)
@@ -333,7 +335,6 @@ class Model(Base):
 
         # ── 11. order_with_respect_to helper methods ──────────────────────
         _install_order_helpers(cls, opts, fk_fields)
-
 
     # ── Class-level helpers ────────────────────────────────────────────────────
 
@@ -364,15 +365,11 @@ class Model(Base):
 
     def get_absolute_url(self) -> str:
         """Return the canonical URL for this object. Override in subclasses."""
-        raise NotImplementedError(
-            f"{self.__class__.__name__} does not define get_absolute_url()."
-        )
+        raise NotImplementedError(f"{self.__class__.__name__} does not define get_absolute_url().")
 
     def natural_key(self) -> tuple:
         """Return a tuple of field values that uniquely identify this object naturally (no PK)."""
-        raise NotImplementedError(
-            f"{self.__class__.__name__} does not define natural_key()."
-        )
+        raise NotImplementedError(f"{self.__class__.__name__} does not define natural_key().")
 
     # ── pk alias ──────────────────────────────────────────────────────────────
 
@@ -388,6 +385,7 @@ class Model(Base):
 
     def __init__(self, **kwargs):
         from buraq.signals import post_init, pre_init
+
         pre_init.send_sync(sender=self.__class__, args=(), kwargs=kwargs)
         self._state = _ModelState(adding=True)
         super().__init__(**kwargs)
@@ -399,6 +397,7 @@ class Model(Base):
         """
         from buraq.core.db import SessionLocal, _current_session
         from buraq.signals import post_save, pre_save
+
         created = self.id is None
         await pre_save.send(sender=self.__class__, instance=self, created=created)
 
@@ -441,6 +440,7 @@ class Model(Base):
         """Delete this instance from the database."""
         from buraq.core.db import SessionLocal, _current_session
         from buraq.signals import post_delete, pre_delete
+
         await pre_delete.send(sender=self.__class__, instance=self)
         active = _current_session.get()
         if active is not None:
@@ -459,6 +459,7 @@ class Model(Base):
     async def refresh_from_db(self, fields: list | None = None) -> None:
         """Reload this instance's fields from the database."""
         from buraq.core.db import SessionLocal
+
         async with SessionLocal() as db:
             fresh = await db.get(self.__class__, self.id)
             if fresh is None:
@@ -476,6 +477,7 @@ class Model(Base):
     async def full_clean(self) -> None:
         """Run all field-level validators and model-level clean(). Raises ValidationError."""
         from buraq.exceptions import ValidationError
+
         errors: dict[str, list] = {}
 
         await self.clean_fields(errors)
@@ -496,6 +498,7 @@ class Model(Base):
     async def clean_fields(self, errors: dict | None = None) -> None:
         """Validate each field's validators. Populates errors dict or raises ValidationError."""
         from buraq.exceptions import ValidationError
+
         _errors = errors if errors is not None else {}
         for col in self.__class__.__table__.columns:
             val = getattr(self, col.name, None)
@@ -523,9 +526,7 @@ class Model(Base):
                 val = getattr(self, col.name, None)
                 if val is None:
                     continue
-                q = select(self.__class__).where(
-                    getattr(self.__class__, col.name) == val
-                )
+                q = select(self.__class__).where(getattr(self.__class__, col.name) == val)
                 if self.id is not None:
                     q = q.where(self.__class__.id != self.id)
                 result = await db.execute(q.limit(1))
@@ -597,9 +598,7 @@ def _attach_managers(cls, opts):
     created when no manager was declared at all. ``Meta.default_manager_name``
     and ``Meta.base_manager_name`` select among the declared managers.
     """
-    declared = {
-        name: value for name, value in vars(cls).items() if isinstance(value, Manager)
-    }
+    declared = {name: value for name, value in vars(cls).items() if isinstance(value, Manager)}
 
     for name, manager in declared.items():
         manager._model = cls

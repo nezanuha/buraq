@@ -126,6 +126,7 @@ def _get_backend() -> BaseCacheBackend:
 def _get_named_backend(alias: str) -> BaseCacheBackend:
     if alias not in _named_backends:
         from buraq.conf import settings
+
         caches_conf = getattr(settings, "CACHES", {})
         if alias not in caches_conf:
             raise ValueError(f"No cache with alias {alias!r} in CACHES setting.")

@@ -3,6 +3,7 @@ Abstract base class for task backends.
 
 All backends must implement ``aenqueue()`` and ``aget_result()``.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable

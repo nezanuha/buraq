@@ -4,6 +4,7 @@ Template loader utilities — render_to_string, get_template, select_template.
 Usage:
     from buraq.template.loader import render_to_string, get_template, select_template
 """
+
 from __future__ import annotations
 
 from typing import Any

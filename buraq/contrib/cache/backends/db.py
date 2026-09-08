@@ -18,6 +18,7 @@ Usage::
     CACHE_BACKEND = "buraq.contrib.cache.backends.db.DatabaseCache"
     CACHE_TABLE   = "buraq_cache_table"
 """
+
 from __future__ import annotations
 
 import json
@@ -44,8 +45,7 @@ def _checked_table_name(name: str) -> str:
     """
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name or ""):
         raise ImproperlyConfigured(
-            f"CACHE_TABLE must be a plain identifier (letters, digits, underscore); "
-            f"got {name!r}."
+            f"CACHE_TABLE must be a plain identifier (letters, digits, underscore); got {name!r}."
         )
     return name
 
@@ -92,6 +92,7 @@ class DatabaseCache(BaseCacheBackend):
             # explicit table (from CACHES OPTIONS) still wins.
             try:
                 from buraq.conf import settings
+
                 table = getattr(settings, "CACHE_TABLE", None) or DEFAULT_TABLE
             except Exception:
                 table = DEFAULT_TABLE
@@ -99,6 +100,7 @@ class DatabaseCache(BaseCacheBackend):
         if cull_probability is None:
             try:
                 from buraq.conf import settings
+
                 cull_probability = getattr(settings, "CACHE_CULL_PROBABILITY", 0.1)
             except Exception:
                 cull_probability = 0.1
@@ -112,6 +114,7 @@ class DatabaseCache(BaseCacheBackend):
         import sqlalchemy as sa
 
         from buraq.core.db import SessionLocal
+
         async with SessionLocal() as db:
             result = await db.execute(sa.text(sql), self._bind(params))
             await db.commit()
@@ -121,6 +124,7 @@ class DatabaseCache(BaseCacheBackend):
         import sqlalchemy as sa
 
         from buraq.core.db import SessionLocal
+
         async with SessionLocal() as db:
             result = await db.execute(sa.text(sql), self._bind(params))
             return result.fetchall()
@@ -148,11 +152,13 @@ class DatabaseCache(BaseCacheBackend):
         import random
 
         import sqlalchemy as sa
+
         timeout = self._resolve_timeout(timeout)
         expires = time.time() + (timeout if timeout and timeout > 0 else _FOREVER)
         raw = self._serialize(value)
         # Upsert via DELETE + INSERT in a single transaction for atomicity
         from buraq.core.db import SessionLocal
+
         async with SessionLocal() as db:
             stored = self._make_key(key)
             await db.execute(
@@ -219,17 +225,13 @@ class DatabaseCache(BaseCacheBackend):
             # An expired row still holds the key, so clear it first -- otherwise
             # a lock could never be taken again once it had expired.
             await db.execute(
-                sa.text(
-                    f"DELETE FROM {self._table} "
-                    f"WHERE cache_key = :0 AND expires <= :1"
-                ),
+                sa.text(f"DELETE FROM {self._table} WHERE cache_key = :0 AND expires <= :1"),
                 {"0": stored, "1": now},
             )
             try:
                 await db.execute(
                     sa.text(
-                        f"INSERT INTO {self._table} (cache_key, value, expires) "
-                        f"VALUES (:0, :1, :2)"
+                        f"INSERT INTO {self._table} (cache_key, value, expires) VALUES (:0, :1, :2)"
                     ),
                     {"0": stored, "1": self._serialize(value), "2": expires},
                 )
@@ -259,8 +261,7 @@ class DatabaseCache(BaseCacheBackend):
         now = time.time()
         async with SessionLocal() as db:
             locked = _for_update(
-                f"SELECT value, expires FROM {self._table} "
-                f"WHERE cache_key = :0 AND expires > :1",
+                f"SELECT value, expires FROM {self._table} WHERE cache_key = :0 AND expires > :1",
                 db,
             )
             row = (await db.execute(sa.text(locked), {"0": stored, "1": now})).first()
@@ -279,7 +280,5 @@ class DatabaseCache(BaseCacheBackend):
     async def cull(self) -> int:
         """Remove expired entries. Returns count deleted."""
         now = time.time()
-        result = await self._execute(
-            f"DELETE FROM {self._table} WHERE expires <= :0", [now]
-        )
+        result = await self._execute(f"DELETE FROM {self._table} WHERE expires <= :0", [now])
         return getattr(result, "rowcount", 0)

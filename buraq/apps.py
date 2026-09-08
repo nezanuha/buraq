@@ -15,6 +15,7 @@ Usage:
     # settings.py
     INSTALLED_APPS = ["blog.apps.BlogConfig", "shop"]
 """
+
 from __future__ import annotations
 
 import importlib

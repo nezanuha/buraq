@@ -24,6 +24,7 @@ Usage:
     has_comments = Exists(Comment.objects.filter(post_id=OuterRef("id")))
     await Post.objects.filter(has_comments=has_comments)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -56,6 +57,7 @@ class When:
                 return self.condition.resolve(model)
             return self.condition
         from buraq.orm.query import _resolve_lookup
+
         clauses = []
         for key, value in self.kwargs.items():
             clauses.append(_resolve_lookup(model, key, value))
@@ -83,10 +85,7 @@ class Case:
         self.default = default
 
     def resolve(self, model) -> sa.sql.ColumnElement:
-        cases = [
-            (w.resolve_condition(model), w.resolve_then(model))
-            for w in self.whens
-        ]
+        cases = [(w.resolve_condition(model), w.resolve_then(model)) for w in self.whens]
         default = None
         if self.default is not None:
             if hasattr(self.default, "resolve"):
@@ -138,7 +137,7 @@ class Subquery:
 
         def _collect(elem):
             if isinstance(elem, ColumnClause) and elem.key.startswith(_OUTER_REF_PREFIX):
-                field_name = elem.key[len(_OUTER_REF_PREFIX):]
+                field_name = elem.key[len(_OUTER_REF_PREFIX) :]
                 replacements[elem.key] = getattr(outer_model, field_name)
 
         visitors.traverse(query, {}, {"column": _collect})
@@ -208,6 +207,12 @@ class JSONNull:
 
 
 __all__ = [
-    "Value", "When", "Case", "OuterRef", "Subquery", "Exists",
-    "ExpressionWrapper", "JSONNull",
+    "Value",
+    "When",
+    "Case",
+    "OuterRef",
+    "Subquery",
+    "Exists",
+    "ExpressionWrapper",
+    "JSONNull",
 ]

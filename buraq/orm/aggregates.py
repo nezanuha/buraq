@@ -10,6 +10,7 @@ Usage:
     qs = await Post.objects.values("author_id").annotate(post_count=Count("id"))
     # → [{"author_id": 1, "post_count": 5}, ...]
 """
+
 import sqlalchemy as sa
 from sqlalchemy import func
 
@@ -72,16 +73,19 @@ class Variance(Aggregate):
 
 class BitAnd(Aggregate):
     """Bitwise AND of all non-NULL integer values."""
+
     sa_func = func.bit_and
 
 
 class BitOr(Aggregate):
     """Bitwise OR of all non-NULL integer values."""
+
     sa_func = func.bit_or
 
 
 class BitXor(Aggregate):
     """Bitwise XOR of all non-NULL integer values."""
+
     sa_func = func.bit_xor
 
 
@@ -103,4 +107,5 @@ class AnyValue(Aggregate):
             sample_note=AnyValue("note")
         )
     """
+
     sa_func = func.any_value

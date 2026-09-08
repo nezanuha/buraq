@@ -2,6 +2,7 @@
 Cookie-based signed session middleware.
 Requires: uv add itsdangerous
 """
+
 import json
 import logging
 
@@ -71,13 +72,9 @@ class SessionMiddleware(BaseHTTPMiddleware):
             session_cookie if session_cookie is not None else settings.SESSION_COOKIE_NAME
         )
         self.max_age = max_age if max_age is not None else settings.SESSION_COOKIE_MAX_AGE
-        self.same_site = (
-            same_site if same_site is not None else settings.SESSION_COOKIE_SAMESITE
-        )
+        self.same_site = same_site if same_site is not None else settings.SESSION_COOKIE_SAMESITE
         self.http_only = getattr(settings, "SESSION_COOKIE_HTTPONLY", True)
-        self.https_only = (
-            https_only if https_only is not None else not settings.DEBUG
-        )
+        self.https_only = https_only if https_only is not None else not settings.DEBUG
         self.domain = domain
 
     async def dispatch(self, request: Request, call_next):
@@ -115,6 +112,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
             return _SessionDict()
         try:
             from itsdangerous import URLSafeTimedSerializer
+
             s = URLSafeTimedSerializer(self.secret_key)
             data = s.loads(cookie, max_age=self.max_age)
             if isinstance(data, str):
@@ -126,5 +124,6 @@ class SessionMiddleware(BaseHTTPMiddleware):
 
     def _dump(self, data: dict) -> str:
         from itsdangerous import URLSafeTimedSerializer
+
         s = URLSafeTimedSerializer(self.secret_key)
         return s.dumps(data)

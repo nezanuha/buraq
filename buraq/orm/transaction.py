@@ -26,6 +26,7 @@ Usage:
         await transaction.on_commit(send_welcome_email)   # async def — correct
         # await transaction.on_commit(lambda: send_welcome_email(user))  ← works too
 """
+
 import functools
 import inspect
 from collections.abc import AsyncGenerator
@@ -35,6 +36,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def _atomic_cm() -> AsyncGenerator:
     from buraq.core.db import SessionLocal, _current_session, _on_commit_callbacks
+
     callbacks: list = []
     tok_session = None
     tok_callbacks = None
@@ -77,6 +79,7 @@ async def on_commit(func):
     Must be awaited.
     """
     from buraq.core.db import _on_commit_callbacks
+
     callbacks = _on_commit_callbacks.get()
     if callbacks is not None:
         callbacks.append(func)
@@ -113,6 +116,7 @@ def atomic(func=None):
         async def wrapper(*args, **kwargs):
             async with _atomic_cm():
                 return await func(*args, **kwargs)
+
         return wrapper
     # Used as async with atomic():
     return _atomic_cm()

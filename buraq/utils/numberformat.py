@@ -7,6 +7,7 @@ Usage::
 
     format_number(1234567.89, ".", ",", 2)  # → "1,234,567.89"
 """
+
 from __future__ import annotations
 
 from decimal import Decimal

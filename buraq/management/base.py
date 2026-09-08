@@ -22,6 +22,7 @@ Usage:
 Then run:
     python manage.py manage send_reminders --days=14
 """
+
 import argparse
 import asyncio
 import inspect
@@ -69,6 +70,7 @@ class Style:
 
 class CommandError(Exception):
     """Exception raised by management commands."""
+
     def __init__(self, message: str = "", returncode: int = 1):
         self.returncode = returncode
         super().__init__(message)
@@ -105,9 +107,7 @@ class BaseCommand:
 
     async def handle(self, *args, **options) -> Any:
         """The actual command logic. Must be overridden."""
-        raise NotImplementedError(
-            "Subclasses of BaseCommand must provide a handle() method."
-        )
+        raise NotImplementedError("Subclasses of BaseCommand must provide a handle() method.")
 
     # ── Internal ────────────────────────────────────────────────────────────
 
@@ -140,6 +140,7 @@ class BaseCommand:
                 # Inside an already-running loop (e.g., tests with pytest-asyncio).
                 # Run in a dedicated thread with its own event loop to avoid conflicts.
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                     fut = pool.submit(asyncio.run, result)
                     return fut.result()
@@ -152,6 +153,7 @@ class BaseCommand:
         """Parse argv and execute the command."""
         try:
             from buraq.conf import settings as _s
+
             _ = _s.configured
         except ImportError:
             if self.requires_settings:

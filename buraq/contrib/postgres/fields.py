@@ -10,6 +10,7 @@ Usage:
         tags = Column(ArrayField(Text), default=list)
         attributes = Column(HStoreField, default=dict)
 """
+
 from __future__ import annotations
 
 from sqlalchemy import Index
@@ -55,6 +56,7 @@ class HStoreField(HSTORE):
 
 # ── Case-insensitive text fields ──────────────────────────────────────────────
 
+
 class CITextField(CITEXT):
     """Case-insensitive text (requires the citext extension)."""
 
@@ -68,6 +70,7 @@ class CIEmailField(CITEXT):
 
 
 # ── Range fields ──────────────────────────────────────────────────────────────
+
 
 class IntegerRangeField(INT4RANGE):
     """PostgreSQL int4range."""
@@ -90,6 +93,7 @@ class DateTimeRangeField(TSTZRANGE):
 
 
 # ── Advanced index types ──────────────────────────────────────────────────────
+
 
 def GinIndex(name: str, *columns, **kwargs) -> Index:
     """
@@ -182,7 +186,8 @@ def TrgmIndex(name: str, *columns, index_type: str = "gin", **kwargs) -> Index:
         name,
         *columns,
         postgresql_using=index_type,
-        postgresql_ops={col: "gin_trgm_ops" if index_type == "gin" else "gist_trgm_ops"
-                        for col in columns},
+        postgresql_ops={
+            col: "gin_trgm_ops" if index_type == "gin" else "gist_trgm_ops" for col in columns
+        },
         **kwargs,
     )

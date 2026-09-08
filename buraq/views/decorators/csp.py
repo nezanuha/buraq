@@ -25,6 +25,7 @@ Pass ``None`` to disable the policy for a specific view::
     async def embed_view(request):
         ...
 """
+
 from __future__ import annotations
 
 import functools
@@ -43,10 +44,12 @@ def csp_override(policy: dict | None = None, **directives) -> Callable:
 
     def decorator(view_func: Callable) -> Callable:
         _policy = policy
+
         @functools.wraps(view_func)
         async def wrapper(request, *args, **kwargs):
             request.state._csp_override = _policy
             return await view_func(request, *args, **kwargs)
+
         return wrapper
 
     return decorator
@@ -63,10 +66,12 @@ def csp_report_only_override(policy: dict | None = None, **directives) -> Callab
 
     def decorator(view_func: Callable) -> Callable:
         _policy = policy
+
         @functools.wraps(view_func)
         async def wrapper(request, *args, **kwargs):
             request.state._csp_ro_override = _policy
             return await view_func(request, *args, **kwargs)
+
         return wrapper
 
     return decorator

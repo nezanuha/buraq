@@ -14,7 +14,8 @@ class TranslatableModelForm(ModelForm):
         if not hasattr(model, "set_translation"):
             return instance
         trans_cols = {
-            c.name for c in model.translation_model.__table__.columns
+            c.name
+            for c in model.translation_model.__table__.columns
             if c.name not in ("id", "master_id", "language_code")
         }
         translated_data = {k: v for k, v in self.cleaned_data.items() if k in trans_cols}

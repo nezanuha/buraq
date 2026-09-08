@@ -35,18 +35,12 @@ class BaseCacheBackend(ABC):
         from buraq.conf import settings
 
         self._prefix = (
-            key_prefix
-            if key_prefix is not None
-            else getattr(settings, "CACHE_KEY_PREFIX", "")
+            key_prefix if key_prefix is not None else getattr(settings, "CACHE_KEY_PREFIX", "")
         ) or ""
         self._default_timeout = (
-            timeout
-            if timeout is not None
-            else getattr(settings, "CACHE_DEFAULT_TIMEOUT", 300)
+            timeout if timeout is not None else getattr(settings, "CACHE_DEFAULT_TIMEOUT", 300)
         )
-        self._version = (
-            version if version is not None else getattr(settings, "CACHE_VERSION", 1)
-        )
+        self._version = version if version is not None else getattr(settings, "CACHE_VERSION", 1)
 
     def _make_key(self, key: str, version: int | None = None) -> str:
         """The key as it is stored: prefix, version, then the key itself.
@@ -199,6 +193,7 @@ class BaseCacheBackend(ABC):
 
     def _run_async(self, coro):
         import concurrent.futures
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             future = pool.submit(asyncio.run, coro)
             return future.result()

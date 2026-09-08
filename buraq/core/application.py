@@ -79,13 +79,9 @@ class Buraq(FastAPI):
         async def _not_found(request: Request, exc: _StarletteHTTPException):
             if request.url.path == "/":
                 return HTMLResponse(
-                    welcome_html(
-                        project=self.title, docs_url=self.docs_url or "/api/docs"
-                    )
+                    welcome_html(project=self.title, docs_url=self.docs_url or "/api/docs")
                 )
-            return JSONResponse(
-                {"detail": getattr(exc, "detail", "Not Found")}, status_code=404
-            )
+            return JSONResponse({"detail": getattr(exc, "detail", "Not Found")}, status_code=404)
 
     def _load_root_urlconf(self) -> None:
         """
@@ -125,13 +121,13 @@ class Buraq(FastAPI):
         ])
         """
         from buraq.urls import register_urlpatterns
+
         register_urlpatterns(self, urlpatterns)
 
     def _load_settings(self, module_path: str) -> None:
         module = importlib.import_module(module_path)
         user_settings = {
-            k: v for k, v in vars(module).items()
-            if k.isupper() and not k.startswith("_")
+            k: v for k, v in vars(module).items() if k.isupper() and not k.startswith("_")
         }
         for key, value in user_settings.items():
             object.__setattr__(settings, key, value)
@@ -150,13 +146,16 @@ class Buraq(FastAPI):
         @self.exception_handler(Exception)
         async def _debug_exception_handler(request: Request, exc: Exception) -> HTMLResponse:
             from starlette.exceptions import HTTPException as _HTTPExc
+
             if isinstance(exc, _HTTPExc):
                 return HTMLResponse(content=exc.detail or "Error", status_code=exc.status_code)
             if not settings.DEBUG:
                 return HTMLResponse(content="Internal Server Error", status_code=500)
             import traceback as _tb
+
             _tb.print_exc()
             from buraq.core.debug import render_debug_page
+
             return HTMLResponse(content=render_debug_page(request, exc), status_code=500)
 
     #: Paths that no longer belong in MIDDLEWARE, and what replaced them. Each
@@ -254,16 +253,20 @@ class Buraq(FastAPI):
         # First: app configs connect signal receivers in ready(), and the checks
         # below inspect what those hooks register.
         from buraq.apps import setup as _setup_apps
+
         await _setup_apps()
 
         from buraq.checks.registry import registry
+
         registry.run_checks_or_raise()
 
         from buraq.core.templating import discover_templatetags
+
         discover_templatetags()
 
         if settings.USE_I18N:
             from buraq.utils.translation import warmup_catalogs
+
             warmup_catalogs()
 
         for hook in self._startup_hooks:
@@ -276,5 +279,6 @@ class Buraq(FastAPI):
             await hook()
 
         from buraq.core.db import _lazy
+
         if _lazy._engine is not None:
             await _lazy._engine.dispose()

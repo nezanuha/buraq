@@ -10,6 +10,7 @@ Use with QuerySet.aggregate() or QuerySet.annotate():
         titles=StringAgg("title", delimiter=", ")
     )
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -112,59 +113,71 @@ class _TwoFieldAggregate:
 
 class Corr(_TwoFieldAggregate):
     """Pearson correlation coefficient of (y_field, x_field)."""
+
     _func_name = "corr"
 
 
 class CovarPop(_TwoFieldAggregate):
     """Population covariance of (y_field, x_field)."""
+
     _func_name = "covar_pop"
 
 
 class CovarSamp(_TwoFieldAggregate):
     """Sample covariance of (y_field, x_field)."""
+
     _func_name = "covar_samp"
 
 
 class RegrAvgX(_TwoFieldAggregate):
     """Average of the independent variable (x)."""
+
     _func_name = "regr_avgx"
 
 
 class RegrAvgY(_TwoFieldAggregate):
     """Average of the dependent variable (y)."""
+
     _func_name = "regr_avgy"
 
 
 class RegrCount(_TwoFieldAggregate):
     """Number of rows where both inputs are non-null."""
+
     _func_name = "regr_count"
 
 
 class RegrIntercept(_TwoFieldAggregate):
     """Y-intercept of the least-squares-fit linear equation."""
+
     _func_name = "regr_intercept"
 
 
 class RegrR2(_TwoFieldAggregate):
     """Square of the correlation coefficient (R²)."""
+
     _func_name = "regr_r2"
 
 
 class RegrSlope(_TwoFieldAggregate):
     """Slope of the least-squares-fit linear equation."""
+
     _func_name = "regr_slope"
 
 
 class RegrSXX(_TwoFieldAggregate):
     """Sum of squares of the independent variable."""
+
     _func_name = "regr_sxx"
 
 
 class RegrSXY(_TwoFieldAggregate):
     """Sum of products of independent times dependent variable."""
+
     _func_name = "regr_sxy"
 
 
 class RegrSYY(_TwoFieldAggregate):
     """Sum of squares of the dependent variable."""
+
     _func_name = "regr_syy"

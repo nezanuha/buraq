@@ -5,6 +5,7 @@ File wrapper classes.
 ``ContentFile``  — in-memory file from raw bytes or str
 ``UploadedFile`` — represents a file received via HTTP multipart upload
 """
+
 from __future__ import annotations
 
 import io

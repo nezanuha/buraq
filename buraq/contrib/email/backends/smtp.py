@@ -41,7 +41,9 @@ class SMTPEmailBackend(BaseEmailBackend):
         except Exception:
             _log.exception(
                 "SMTP error sending to %s via %s:%s",
-                all_recipients, self.host, self.port,
+                all_recipients,
+                self.host,
+                self.port,
             )
             return False
 
@@ -75,9 +77,7 @@ class SMTPEmailBackend(BaseEmailBackend):
         backend: Python calls ``__aexit__`` on the object the ``with`` names, so
         a backend handing out a different object would never see it closed.
         """
-        client = aiosmtplib.SMTP(
-            hostname=self.host, port=self.port, start_tls=self.use_tls
-        )
+        client = aiosmtplib.SMTP(hostname=self.host, port=self.port, start_tls=self.use_tls)
         return _OpenSMTPConnection(client, self)
 
 

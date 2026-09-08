@@ -57,9 +57,7 @@ class MemoryCacheBackend(BaseCacheBackend):
                 # Evict the oldest key (simple LRU approximation)
                 oldest = next(iter(self._store))
                 del self._store[oldest]
-            expires_at = (
-                time.monotonic() + timeout if timeout and timeout > 0 else None
-            )
+            expires_at = time.monotonic() + timeout if timeout and timeout > 0 else None
             self._store[key] = (value, expires_at)
 
     async def delete(self, key: str) -> None:
@@ -110,8 +108,6 @@ class MemoryCacheBackend(BaseCacheBackend):
             if len(self._store) >= self._max_size:
                 oldest = next(iter(self._store))
                 del self._store[oldest]
-            expires_at = (
-                time.monotonic() + timeout if timeout and timeout > 0 else None
-            )
+            expires_at = time.monotonic() + timeout if timeout and timeout > 0 else None
             self._store[key] = (value, expires_at)
             return True

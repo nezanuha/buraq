@@ -1,6 +1,7 @@
 """
 Async sitemap view — renders sitemap.xml using stdlib xml.etree.ElementTree (C accelerator).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -40,6 +41,7 @@ async def sitemap(
     if section is not None:
         if section not in sitemaps:
             from fastapi import HTTPException
+
             raise HTTPException(status_code=404, detail=f"No sitemap section: {section!r}")
         active = {section: sitemaps[section]}
     else:

@@ -15,6 +15,7 @@ Usage:
     for msg in messages:
         print(f"[{msg.__class__.__name__}] {msg.id}: {msg}")
 """
+
 # Register built-in security checks
 import buraq.checks.security  # noqa: F401, E402
 import buraq.checks.urls  # noqa: F401, E402
@@ -36,6 +37,12 @@ def run_checks(tags=None) -> list[CheckMessage]:
 
 
 __all__ = [
-    "register", "run_checks",
-    "CheckMessage", "Debug", "Info", "Warning", "Error", "Critical",
+    "register",
+    "run_checks",
+    "CheckMessage",
+    "Debug",
+    "Info",
+    "Warning",
+    "Error",
+    "Critical",
 ]

@@ -15,6 +15,7 @@ Usage:
     class MyView(View):
         ...
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -35,6 +36,7 @@ def method_decorator(decorator: Callable, name: str = "") -> Callable:
         class MyView(View):
             async def get(self, request): ...
     """
+
     def _dec(obj):
         if isinstance(obj, type):
             # Applied to a class

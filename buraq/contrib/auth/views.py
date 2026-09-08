@@ -8,6 +8,7 @@ from .schemas import UserCreate, UserRead
 
 async def register(payload: UserCreate) -> UserRead:
     from sqlalchemy.exc import IntegrityError
+
     try:
         return await User.objects.create(
             email=payload.email,
@@ -28,6 +29,7 @@ async def register(payload: UserCreate) -> UserRead:
 
 
 # ── Class-based auth views ───────────────────────────────────────────────────
+
 
 def _set_access_token(response, user) -> None:
     """
@@ -98,13 +100,19 @@ class LoginView:
 
     async def get(self, request, **kwargs):
         from buraq.shortcuts import render
-        return await render(request, self.template_name, {
-            "next": request.query_params.get(self.redirect_field_name, ""),
-        })
+
+        return await render(
+            request,
+            self.template_name,
+            {
+                "next": request.query_params.get(self.redirect_field_name, ""),
+            },
+        )
 
     async def post(self, request, **kwargs):
         from buraq.contrib.auth import authenticate, login
         from buraq.shortcuts import redirect, render
+
         form_data = dict(await request.form())
         username = form_data.get("username", "")
         password = form_data.get("password", "")
@@ -116,10 +124,14 @@ class LoginView:
             _set_access_token(response, user)
             return response
 
-        return await render(request, self.template_name, {
-            "error": "Invalid username or password.",
-            "next": form_data.get(self.redirect_field_name, ""),
-        })
+        return await render(
+            request,
+            self.template_name,
+            {
+                "error": "Invalid username or password.",
+                "next": form_data.get(self.redirect_field_name, ""),
+            },
+        )
 
 
 class LogoutView:
@@ -154,6 +166,7 @@ class LogoutView:
     async def get(self, request, **kwargs):
         from buraq.contrib.auth import logout
         from buraq.shortcuts import redirect
+
         await logout(request)
         response = redirect(self.next_page)
         # Clearing the session is not enough: the access token authenticates on
@@ -194,10 +207,12 @@ class PasswordChangeView:
 
     async def get(self, request, **kwargs):
         from buraq.shortcuts import render
+
         return await render(request, self.template_name, {})
 
     async def post(self, request, **kwargs):
         from buraq.shortcuts import redirect, render
+
         form_data = dict(await request.form())
         old_pw = form_data.get("old_password", "")
         new_pw1 = form_data.get("new_password1", "")
@@ -256,6 +271,7 @@ class PasswordResetView:
 
     async def get(self, request, **kwargs):
         from buraq.shortcuts import render
+
         return await render(request, self.template_name, {})
 
     async def post(self, request, **kwargs):
@@ -355,6 +371,7 @@ class PasswordResetConfirmView:
 
     async def get(self, request, **kwargs):
         from buraq.shortcuts import render
+
         token = kwargs.get("token", "")
         valid = self._verify_token(token) is not None
         return await render(request, self.template_name, {"valid": valid, "token": token})
@@ -371,9 +388,11 @@ class PasswordResetConfirmView:
         parsed = self._verify_token(token)
 
         if not parsed:
-            return await render(request, self.template_name, {
-                "valid": False, "error": "The reset link is invalid or has expired."
-            })
+            return await render(
+                request,
+                self.template_name,
+                {"valid": False, "error": "The reset link is invalid or has expired."},
+            )
 
         uid, timestamp, sig = parsed
         user = await User.objects.get_or_none(id=int(uid))
@@ -388,22 +407,32 @@ class PasswordResetConfirmView:
             hashlib.sha256,
         ).hexdigest()[:24]
         if not hmac.compare_digest(sig, expected):
-            return await render(request, self.template_name, {
-                "valid": False, "error": "Invalid reset token."
-            })
+            return await render(
+                request, self.template_name, {"valid": False, "error": "Invalid reset token."}
+            )
 
         pw1 = form_data.get("new_password1", "")
         pw2 = form_data.get("new_password2", "")
         if pw1 != pw2:
-            return await render(request, self.template_name, {
-                "valid": True, "token": token,
-                "error": "The two passwords didn't match.",
-            })
+            return await render(
+                request,
+                self.template_name,
+                {
+                    "valid": True,
+                    "token": token,
+                    "error": "The two passwords didn't match.",
+                },
+            )
         if not pw1:
-            return await render(request, self.template_name, {
-                "valid": True, "token": token,
-                "error": "Password cannot be empty.",
-            })
+            return await render(
+                request,
+                self.template_name,
+                {
+                    "valid": True,
+                    "token": token,
+                    "error": "Password cannot be empty.",
+                },
+            )
 
         await User.objects.update(user.id, hashed_password=await make_password(pw1))
         return redirect(self.success_url)
@@ -424,6 +453,7 @@ class PasswordResetDoneView:
 
         async def _view(request: Request, **kwargs):
             from buraq.shortcuts import render
+
             return await render(request, view.template_name, {})
 
         _view.view_class = cls
@@ -449,6 +479,7 @@ class PasswordChangeDoneView:
 
         async def _view(request: Request, **kwargs):
             from buraq.shortcuts import render
+
             return await render(request, view.template_name, {})
 
         _view.view_class = cls
@@ -474,6 +505,7 @@ class PasswordResetCompleteView:
 
         async def _view(request: Request, **kwargs):
             from buraq.shortcuts import render
+
             return await render(request, view.template_name, {})
 
         _view.view_class = cls
@@ -487,6 +519,7 @@ class PasswordResetCompleteView:
 def render_to_string_safe(template_name, context=None, request=None) -> str:
     try:
         from buraq.template.loader import render_to_string
+
         return render_to_string(template_name, context, request)
     except Exception:
         return ""

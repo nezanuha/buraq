@@ -5,6 +5,7 @@ Renders a full-page HTML traceback with source context, local variables,
 and request info so you can diagnose 500 errors in the browser instead
 of hunting through the server console.
 """
+
 from __future__ import annotations
 
 import html
@@ -20,6 +21,7 @@ def _short_path(filename: str) -> str:
     """Strip the project root prefix so paths fit on one line."""
     try:
         from pathlib import Path
+
         return str(Path(filename).resolve().relative_to(Path.cwd()))
     except ValueError:
         return filename
@@ -57,15 +59,17 @@ def _extract_frames(exc: BaseException) -> list[dict]:
             except Exception:
                 local_vars[k] = "<error calling repr()>"
 
-        frames.append({
-            "filename": filename,
-            "short": _short_path(filename),
-            "lineno": lineno,
-            "funcname": funcname,
-            "source": _source_block(filename, lineno),
-            "locals": local_vars,
-            "is_project": is_project,
-        })
+        frames.append(
+            {
+                "filename": filename,
+                "short": _short_path(filename),
+                "lineno": lineno,
+                "funcname": funcname,
+                "source": _source_block(filename, lineno),
+                "locals": local_vars,
+                "is_project": is_project,
+            }
+        )
         tb = tb.tb_next
 
     return list(reversed(frames))  # most-recent first
@@ -85,14 +89,14 @@ def _frames_html(frames: list[dict]) -> str:
                 f'<div class="flex gap-2 px-2 py-px {row_cls}">'
                 f'<span class="w-6 shrink-0 text-right select-none text-xs">{ln}</span>'
                 f'<span class="shrink-0 select-none">{marker}</span>'
-                f'<span>{html.escape(text)}</span>'
-                f'</div>'
+                f"<span>{html.escape(text)}</span>"
+                f"</div>"
             )
 
         source_block = (
             f'<div class="surface surface-1 surface-rounded mt-2 overflow-x-auto">'
             f'<pre class="text-xs py-1">{src_rows}</pre>'
-            f'</div>'
+            f"</div>"
         )
 
         # Local variables
@@ -100,13 +104,13 @@ def _frames_html(frames: list[dict]) -> str:
         for k, v in list(frame["locals"].items())[:30]:
             trunc = v if len(v) <= 300 else v[:300] + "…"
             locals_rows += (
-                f'<tr>'
+                f"<tr>"
                 f'<td class="text-primary font-mono align-top'
                 f' pr-3 py-0.5 whitespace-nowrap text-xs">'
-                f'{html.escape(k)}</td>'
+                f"{html.escape(k)}</td>"
                 f'<td class="font-mono text-xs break-all py-0.5">'
-                f'{html.escape(trunc)}</td>'
-                f'</tr>'
+                f"{html.escape(trunc)}</td>"
+                f"</tr>"
             )
         locals_block = ""
         if locals_rows:
@@ -114,26 +118,26 @@ def _frames_html(frames: list[dict]) -> str:
             locals_block = (
                 f'<details class="mt-2 text-xs" {open_attr}>'
                 f'<summary class="cursor-pointer select-none mb-1 font-medium">'
-                f'Local variables ({len(frame["locals"])})</summary>'
+                f"Local variables ({len(frame['locals'])})</summary>"
                 f'<div class="surface surface-1 surface-rounded mt-1">'
                 f'<table class="w-full"><tbody>{locals_rows}</tbody></table>'
-                f'</div>'
-                f'</details>'
+                f"</div>"
+                f"</details>"
             )
 
         parts.append(
             f'<div class="border-l-4 {border} pl-4 mb-5">'
             f'<p class="text-sm">'
-            f'File '
+            f"File "
             f'<span class="text-accent font-mono">{html.escape(frame["short"])}</span>'
-            f', line '
+            f", line "
             f'<span class="font-bold">{frame["lineno"]}</span>'
-            f', in '
+            f", in "
             f'<span class="text-primary font-mono">{html.escape(frame["funcname"])}</span>'
-            f'</p>'
-            f'{source_block}'
-            f'{locals_block}'
-            f'</div>'
+            f"</p>"
+            f"{source_block}"
+            f"{locals_block}"
+            f"</div>"
         )
 
     return "\n".join(parts)
@@ -156,10 +160,10 @@ def render_debug_page(request: Request, exc: BaseException) -> str:
     if len(exc_chain) > 1:
         chain_notice = (
             f'<div class="alert alert-soft alert-warning mb-4 text-sm">'
-            f'This exception was raised while handling another exception: '
-            f'<code>{html.escape(type(exc_chain[0]).__name__)}:'
-            f' {html.escape(str(exc_chain[0]))}</code>'
-            f'</div>'
+            f"This exception was raised while handling another exception: "
+            f"<code>{html.escape(type(exc_chain[0]).__name__)}:"
+            f" {html.escape(str(exc_chain[0]))}</code>"
+            f"</div>"
         )
 
     try:

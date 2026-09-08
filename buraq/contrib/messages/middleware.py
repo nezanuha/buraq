@@ -6,6 +6,7 @@ messages are written straight to the session, so a project needs this only for
 parity with code that expects it to be in the stack.
 """
 
+
 class MessageMiddleware:
     """
     Middleware placeholder for flash messages.

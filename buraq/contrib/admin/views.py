@@ -135,6 +135,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         try:
             user = await User.objects.get(username=username)
             from buraq.contrib.auth import check_password as _async_check
+
             if not await _async_check(password, user.hashed_password):
                 raise ValueError
             if not (user.is_staff or user.is_superuser):
@@ -177,18 +178,24 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 count = await ma.get_queryset(request).count()
             except Exception:
                 count = "—"
-            model_cards.append({
-                "app_label": ma.get_app_label(),
-                "model_name": ma.get_model_name(),
-                "verbose_name_plural": ma.get_verbose_name_plural(),
-                "count": count,
-                "can_create": await ma.has_add_permission(request),
-            })
+            model_cards.append(
+                {
+                    "app_label": ma.get_app_label(),
+                    "model_name": ma.get_model_name(),
+                    "verbose_name_plural": ma.get_verbose_name_plural(),
+                    "count": count,
+                    "can_create": await ma.has_add_permission(request),
+                }
+            )
 
-        return _render(request, "admin/dashboard.html", {
-            "user": user,
-            "model_cards": model_cards,
-        })
+        return _render(
+            request,
+            "admin/dashboard.html",
+            {
+                "user": user,
+                "model_cards": model_cards,
+            },
+        )
 
     # â”€â”€ Model list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -212,6 +219,7 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         # â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if search and ma.search_fields:
             from buraq.orm.query import Q
+
             q_filter = None
             for field in ma.search_fields:
                 clause = Q(**{f"{field}__icontains": search})
@@ -248,10 +256,12 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         rows = []
         for obj in objects:
             d = obj_to_dict(obj)
-            rows.append({
-                "obj_id": d.get("id"),
-                "cells": [str(d.get(f, "")) for f in list_display],
-            })
+            rows.append(
+                {
+                    "obj_id": d.get("id"),
+                    "cells": [str(d.get(f, "")) for f in list_display],
+                }
+            )
 
         # â”€â”€ Filter groups for sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         filter_groups = []
@@ -261,35 +271,38 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 # scoped admin is not allowed to see -- a "customer" filter
                 # naming every customer in the system.
                 raw_vals = (
-                    await ma.get_queryset(request)
-                    .values_list(field, flat=True)
-                    .distinct()
-                    .all()
+                    await ma.get_queryset(request).values_list(field, flat=True).distinct().all()
                 )
                 vals = sorted({str(v) for v in raw_vals if v is not None})
-                filter_groups.append({
-                    "field": field,
-                    "label": field.replace("_", " ").title(),
-                    "values": vals,
-                    "active": filter_params.get(field, ""),
-                })
+                filter_groups.append(
+                    {
+                        "field": field,
+                        "label": field.replace("_", " ").title(),
+                        "values": vals,
+                        "active": filter_params.get(field, ""),
+                    }
+                )
             except Exception:
                 pass
 
-        return _render(request, "admin/list.html", {
-            "user": user,
-            "ma": ma,
-            "app_label": app_label,
-            "model_name": model_name,
-            "list_display": list_display,
-            "rows": rows,
-            "pagination": pagination,
-            "search": search,
-            "success": request.query_params.get("success", ""),
-            "filter_groups": filter_groups,
-            "filter_params": filter_params,
-            "ordering_param": ordering_param,
-        })
+        return _render(
+            request,
+            "admin/list.html",
+            {
+                "user": user,
+                "ma": ma,
+                "app_label": app_label,
+                "model_name": model_name,
+                "list_display": list_display,
+                "rows": rows,
+                "pagination": pagination,
+                "search": search,
+                "success": request.query_params.get("success", ""),
+                "filter_groups": filter_groups,
+                "filter_params": filter_params,
+                "ordering_param": ordering_param,
+            },
+        )
 
     # â”€â”€ Bulk action POST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -329,8 +342,10 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
         queryset = ma.get_queryset(request).filter(clause)
 
         try:
-            message = await func(request, queryset) if _takes_request(func) else await func(
-                ma, request, queryset
+            message = (
+                await func(request, queryset)
+                if _takes_request(func)
+                else await func(ma, request, queryset)
             )
         except Exception:
             return RedirectResponse(f"{redirect_url}?error=action", status_code=303)
@@ -355,17 +370,21 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
 
         from buraq.contrib.admin.helpers import get_form_fields
 
-        return _render(request, "admin/change.html", {
-            "user": user,
-            "ma": ma,
-            "app_label": app_label,
-            "model_name": model_name,
-            "form_fields": get_form_fields(ma, request),
-            "fieldsets": ma.get_fieldsets(request),
-            "obj": {},
-            "is_add": True,
-            "error": None,
-        })
+        return _render(
+            request,
+            "admin/change.html",
+            {
+                "user": user,
+                "ma": ma,
+                "app_label": app_label,
+                "model_name": model_name,
+                "form_fields": get_form_fields(ma, request),
+                "fieldsets": ma.get_fieldsets(request),
+                "obj": {},
+                "is_add": True,
+                "error": None,
+            },
+        )
 
     @router.post("/{app_label}/{model_name}/add/")
     async def model_add_post(request: Request, app_label: str, model_name: str):
@@ -400,24 +419,26 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 f"{admin_site.prefix}/{app_label}/{model_name}/?success=created", status_code=303
             )
         except Exception as e:
-            return _render(request, "admin/change.html", {
-                "user": user,
-                "ma": ma,
-                "app_label": app_label,
-                "model_name": model_name,
-                "form_fields": get_form_fields(ma, request),
-            "fieldsets": ma.get_fieldsets(request),
-                "obj": dict(form),
-                "is_add": True,
-                "error": str(e),
-            })
+            return _render(
+                request,
+                "admin/change.html",
+                {
+                    "user": user,
+                    "ma": ma,
+                    "app_label": app_label,
+                    "model_name": model_name,
+                    "form_fields": get_form_fields(ma, request),
+                    "fieldsets": ma.get_fieldsets(request),
+                    "obj": dict(form),
+                    "is_add": True,
+                    "error": str(e),
+                },
+            )
 
     # â”€â”€ Change â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @router.get("/{app_label}/{model_name}/{obj_id}/change/", response_class=HTMLResponse)
-    async def model_change_get(
-        request: Request, app_label: str, model_name: str, obj_id: int
-    ):
+    async def model_change_get(request: Request, app_label: str, model_name: str, obj_id: int):
         user = await _auth(request)
         if not user:
             return _redirect_login()
@@ -435,23 +456,25 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
 
         from buraq.contrib.admin.helpers import get_form_fields, obj_to_dict
 
-        return _render(request, "admin/change.html", {
-            "user": user,
-            "ma": ma,
-            "app_label": app_label,
-            "model_name": model_name,
-            "form_fields": get_form_fields(ma, request),
-            "fieldsets": ma.get_fieldsets(request),
-            "obj": obj_to_dict(obj),
-            "is_add": False,
-            "error": None,
-            "success": request.query_params.get("success", ""),
-        })
+        return _render(
+            request,
+            "admin/change.html",
+            {
+                "user": user,
+                "ma": ma,
+                "app_label": app_label,
+                "model_name": model_name,
+                "form_fields": get_form_fields(ma, request),
+                "fieldsets": ma.get_fieldsets(request),
+                "obj": obj_to_dict(obj),
+                "is_add": False,
+                "error": None,
+                "success": request.query_params.get("success", ""),
+            },
+        )
 
     @router.post("/{app_label}/{model_name}/{obj_id}/change/")
-    async def model_change_post(
-        request: Request, app_label: str, model_name: str, obj_id: int
-    ):
+    async def model_change_post(request: Request, app_label: str, model_name: str, obj_id: int):
         user = await _auth(request)
         if not user:
             return _redirect_login()
@@ -491,24 +514,26 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
                 f"{admin_site.prefix}/{app_label}/{model_name}/?success=saved", status_code=303
             )
         except Exception as e:
-            return _render(request, "admin/change.html", {
-                "user": user,
-                "ma": ma,
-                "app_label": app_label,
-                "model_name": model_name,
-                "form_fields": get_form_fields(ma, request),
-            "fieldsets": ma.get_fieldsets(request),
-                "obj": obj_to_dict(obj),
-                "is_add": False,
-                "error": str(e),
-            })
+            return _render(
+                request,
+                "admin/change.html",
+                {
+                    "user": user,
+                    "ma": ma,
+                    "app_label": app_label,
+                    "model_name": model_name,
+                    "form_fields": get_form_fields(ma, request),
+                    "fieldsets": ma.get_fieldsets(request),
+                    "obj": obj_to_dict(obj),
+                    "is_add": False,
+                    "error": str(e),
+                },
+            )
 
     # â”€â”€ Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @router.get("/{app_label}/{model_name}/{obj_id}/delete/", response_class=HTMLResponse)
-    async def model_delete_get(
-        request: Request, app_label: str, model_name: str, obj_id: int
-    ):
+    async def model_delete_get(request: Request, app_label: str, model_name: str, obj_id: int):
         user = await _auth(request)
         if not user:
             return _redirect_login()
@@ -526,19 +551,21 @@ def get_admin_router(admin_site: AdminSite) -> APIRouter:
 
         from buraq.contrib.admin.helpers import obj_to_dict
 
-        return _render(request, "admin/delete.html", {
-            "user": user,
-            "ma": ma,
-            "app_label": app_label,
-            "model_name": model_name,
-            "obj": obj_to_dict(obj),
-            "obj_id": obj_id,
-        })
+        return _render(
+            request,
+            "admin/delete.html",
+            {
+                "user": user,
+                "ma": ma,
+                "app_label": app_label,
+                "model_name": model_name,
+                "obj": obj_to_dict(obj),
+                "obj_id": obj_id,
+            },
+        )
 
     @router.post("/{app_label}/{model_name}/{obj_id}/delete/")
-    async def model_delete_post(
-        request: Request, app_label: str, model_name: str, obj_id: int
-    ):
+    async def model_delete_post(request: Request, app_label: str, model_name: str, obj_id: int):
         user = await _auth(request)
         if not user:
             return _redirect_login()
