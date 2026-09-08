@@ -74,7 +74,7 @@ def test_hashed_url_is_found_and_is_a_valid_url(collected):
         ("css/site.css", "css/site.abc123.css"),
         ("css/vendor/reset.css", "css/vendor/reset.abc123.css"),
         # A caller that hands over a Windows-style name still gets a URL back.
-        ("css\site.css", "css/site.abc123.css"),
+        (r"css\site.css", "css/site.abc123.css"),
     ],
 )
 def test_hashed_name_is_posix(name, expected):

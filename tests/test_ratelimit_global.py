@@ -254,6 +254,11 @@ def test_a_project_with_no_cache_configured_needs_nothing_running(monkeypatch):
     ],
 )
 @needs_limits
+# limits' MongoDBStorage.__del__ does `self.storage and ...`, but __init__ never
+# sets `storage` when the driver is absent -- which is the case under test. The
+# AttributeError escapes during garbage collection, where nothing can catch it.
+# Scoped to this test so a genuine unraisable exception anywhere else still fails.
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_a_missing_driver_names_the_package_to_install(uri, package):
     """
     None of these clients is a dependency -- a project on the default in-process
