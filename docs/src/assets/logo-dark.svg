@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1278.4 400.0"
+     width="1278" height="400" role="img" aria-label="Buraq">
+  <!--
+    Buraq wordmark lockup. Pure vector, no embedded raster.
+
+    The mark was vectorised from Buraq-dual-3.png by contour tracing rather than
+    by eye: both bolts isolated by luminance, boundaries followed, simplified to
+    18 and 22 vertices. Rendered back and diffed against the source, 1.14 percent
+    of pixels differ by more than 24/255, which is edge antialiasing.
+
+    The gradient was fitted, not guessed. Correlating position against colour
+    across the dark bolt puts the axis at 95 degrees, running #0b4131 to #2c5c58.
+
+    The word is real outlines from Onest 700, the face the site already uses,
+    pulled with fontTools. Deliberately NOT an SVG text element: an SVG loaded as
+    an image cannot reach webfonts, so text would fall back to whatever the OS
+    supplies and the wordmark would change shape per platform. Tracking -0.03em,
+    matching the header's own title.
+
+    Glyph offsets are in font units because the wrapping g already applies the
+    scale. Multiplying them by it as well stacks every letter on the first.
+
+    Word in #79c9a2, the mark's own mint: 10.01:1 on the dark page. The dark green
+    is 1.70:1 there and would be unreadable, so the dark file differs by that one value.
+  -->
+  <defs>
+    <linearGradient id="bqg" gradientUnits="userSpaceOnUse"
+      x1="204.4" y1="-11.3" x2="171.7" y2="362.1">
+      <stop offset="0" stop-color="#0b4131"/>
+      <stop offset="1" stop-color="#2c5c58"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#bqg)" d="M334.0 0.0 345.0 2.0 379.0 39.0 397.0 60.0 397.0 72.0 235.0 273.0 227.0 278.0 218.0 277.0 144.0 206.0 136.0 204.0 122.0 215.0 19.0 344.0 11.0 348.0 3.0 346.0 0.0 339.0 2.0 331.0 122.0 121.0 129.0 118.0 137.0 120.0 211.0 189.0 222.0 188.0 328.0 4.0Z"/>
+  <path fill="#79c9a2" d="M380.0 94.0 397.0 112.0 396.0 126.0 231.0 329.0 218.0 329.0 144.0 258.0 136.0 256.0 122.0 267.0 19.0 396.0 11.0 400.0 2.0 397.0 1.0 385.0 37.0 322.0 131.0 207.0 136.0 205.0 144.0 207.0 218.0 278.0 231.0 278.0Z"/>
+  <g fill="#79c9a2" transform="translate(477.0 304.0) scale(0.29379 -0.29379)"><path transform="translate(0 0)" d="M74 0V708H384Q433 708 473.5 698.5Q514 689 544.0 668.0Q574 647 590.5 612.0Q607 577 607 523Q607 479 587.0 441.0Q567 403 528 383Q580 366 610.0 324.0Q640 282 640 213Q640 153 617.0 112.0Q594 71 554.0 46.0Q514 21 461.0 10.5Q408 0 348 0ZM217 132H365Q392 132 415.5 136.0Q439 140 457.0 149.5Q475 159 485.5 176.0Q496 193 496 218Q496 241 487.5 256.5Q479 272 463.5 282.0Q448 292 427.5 296.0Q407 300 382 300H217ZM217 419H348Q375 419 397.0 424.0Q419 429 434.0 440.0Q449 451 457.0 467.5Q465 484 465 506Q466 536 452.0 550.5Q438 565 414.0 570.5Q390 576 360 576H217Z"/><path transform="translate(647 0)" d="M294 -7Q178 -7 115.5 52.5Q53 112 53 232V527H193V242Q193 206 203.5 178.5Q214 151 236.0 135.0Q258 119 294 119Q333 119 354.0 136.0Q375 153 383.0 181.5Q391 210 391 242V527H531V232Q531 107 468.5 50.0Q406 -7 294 -7Z"/><path transform="translate(1202 0)" d="M55 0V527H181L190 464Q210 494 235.0 509.5Q260 525 287.0 530.5Q314 536 342 536Q355 536 366.0 535.5Q377 535 382 535V400H349Q302 400 267.0 384.0Q232 368 213.5 334.0Q195 300 195 247V0Z"/><path transform="translate(1565 0)" d="M222 -7Q186 -7 152.5 2.5Q119 12 93.0 32.0Q67 52 52.0 82.0Q37 112 37 152Q37 206 59.0 238.5Q81 271 118.0 288.0Q155 305 203.5 311.0Q252 317 304 317H380Q380 346 369.5 368.5Q359 391 338.0 403.5Q317 416 284 416Q263 416 244.0 410.5Q225 405 212.0 395.0Q199 385 195 369H53Q59 413 81.0 444.5Q103 476 135.5 496.0Q168 516 207.5 525.5Q247 535 289 535Q366 535 415.5 506.0Q465 477 489.5 421.0Q514 365 514 284V0H388L386 68Q361 33 329.5 17.0Q298 1 269.0 -3.0Q240 -7 222 -7ZM254 104Q289 104 318.0 118.0Q347 132 364.0 156.0Q381 180 381 210V223H264Q249 223 233.5 220.5Q218 218 205.0 212.0Q192 206 184.0 195.0Q176 184 176 164Q176 144 186.5 130.5Q197 117 215.0 110.5Q233 104 254 104Z"/><path transform="translate(2103 0)" d="M430 -197V57Q400 20 357.0 6.5Q314 -7 273 -7Q213 -7 168.0 13.5Q123 34 93.5 70.5Q64 107 49.5 155.5Q35 204 35 261Q35 342 64.0 404.0Q93 466 148.5 501.0Q204 536 281 536Q326 536 366.5 521.0Q407 506 433 473L440 527H570V-197ZM303 119Q345 119 373.0 139.0Q401 159 415.5 192.0Q430 225 430 264Q430 304 415.5 336.5Q401 369 372.5 388.5Q344 408 301 408Q257 408 229.0 388.0Q201 368 188.0 335.5Q175 303 175 265Q175 227 188.0 193.5Q201 160 229.0 139.5Q257 119 303 119Z"/></g>
+</svg>
