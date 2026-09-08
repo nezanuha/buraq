@@ -5,18 +5,22 @@ description: "Build a working blog with models, views, URLs and templates."
 
 A working blog in about five minutes — models, views, URLs, templates.
 
-New here? [Installation](/docs/getting-started/installation) covers making an
-environment and installing the `buraq` command first.
+New here? [Installation](/docs/getting-started/installation) covers installing
+the `buraq` command first.
 
 ## 1. Create the project
 
 ```bash
 buraq startproject myblog
 cd myblog
+
+uv sync                          # or: python -m venv .venv && pip install buraq
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 ```
 
-That writes the files. It installs nothing — the project runs in the
-environment you installed Buraq into, and your own packages go there too.
+`startproject` writes the files and installs nothing. `uv sync` reads the
+`pyproject.toml` it just wrote and builds `.venv` inside the project — that is
+the environment the project runs in, and where your own packages go.
 
 ## 2. Create the app
 

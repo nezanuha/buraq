@@ -26,7 +26,10 @@ This tutorial walks you through building a complete blog application with Buraq 
 ```bash
 buraq startproject buraq_blog
 cd buraq_blog
+
 uv sync
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
 buraq startapp posts
 ```
 
